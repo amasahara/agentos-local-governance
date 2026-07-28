@@ -1,0 +1,7 @@
+.agents/state/*.sqlite3
+.agents/runtime/*
+!.agents/runtime/.gitkeep
+.agents/cache/*
+!.agents/cache/.gitkeep
+__pycache__/
+.pytest_cache/

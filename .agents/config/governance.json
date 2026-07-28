@@ -1,0 +1,81 @@
+{
+  "version": "0.5.1",
+  "instruction_policy": {
+    "single_source": "AGENTS.md",
+    "forbidden_files": [
+      "CLAUDE.md",
+      "GEMINI.md",
+      "COPILOT.md",
+      "CODEX.md",
+      "CURSOR.md"
+    ]
+  },
+  "language_policy": {
+    "understand_user_language_directly": true,
+    "preserve_original_request": true,
+    "external_translation_for_intent_parsing": "forbidden",
+    "response_language": "user_language",
+    "technical_identifiers_language": "english"
+  },
+  "clarification_policy": {
+    "required_when": [
+      "target_is_unknown",
+      "requested_behavior_is_ambiguous",
+      "multiple_material_interpretations_exist",
+      "acceptance_criteria_are_missing",
+      "operation_has_destructive_effects",
+      "database_schema_may_change",
+      "permission_or_security_behavior_may_change",
+      "scope_cannot_be_determined"
+    ],
+    "low_risk": "proceed_with_documented_reversible_assumption",
+    "medium_risk": "ask_before_execution",
+    "high_risk": "require_explicit_scope_acceptance_criteria_and_approval"
+  },
+  "tool_execution_policy": {
+    "max_tool_calls_per_work_unit": 12,
+    "max_identical_tool_calls": 1,
+    "max_retries_per_failure_signature": 1,
+    "max_consecutive_failures": 3,
+    "stop_on_budget_exhaustion": true,
+    "cache_file_reads": true,
+    "cache_searches": true,
+    "bounded_output_default_lines": 120,
+    "error_context_lines": 20,
+    "search_result_limit": 20
+  },
+  "filesystem_policy": {
+    "project_root_containment": true,
+    "deny_path_traversal": true,
+    "deny_symlink_escape": true,
+    "runtime_root": ".agents/runtime",
+    "temporary_workspace": ".agents/runtime/task-workspaces/{task_id}"
+  },
+  "documentation_policy": {
+    "bilingual_languages": [
+      "vi",
+      "en"
+    ],
+    "developer_entry_point": "huong_dan.md",
+    "required_docs": [
+      "huong_dan.md",
+      ".agents/docs/USAGE.md",
+      ".agents/docs/PROJECT_STRUCTURE.md",
+      ".agents/docs/RULES_WORKFLOW_CHANGELOG.md"
+    ],
+    "governance_change_sync_set": [
+      "AGENTS.md",
+      ".agents/config/governance.json",
+      "huong_dan.md",
+      ".agents/docs/PROJECT_STRUCTURE.md",
+      ".agents/docs/USAGE.md",
+      ".agents/docs/RULES_WORKFLOW_CHANGELOG.md",
+      ".agents/agentos",
+      ".agents/tests",
+      "VERSION"
+    ],
+    "require_changelog_for_governance_change": true,
+    "require_version_bump_for_governance_change": true,
+    "require_sync_matrix_in_final_report": true
+  }
+}

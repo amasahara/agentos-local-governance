@@ -82,3 +82,30 @@ Triển khai trạng thái workflow bền vững, phát hiện drift, installer 
 ### Migration note
 
 Schema advances from 5 to 7. Migration 6 creates `workflow_steps`; migration 7 creates `governance_baseline` and `governance_change_log`. Existing v0.7.2 data is preserved.
+
+## 2026-07-29 — v0.9.0 — Trust Boundary Hardening
+
+### Yêu cầu / Request
+
+Audit v0.8.1 identified self-attestation in tool classification, workflow completion,
+baseline acknowledgement, drift-aware reporting, and sensitive local overrides.
+
+### Quyết định / Decision
+
+AgentOS now derives tool classification, requires single-use guarded execution
+tokens, records command provenance for automated workflow steps, isolates current
+tasks by session, stages sensitive local overrides, redacts audit content, tracks
+governance recursively, and blocks final reports on drift or invalid provenance.
+
+### Enforcement
+
+- schema migration 8: guarded executions, workflow provenance, override approvals,
+  acknowledgement methods, and hash-chained audit events;
+- runtime: `tooling.py`, `workflow.py`, `drift.py`, `policy.py`, `core.py`, `cli.py`;
+- tests: adversarial bypass, token, session, drift, override, redaction, and provenance tests;
+- documentation: README, AGENTS.md, huong_dan.md, usage, and structure docs.
+
+### Compatibility
+
+Direct `record-tool` is intentionally disabled. Integrations must use
+`guard-tool` followed by `complete-tool`. Database migrations remain additive.

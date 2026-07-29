@@ -68,14 +68,14 @@ For every governance change, evaluate and report the status of:
 - `VERSION` and package version.
 
 
-## v0.8.1 runtime repair gates
+## v0.9.0 runtime repair gates
 
 - Run `agentos docs-scan --scope <source-root-or-affected-path>` before reporting a source change complete. A failed source documentation scan blocks completion.
 - Use `tool-guard` before governed tool execution. Unknown tools fail closed; network tools require reason, justification, and prior successful local evidence.
 - Keep `record-tool` as the canonical evidence writer. `record-tool-result` records guard/audit outcomes and must not replace evidence records.
 - Use `cache-lookup` before repeating an identical bounded file read and `cache-store` only for bounded, non-sensitive summaries. A stale cache entry must not be reused.
 
-## Persistent task heartbeat and workflow gates (v0.8.1)
+## Persistent task heartbeat and workflow gates (v0.9.0)
 
 AgentOS workflow state is persisted outside the conversation context. Starting a task sets `.agents/runtime/current_task.json` and seeds `workflow_steps` from the configured workflow. Commands may resolve the current task when `--task-id` is omitted.
 
@@ -90,3 +90,12 @@ Governance files are compared against a human-acknowledged hash baseline. Use `d
 ## Safe installation and local policy
 
 Installers must preserve existing root files. Conflicting files are written with an `.agentos` suffix for manual merge. Project-specific overrides belong in `.agents/config/governance.local.json`; the canonical `.agents/config/governance.json` remains the distributed baseline.
+
+## v0.9.0 trust-boundary rules
+
+- Never use direct `record-tool`; obtain a guard token and complete that token.
+- Never supply or override tool classification. Runtime classification is authoritative.
+- Do not mark automated-only workflow steps done manually.
+- Use a distinct session ID for each concurrent agent or IDE session.
+- Do not approve sensitive local overrides or acknowledge baselines on behalf of a human.
+- Do not report completion while baseline, drift, provenance, or override gates are blocked.

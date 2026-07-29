@@ -16,7 +16,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 
 def _db_path(root: Path) -> Path:
@@ -68,7 +68,7 @@ def migrate(connection: sqlite3.Connection) -> None:
     """
     connection.execute("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY)")
     current = connection.execute("SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations").fetchone()["v"]
-    migrations = [_m1, _m2, _m3, _m4, _m5, _m6, _m7]
+    migrations = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8]
     for version, fn in enumerate(migrations, start=1):
         if version > current:
             fn(connection)
@@ -262,4 +262,71 @@ def _m7(c: sqlite3.Connection) -> None:
     );
     CREATE INDEX IF NOT EXISTS idx_governance_baseline_file ON governance_baseline(file_path);
     CREATE INDEX IF NOT EXISTS idx_governance_change_ack ON governance_change_log(acknowledged);
+    """)
+
+
+def _m8(c: sqlite3.Connection) -> None:
+    """Add trust-boundary hardening state and provenance.
+
+    Args:
+        c: Open SQLite connection.
+
+    Returns:
+        None.
+    """
+    c.executescript("""
+    ALTER TABLE workflow_steps ADD COLUMN completion_source TEXT NOT NULL DEFAULT 'none';
+    ALTER TABLE workflow_steps ADD COLUMN evidence_type TEXT;
+    ALTER TABLE workflow_steps ADD COLUMN evidence_id TEXT;
+    ALTER TABLE workflow_steps ADD COLUMN result_hash TEXT;
+    ALTER TABLE workflow_steps ADD COLUMN command_name TEXT;
+    ALTER TABLE workflow_steps ADD COLUMN exit_code INTEGER;
+
+    ALTER TABLE governance_baseline ADD COLUMN acknowledgement_method TEXT NOT NULL DEFAULT 'legacy';
+    ALTER TABLE governance_baseline ADD COLUMN session_id TEXT;
+
+    CREATE TABLE guarded_executions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        execution_token TEXT NOT NULL UNIQUE,
+        task_id TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        tool_name TEXT NOT NULL,
+        classification TEXT NOT NULL,
+        args_hash TEXT NOT NULL,
+        decision TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        target TEXT,
+        reason_code TEXT,
+        justification TEXT,
+        issued_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at TEXT NOT NULL,
+        completed_at TEXT,
+        success INTEGER,
+        tool_call_id INTEGER,
+        FOREIGN KEY(task_id) REFERENCES tasks(id),
+        FOREIGN KEY(tool_call_id) REFERENCES tool_calls(id)
+    );
+    CREATE INDEX idx_guarded_executions_task_id ON guarded_executions(task_id);
+
+    CREATE TABLE policy_override_approvals(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        content_hash TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        reviewed_by TEXT,
+        review_method TEXT,
+        reviewed_at TEXT,
+        note TEXT,
+        UNIQUE(content_hash)
+    );
+
+    CREATE TABLE audit_events(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_type TEXT NOT NULL,
+        task_id TEXT,
+        session_id TEXT,
+        payload_json TEXT NOT NULL,
+        previous_hash TEXT,
+        event_hash TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
     """)

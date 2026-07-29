@@ -74,7 +74,7 @@ Create:
 ```
 
 
-## v0.8.1 repaired runtime commands
+## v0.9.0 repaired runtime commands
 
 ### Documentation scan
 
@@ -99,7 +99,7 @@ Create:
 .agents/bin/agentos cache-lookup --task-id TASK-001 --path src/a.py --range-key 1:160
 ```
 
-## v0.8.1 task heartbeat and workflow
+## v0.9.0 task heartbeat and workflow
 
 ```bash
 agentos start-task --task-id TASK-042 --request "..."
@@ -133,3 +133,25 @@ Only the user should acknowledge a governance baseline.
 ```
 
 Use `.agents/bin/install.cmd` on Windows. Existing root files are preserved.
+
+## Hardened tool lifecycle (v0.9.0)
+
+```bash
+agentos --session-id S1 guard-tool --task-id T1 \
+  --tool bounded_file_read --args '{"path":"src/a.py"}'
+agentos --session-id S1 complete-tool --execution-token TOKEN \
+  --input '{"path":"src/a.py"}' --success --output "Read source contract"
+```
+
+`record-tool` is retained only to return a migration error. It cannot write evidence.
+
+## Sensitive local overrides
+
+```bash
+agentos local-override-status
+agentos approve-local-override --reviewed-by USER --note "Reviewed"
+```
+
+## Session isolation
+
+Pass global `--session-id NAME` or set `AGENTOS_SESSION_ID`.

@@ -8,7 +8,7 @@ AgentOS Local Governance helps developers keep AI coding agents aligned with one
 AgentOS Local Governance giúp developer kiểm soát AI coding agent bằng một hệ thống quản trị nằm trực tiếp trong repository, gồm instruction thống nhất, policy có cấu trúc, approval gate, giới hạn filesystem, yêu cầu bằng chứng, kiểm thử và tài liệu đồng bộ.
 
 > Repository slug: `agentos-local-governance`  
-> Current version: `v0.8.1`  
+> Current version: `v0.9.0`  
 > Database schema: `5`  
 > Primary runtime: Python standard library  
 > Test dependency: `pytest`
@@ -66,7 +66,7 @@ CURSOR.md
 
 The agent should inspect local code, local indexes, recorded tool calls, and repository state before relying on network tools.
 
-In v0.8.1, evidence-grounded claims accept successful `local` tool calls by default. Network evidence is disabled by the active policy.
+In v0.9.0, evidence-grounded claims accept successful `local` tool calls by default. Network evidence is disabled by the active policy.
 
 #### 3. Fail-closed writes
 
@@ -103,7 +103,7 @@ claim
 
 A governance change is incomplete when instruction text, structured policy, runtime enforcement, tests, developer documentation, changelog, or version identity materially disagree.
 
-### Core capabilities in v0.8.1
+### Core capabilities in v0.9.0
 
 - **Single instruction authority** through `AGENTS.md`
 - **Task creation and bounded approval scopes**
@@ -147,7 +147,7 @@ receive_request
 → report
 ```
 
-The current v0.8.1 CLI directly implements the following runtime portions of that workflow:
+The current v0.9.0 CLI directly implements the following runtime portions of that workflow:
 
 ```text
 start-task
@@ -522,7 +522,7 @@ Shared code is appropriate only when:
 
 ### Python symbol index
 
-The v0.8.1 index supports Python source and records information such as:
+The v0.9.0 index supports Python source and records information such as:
 
 - symbol name;
 - qualified name;
@@ -568,7 +568,7 @@ medium
 high
 ```
 
-Evidence requirements in the default v0.8.1 policy:
+Evidence requirements in the default v0.9.0 policy:
 
 | Risk and type | Evidence requirement |
 |---|---|
@@ -587,7 +587,7 @@ Evidence must be:
 - successful when policy requires success;
 - classified as allowed by policy.
 
-The active v0.8.1 policy uses `local` evidence and keeps network evidence disabled.
+The active v0.9.0 policy uses `local` evidence and keeps network evidence disabled.
 
 Claim insertion and claim-evidence insertion occur in one transaction. If any referenced evidence is invalid, the claim is not partially stored.
 
@@ -778,9 +778,9 @@ v0.7.1 closed gaps between documented behavior and runtime implementation:
 - advances the database schema to migration 4;
 - synchronizes runtime, policy, tests, bilingual documentation, changelog, and version identity.
 
-#### v0.8.1 — Runtime repair and documentation enforcement patch
+#### v0.9.0 — Runtime repair and documentation enforcement patch
 
-v0.8.1 is a focused compatibility patch based on the post-v0.7.1 audit. It does not introduce the heartbeat, persistent workflow checklist, governance drift baseline, installer, or git-hook design reserved for v0.8.x. It repairs the runtime contracts already promised by v0.7.0/v0.7.1:
+v0.9.0 is a focused compatibility patch based on the post-v0.7.1 audit. It does not introduce the heartbeat, persistent workflow checklist, governance drift baseline, installer, or git-hook design reserved for v0.8.x. It repairs the runtime contracts already promised by v0.7.0/v0.7.1:
 
 - restores `tooling.py`, `cache.py`, and `documentation.py` as importable runtime modules;
 - keeps `core.record_tool_execution()` as the single canonical writer to `tool_calls`;
@@ -792,7 +792,7 @@ v0.8.1 is a focused compatibility patch based on the post-v0.7.1 audit. It does 
 - adds regression tests for migration 5, tool audit, egress policy, cache invalidation, and documentation scanning;
 - advances the release database schema to migration 5.
 
-Pre-merge validation for v0.8.1:
+Pre-merge validation for v0.9.0:
 
 ```bash
 .agents/bin/agentos instruction-check
@@ -809,7 +809,7 @@ Run:
 PYTHONPATH=.agents python3 -m pytest .agents/tests -q
 ```
 
-The v0.8.1 test suite covers:
+The v0.9.0 test suite covers:
 
 - task creation and approval;
 - approved write scopes;
@@ -835,7 +835,7 @@ The v0.8.1 test suite covers:
 
 ### Current scope and limitations
 
-Version `v0.8.1` focuses on:
+Version `v0.9.0` focuses on:
 
 - repository-local Python governance utilities;
 - CLI integration;
@@ -949,7 +949,7 @@ CURSOR.md
 
 Agent nên kiểm tra code local, symbol index local, tool call đã ghi và trạng thái repository trước khi dựa vào network tool.
 
-Trong v0.8.1, evidence-grounded claim mặc định chỉ chấp nhận tool call thành công có classification `local`. Network evidence đang bị tắt trong policy hiện hành.
+Trong v0.9.0, evidence-grounded claim mặc định chỉ chấp nhận tool call thành công có classification `local`. Network evidence đang bị tắt trong policy hiện hành.
 
 #### 3. Write fail-closed
 
@@ -986,7 +986,7 @@ claim
 
 Một governance change chưa hoàn chỉnh khi instruction, structured policy, runtime enforcement, test, tài liệu developer, changelog hoặc version identity còn bất đồng đáng kể.
 
-### Chức năng chính trong v0.8.1
+### Chức năng chính trong v0.9.0
 
 - **Một nguồn instruction duy nhất** qua `AGENTS.md`
 - **Tạo task và phê duyệt phạm vi ghi có giới hạn**
@@ -1030,7 +1030,7 @@ receive_request
 → report
 ```
 
-CLI v0.8.1 hiện triển khai trực tiếp các phần runtime sau:
+CLI v0.9.0 hiện triển khai trực tiếp các phần runtime sau:
 
 ```text
 start-task
@@ -1405,7 +1405,7 @@ Chỉ đưa code vào shared khi:
 
 ### Python symbol index
 
-Index v0.8.1 hỗ trợ Python và ghi nhận:
+Index v0.9.0 hỗ trợ Python và ghi nhận:
 
 - symbol name;
 - qualified name;
@@ -1451,7 +1451,7 @@ medium
 high
 ```
 
-Yêu cầu evidence mặc định trong v0.8.1:
+Yêu cầu evidence mặc định trong v0.9.0:
 
 | Risk và loại claim | Yêu cầu evidence |
 |---|---|
@@ -1470,7 +1470,7 @@ Evidence phải:
 - thành công khi policy yêu cầu;
 - có classification được policy cho phép.
 
-Policy v0.8.1 chỉ dùng evidence `local` và chưa cho phép network evidence.
+Policy v0.9.0 chỉ dùng evidence `local` và chưa cho phép network evidence.
 
 Claim và claim evidence được insert trong cùng transaction. Nếu bất kỳ evidence nào không hợp lệ, claim không bị lưu dang dở.
 
@@ -1661,9 +1661,9 @@ v0.7.1 đóng khoảng trống giữa hành vi đã tài liệu hóa và impleme
 - nâng database schema lên migration 4;
 - đồng bộ runtime, policy, tests, tài liệu song ngữ, changelog và version identity.
 
-#### v0.8.1 — Bản vá runtime và enforcement tài liệu source
+#### v0.9.0 — Bản vá runtime và enforcement tài liệu source
 
-v0.8.1 là patch tương thích tập trung theo báo cáo audit sau v0.7.1. Phiên bản này chưa đưa heartbeat, workflow checklist bền vững, governance drift baseline, installer hoặc git hook của lộ trình v0.8.x vào runtime. Bản vá sửa các contract đã được công bố từ v0.7.0/v0.7.1:
+v0.9.0 là patch tương thích tập trung theo báo cáo audit sau v0.7.1. Phiên bản này chưa đưa heartbeat, workflow checklist bền vững, governance drift baseline, installer hoặc git hook của lộ trình v0.8.x vào runtime. Bản vá sửa các contract đã được công bố từ v0.7.0/v0.7.1:
 
 - phục hồi `tooling.py`, `cache.py` và `documentation.py` thành các runtime module có thể import;
 - giữ `core.record_tool_execution()` là nơi duy nhất ghi vào `tool_calls`;
@@ -1675,7 +1675,7 @@ v0.8.1 là patch tương thích tập trung theo báo cáo audit sau v0.7.1. Phi
 - thêm regression test cho migration 5, tool audit, egress policy, cache invalidation và documentation scan;
 - nâng schema phát hành lên migration 5.
 
-Kiểm tra pre-merge cho v0.8.1:
+Kiểm tra pre-merge cho v0.9.0:
 
 ```bash
 .agents/bin/agentos instruction-check
@@ -1692,7 +1692,7 @@ Chạy:
 PYTHONPATH=.agents python3 -m pytest .agents/tests -q
 ```
 
-Test suite v0.8.1 bao phủ:
+Test suite v0.9.0 bao phủ:
 
 - tạo task và approval;
 - approved write scope;
@@ -1718,7 +1718,7 @@ Test suite v0.8.1 bao phủ:
 
 ### Phạm vi và giới hạn hiện tại
 
-Phiên bản `v0.8.1` tập trung vào:
+Phiên bản `v0.9.0` tập trung vào:
 
 - governance utility Python nằm trong repository;
 - tích hợp qua CLI;
@@ -1784,14 +1784,14 @@ Phiên bản này chưa có file `LICENSE`. Cần bổ sung giấy phép rõ rà
 
 ## Project status
 
-AgentOS Local Governance is under active development. Version `v0.8.1` is suitable for evaluation, experimentation, and repository-local integration. Review the policy and implementation before security-critical or production use.
+AgentOS Local Governance is under active development. Version `v0.9.0` is suitable for evaluation, experimentation, and repository-local integration. Review the policy and implementation before security-critical or production use.
 
-AgentOS Local Governance đang được phát triển tích cực. Phiên bản `v0.8.1` phù hợp để đánh giá, thử nghiệm và tích hợp local trong repository. Cần review policy và implementation trước khi dùng trong production hoặc môi trường bảo mật cao.
+AgentOS Local Governance đang được phát triển tích cực. Phiên bản `v0.9.0` phù hợp để đánh giá, thử nghiệm và tích hợp local trong repository. Cần review policy và implementation trước khi dùng trong production hoặc môi trường bảo mật cao.
 
 
 ---
 
-## v0.8.1 runtime repair command reference / Tham chiếu lệnh sửa runtime v0.8.1
+## v0.9.0 runtime repair command reference / Tham chiếu lệnh sửa runtime v0.9.0
 
 ### Source documentation enforcement
 
@@ -1830,9 +1830,9 @@ Cache chỉ hit khi task ID, path chuẩn hóa, range key, thời gian sửa, k�
 
 ---
 
-# v0.8.1 — Persistent workflow, drift awareness, and safe installation
+# v0.9.0 — Persistent workflow, drift awareness, and safe installation
 
-Version 0.8.1 completes the v0.8 proposal on top of the v0.7.2 runtime repair. Its central change is that workflow state no longer depends on an LLM remembering the conversation. Required progress is persisted in SQLite and the current task is stored under `.agents/runtime/current_task.json`.
+Version 0.9.0 completes the v0.8 proposal on top of the v0.7.2 runtime repair. Its central change is that workflow state no longer depends on an LLM remembering the conversation. Required progress is persisted in SQLite and the current task is stored under `.agents/runtime/current_task.json`.
 
 ## New persistent task commands
 
@@ -1985,7 +1985,7 @@ The hook is an additional defense layer, not an operating-system sandbox. Direct
 | 6 | `workflow_steps` | Persistent workflow checklist |
 | 7 | `governance_baseline`, `governance_change_log` | Human-visible governance drift |
 
-## v0.8.1 validation checklist
+## v0.9.0 validation checklist
 
 ```bash
 .agents/bin/agentos instruction-check
@@ -1998,7 +1998,7 @@ PYTHONPATH=.agents python3 -m pytest .agents/tests -q
 Expected release state:
 
 ```text
-version: 0.8.1
+version: 0.9.0
 schema: 7
 38 tests passed
 instruction-check: ok
@@ -2010,9 +2010,9 @@ docs-scan: passed
 
 ---
 
-# v0.8.1 — Workflow bền vững, cảnh báo drift và cài đặt an toàn
+# v0.9.0 — Workflow bền vững, cảnh báo drift và cài đặt an toàn
 
-Phiên bản 0.8.1 hoàn thiện đề xuất v0.8 trên nền bản vá v0.7.2. Thay đổi trọng tâm là trạng thái workflow không còn phụ thuộc vào việc LLM nhớ nội dung hội thoại. Tiến trình bắt buộc được lưu trong SQLite và task hiện tại được lưu tại `.agents/runtime/current_task.json`.
+Phiên bản 0.9.0 hoàn thiện đề xuất v0.8 trên nền bản vá v0.7.2. Thay đổi trọng tâm là trạng thái workflow không còn phụ thuộc vào việc LLM nhớ nội dung hội thoại. Tiến trình bắt buộc được lưu trong SQLite và task hiện tại được lưu tại `.agents/runtime/current_task.json`.
 
 ## Lệnh task mới
 
@@ -2040,3 +2040,47 @@ Migration 7 bổ sung baseline hash và change log. Người dùng tạo mốc �
 ## Git hook tùy chọn
 
 `install-git-hooks.sh` cài pre-commit gate để chạy instruction check, docs check, source documentation scan, drift check và test. Đây là lớp phòng thủ bổ sung; AgentOS không phải sandbox hệ điều hành.
+
+---
+
+## v0.9.0 — Trust Boundary Hardening
+
+Version 0.9.0 changes AgentOS from a purely self-attested audit flow toward a
+linked execution lifecycle. Tool evidence can no longer be created by choosing a
+classification in `record-tool`. The canonical flow is now:
+
+```text
+guard-tool → single-use execution token → actual execution → complete-tool → tool_calls evidence
+```
+
+The token is bound to task, session, tool name, derived classification, normalized
+argument hash, expiry, and one-time use. Unknown and dynamic tools fail closed.
+Audit inputs and summaries are redacted before persistence.
+
+Automated workflow steps such as `tests`, `documentation_check`, `synchronize`,
+`prepare_change`, and `execute_guarded` cannot be marked done manually. Their
+rows contain command provenance, result hash, evidence type, evidence ID, and exit
+code. The final `report` gate verifies workflow provenance, baseline state,
+unacknowledged drift, and sensitive local-override approval.
+
+Current task state is now session-scoped under:
+
+```text
+.agents/runtime/sessions/<session-id>/current_task.json
+```
+
+Set `AGENTOS_SESSION_ID` or pass global `--session-id` when multiple agents or IDE
+sessions operate in one repository.
+
+Sensitive `governance.local.json` sections are staged until explicitly approved.
+Safe project settings such as `source_root` may apply immediately; policy sections
+such as `claim_policy`, `filesystem_policy`, and `workflow_policy` do not.
+
+```bash
+agentos local-override-status
+agentos approve-local-override --reviewed-by USER --note "Reviewed project policy"
+```
+
+The installer no longer acknowledges the governance baseline. After installation,
+a human reviews the governance files and runs `ack-baseline` interactively.
+Non-interactive acknowledgement is labeled `ci_machine`, never `interactive_human`.

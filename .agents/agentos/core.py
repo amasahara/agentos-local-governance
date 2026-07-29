@@ -69,9 +69,7 @@ def _task(root: Path, task_id: str) -> dict[str, Any]:
 def _relative_resolved(root: Path, target: str) -> tuple[Path, str | None]:
     base = root.resolve()
     candidate = Path(target)
-    if candidate.is_absolute():
-        return candidate.resolve(), None
-    resolved = (base / candidate).resolve()
+    resolved = candidate.resolve() if candidate.is_absolute() else (base / candidate).resolve()
     try:
         rel = resolved.relative_to(base).as_posix()
     except ValueError:
@@ -211,29 +209,26 @@ def prepare_change(root: Path, task_id: str, operation: str, target: str, intent
     }
 
 
-def record_tool_execution(root: Path, task_id: str, tool_name: str, input_data: dict[str, Any], success: bool, output_summary: str, classification: str = "local") -> dict[str, Any]:
-    """Record one tool execution for later evidence linkage.
+def record_tool_execution(root: Path, task_id: str, tool_name: str, input_data: dict[str, Any], success: bool, output_summary: str, classification: str | None = None) -> dict[str, Any]:
+    """Reject unguarded evidence recording in v0.9.0.
 
     Args:
         root: Project root.
         task_id: Existing task identifier.
         tool_name: Tool identifier.
-        input_data: Redacted input metadata.
+        input_data: Tool input metadata.
         success: Whether execution succeeded.
-        output_summary: Bounded output summary.
-        classification: Local, network, dynamic, or unknown.
+        output_summary: Execution summary.
+        classification: Deprecated caller-supplied classification.
 
     Returns:
-        Recorded tool-call identifier.
-    """
-    _task(root, task_id)
-    if classification not in {"local", "network", "dynamic", "unknown"}:
-        raise RuntimeError("invalid tool classification")
-    with connect(root) as c:
-        cur = c.execute("INSERT INTO tool_calls(task_id,tool_name,classification,input_json,success,output_summary) VALUES(?,?,?,?,?,?)", (task_id, tool_name, classification, json.dumps(input_data), int(success), output_summary))
-        tool_call_id = int(cur.lastrowid)
-    return {"tool_call_id": tool_call_id}
+        Never returns normally.
 
+    Raises:
+        RuntimeError: Direct evidence recording is forbidden.
+    """
+    del root, task_id, tool_name, input_data, success, output_summary, classification
+    raise RuntimeError("direct record-tool is disabled in v0.9.0; use guard-tool followed by complete-tool")
 
 def record_claim(root: Path, task_id: str, claim_text: str, claim_type: str, risk: str, evidence_tool_call_ids: list[int] | None = None) -> dict[str, Any]:
     """Record a claim linked atomically to valid supporting evidence.
@@ -342,7 +337,7 @@ def docs_check(root: Path) -> dict[str, Any]:
 
 
 def instruction_check(root: Path) -> dict[str, Any]:
-    """Verify that AGENTS.md is the only model instruction source.
+    """Verify that AGENTS.md is the only coding-agent instruction authority.
 
     Args:
         root: Project root.
@@ -350,10 +345,15 @@ def instruction_check(root: Path) -> dict[str, Any]:
     Returns:
         Instruction-source report.
     """
-    forbidden = ["CLAUDE.md", "GEMINI.md", "COPILOT.md", "CODEX.md", "CURSOR.md", ".agents/README.md"]
-    found = [p for p in forbidden if (root / p).exists()]
-    return {"ok": (root / "AGENTS.md").exists() and not found, "duplicate_instruction_sources": found}
-
+    exact = ["CLAUDE.md", "GEMINI.md", "COPILOT.md", "CODEX.md", "CURSOR.md", ".agents/README.md", ".clinerules", ".windsurfrules", "INSTRUCTIONS.md", "AI_RULES.md", ".github/copilot-instructions.md"]
+    patterns = [".cursor/rules/*.mdc", ".windsurf/rules/*", "**/*instructions*.md", "**/*agent-rules*.md"]
+    found = {p for p in exact if (root / p).exists()}
+    for pattern in patterns:
+        for path in root.glob(pattern):
+            rel = path.relative_to(root).as_posix()
+            if rel not in {"AGENTS.md", ".agents/docs/PROJECT_STRUCTURE.md"} and ".agents/runtime/" not in rel:
+                found.add(rel)
+    return {"ok": (root / "AGENTS.md").exists() and not found, "duplicate_instruction_sources": sorted(found)}
 
 def db_status(root: Path) -> dict[str, Any]:
     """Return current database migration status.

@@ -14,5 +14,4 @@ for %%F in (AGENTS.md README.md huong_dan.md VERSION) do (
 call "%TARGET%\.agents\bin\agentos.cmd" instruction-check || exit /b 2
 call "%TARGET%\.agents\bin\agentos.cmd" docs-check || exit /b 2
 call "%TARGET%\.agents\bin\agentos.cmd" db-status || exit /b 2
-call "%TARGET%\.agents\bin\agentos.cmd" ack-baseline --acknowledged-by installer || exit /b 2
 endlocal

@@ -1,4 +1,4 @@
-# Hướng dẫn AgentOS v0.8.1 / AgentOS v0.8.1 Developer Guide
+# Hướng dẫn AgentOS v0.9.0 / AgentOS v0.9.0 Developer Guide
 
 > Tài liệu này là điểm bắt đầu dành cho developer khi đưa AgentOS vào một project.
 > Phần quan trọng nhất là lựa chọn đúng quy trình cho **project mới** hoặc **project đang tồn tại**.
@@ -87,13 +87,13 @@ Nếu repository đã được tạo từ GitHub/GitLab nhưng chưa có source 
 Từ thư mục bản phân phối AgentOS:
 
 ```bash
-/path/to/agentos-local-governance-v0.8.1/.agents/bin/install.sh /path/to/my-project
+/path/to/agentos-local-governance-v0.9.0/.agents/bin/install.sh /path/to/my-project
 ```
 
 Windows:
 
 ```bat
-C:\path\to\agentos-local-governance-v0.8.1\.agents\bin\install.cmd C:\path\to\my-project
+C:\path\to\agentos-local-governance-v0.9.0\.agents\bin\install.cmd C:\path\to\my-project
 ```
 
 Installer sẽ:
@@ -227,7 +227,7 @@ Nếu project chưa dùng Git, có thể bỏ qua tạm thời nhưng phải ch�
 PYTHONPATH=.agents python3 -m pytest .agents/tests -q
 ```
 
-Kết quả mong đợi ở v0.8.1:
+Kết quả mong đợi ở v0.9.0:
 
 ```text
 instruction-check: ok
@@ -310,7 +310,7 @@ Mục tiêu khi cài AgentOS vào project cũ là **bổ sung governance mà kh�
 Ưu tiên tạo branch riêng:
 
 ```bash
-git switch -c chore/install-agentos-v0.8.1
+git switch -c chore/install-agentos-v0.9.0
 ```
 
 Hoặc ít nhất tạo backup trước khi cài.
@@ -960,3 +960,69 @@ PYTHONPATH=.agents python3 -m pytest .agents/tests -q
 ```
 
 Then run the project's own test suite and complete the workflow report gate.
+
+---
+
+## Tiếng Việt — Thay đổi bắt buộc khi dùng v0.9.0
+
+### Tool execution không còn tự khai báo
+
+Không dùng `record-tool` để tạo evidence. Luồng đúng:
+
+```bash
+.agents/bin/agentos --session-id SESSION-1 guard-tool \
+  --task-id TASK-001 --tool bounded_file_read \
+  --args '{"path":"src/orders/service.py"}'
+
+.agents/bin/agentos --session-id SESSION-1 complete-tool \
+  --execution-token TOKEN_FROM_GUARD \
+  --input '{"path":"src/orders/service.py"}' \
+  --success --output "Đã đọc contract và logic liên quan."
+```
+
+Classification do AgentOS suy ra từ registry. Token chỉ dùng một lần, hết hạn,
+gắn với session và hash của arguments. Agent không thể đổi `web` thành `local`.
+
+### Workflow automated-only
+
+Các bước `approve_task`, `build_or_update_local_index`, `prepare_change`,
+`execute_guarded`, `documentation_check`, `tests`, `evidence_review`, và
+`synchronize` chỉ được command chính thức hoàn thành. `mark-step --status done`
+cho các bước này bị từ chối. Mỗi step lưu provenance và result hash.
+
+### Session riêng cho nhiều agent
+
+Dùng `--session-id` hoặc biến `AGENTOS_SESSION_ID`. Không dùng chung current task
+giữa hai agent chạy song song.
+
+### Baseline và drift
+
+Project chưa có baseline trả `baseline_state=not_initialized`, không bị gọi nhầm
+là drift. Installer không tự xác nhận. Người dùng review rồi chạy tương tác:
+
+```bash
+.agents/bin/agentos ack-baseline --identity TEN_NGUOI_REVIEW
+```
+
+`report` bị chặn nếu chưa có baseline, có drift, provenance không hợp lệ, hoặc
+sensitive local override chưa được duyệt.
+
+### Local override nhạy cảm
+
+`source_root`, `test_path`, `encoding`, `runtime_paths` có thể áp dụng ngay.
+Các section policy nhạy cảm được giữ ở trạng thái `pending` cho đến khi review:
+
+```bash
+.agents/bin/agentos local-override-status
+.agents/bin/agentos approve-local-override \
+  --reviewed-by TEN_NGUOI_REVIEW \
+  --note "Đã kiểm tra tác động của override"
+```
+
+## English — Required v0.9.0 operational changes
+
+Use `guard-tool` and `complete-tool`; direct evidence recording is disabled.
+Automated workflow gates require canonical command provenance. Use a unique session
+ID for concurrent agents. The installer does not acknowledge the baseline. Final
+reporting is blocked by uninitialized baseline, drift, invalid provenance, or an
+unapproved sensitive local override.

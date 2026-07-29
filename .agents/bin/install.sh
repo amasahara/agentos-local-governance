@@ -19,4 +19,9 @@ chmod +x "$TARGET_DIR/.agents/bin/agentos" "$TARGET_DIR/.agents/bin/install-git-
 if [ "$SOURCE_ROOT" != "src" ]; then
   printf '{\n  "source_root": "%s"\n}\n' "$SOURCE_ROOT" > "$TARGET_DIR/.agents/config/governance.local.json"
 fi
-(cd "$TARGET_DIR" && .agents/bin/agentos instruction-check && .agents/bin/agentos docs-check && .agents/bin/agentos db-status && .agents/bin/agentos ack-baseline --acknowledged-by installer)
+(cd "$TARGET_DIR" && \
+  .agents/bin/agentos instruction-check && \
+  .agents/bin/agentos docs-check && \
+  .agents/bin/agentos db-status)
+printf '%s\n' "Installation validated. Governance baseline is pending human review."
+printf '%s\n' "Review governance files, then run: .agents/bin/agentos ack-baseline --identity YOUR_NAME"

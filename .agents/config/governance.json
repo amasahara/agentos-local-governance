@@ -1,5 +1,5 @@
 {
-  "version": "0.8.1",
+  "version": "0.9.0",
   "language_policy": {
     "understand_user_language_directly": true,
     "preserve_original_request": true,
@@ -82,13 +82,17 @@
     "persist_current_task": true,
     "context_reminder_on_every_cli_command": true,
     "allow_implicit_current_task": true,
-    "require_explicit_use_task_for_resume": false
+    "require_explicit_use_task_for_resume": false,
+    "session_scoped_current_task": true,
+    "default_session_from_env": "AGENTOS_SESSION_ID"
   },
   "workflow_policy": {
     "persist_steps": true,
     "require_skip_reason": true,
     "report_requires_complete_workflow": true,
-    "failure_exit_code": 2
+    "failure_exit_code": 2,
+    "automated_steps_require_command_provenance": true,
+    "manual_done_for_automated_steps_forbidden": true
   },
   "drift_policy": {
     "enabled": true,
@@ -100,12 +104,43 @@
       ".agents/config/governance.local.json"
     ],
     "human_acknowledgement_command": "ack-baseline",
-    "agent_must_not_ack_for_user": true
+    "agent_must_not_ack_for_user": true,
+    "recursive_tracking": true,
+    "report_blocks_uninitialized_baseline": true,
+    "report_blocks_drift": true,
+    "interactive_human_ack_default": true
   },
   "installation_policy": {
     "never_overwrite_existing_root_files": true,
     "fallback_suffix": ".agentos",
     "support_local_policy_override": true,
-    "git_hook_optional": true
+    "git_hook_optional": true,
+    "automatic_baseline_acknowledgement": false
+  },
+  "tool_policy": {
+    "canonical_guarded_lifecycle": true,
+    "derive_classification_from_registry": true,
+    "unknown_tools_fail_closed": true,
+    "execution_token_ttl_seconds": 900,
+    "direct_record_tool_forbidden": true,
+    "redact_audit_content": true
+  },
+  "local_override_policy": {
+    "safe_keys": [
+      "source_root",
+      "test_path",
+      "encoding",
+      "runtime_paths"
+    ],
+    "sensitive_sections": [
+      "claim_policy",
+      "filesystem_policy",
+      "tool_policy",
+      "workflow_policy",
+      "drift_policy",
+      "instruction_policy",
+      "task_context_policy"
+    ],
+    "sensitive_override_requires_approval": true
   }
 }

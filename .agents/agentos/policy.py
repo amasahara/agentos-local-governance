@@ -2,45 +2,63 @@
 File: .agents/agentos/policy.py
 
 Purpose:
-    Load and validate machine-readable AgentOS policy.
+    Load and validate machine-readable AgentOS governance policy.
 
 Responsibilities:
-    - Parse governance JSON.
-    - Validate required sections and enum values.
-    - Fail closed when policy is malformed.
+    - Parse governance.json.
+    - Fail closed when required policy fields are missing or invalid.
 """
+from __future__ import annotations
+
 import json
 from pathlib import Path
 from typing import Any
 
-def load(root:Path)->dict[str,Any]:
-    """Load validated governance configuration.
+CLAIM_TYPES = {"business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"}
+RISK_LEVELS = {"low", "medium", "high"}
+
+
+def load_policy(root: Path) -> dict[str, Any]:
+    """Load and validate project governance policy.
 
     Args:
-        root: Absolute AgentOS project root.
+        root: Project root.
 
     Returns:
-        Parsed governance dictionary.
+        Validated policy dictionary.
 
     Raises:
-        RuntimeError: Required configuration is missing or invalid.
+        RuntimeError: Policy is missing or invalid.
     """
-    p=root/'.agents/config/governance.json'
-    if not p.is_file(): raise RuntimeError('Missing governance.json')
-    data=json.loads(p.read_text(encoding='utf-8')); validate(data); return data
+    path = root.resolve() / ".agents" / "config" / "governance.json"
+    if not path.exists():
+        raise RuntimeError("governance policy not found")
+    policy = json.loads(path.read_text(encoding="utf-8"))
+    validate_policy(policy)
+    return policy
 
-def validate(data:dict[str,Any])->None:
-    """Validate required policy sections.
+
+def validate_policy(policy: dict[str, Any]) -> None:
+    """Validate required AgentOS policy contracts.
 
     Args:
-        data: Parsed governance dictionary.
+        policy: Parsed governance policy.
 
     Returns:
         None.
 
     Raises:
-        RuntimeError: A required section or supported value is missing.
+        RuntimeError: A required field is missing or invalid.
     """
-    for k in ('version','tool_execution_policy','tool_policy','code_documentation_policy'):
-        if k not in data: raise RuntimeError(f'Missing governance key: {k}')
-    if data['tool_policy'].get('mode') not in {'audit','warn','enforce'}: raise RuntimeError('Unsupported tool policy mode')
+    required = ["version", "filesystem_policy", "claim_policy", "workflows"]
+    for key in required:
+        if key not in policy:
+            raise RuntimeError(f"missing policy key: {key}")
+    claim = policy["claim_policy"]
+    if set(claim.get("claim_types", [])) != CLAIM_TYPES:
+        raise RuntimeError("claim_policy.claim_types is invalid")
+    if set(claim.get("risk_levels", [])) != RISK_LEVELS:
+        raise RuntimeError("claim_policy.risk_levels is invalid")
+    for key in ("require_evidence_for_high_risk", "require_successful_evidence", "require_same_task_evidence"):
+        if claim.get(key) is not True:
+            raise RuntimeError(f"claim_policy.{key} must be true")

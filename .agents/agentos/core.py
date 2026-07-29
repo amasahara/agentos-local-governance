@@ -2,226 +2,385 @@
 File: .agents/agentos/core.py
 
 Purpose:
-    Provide the stable AgentOS public governance interface.
+    Implement AgentOS runtime governance and composite workflows.
 
 Responsibilities:
-    - Manage clarity, approval, write scope, placement, and status.
-    - Delegate tool, cache, index, and documentation operations.
-    - Preserve compatibility with earlier AgentOS commands.
+    - Manage tasks and approvals.
+    - Enforce project-root write containment.
+    - Prepare code changes using placement, reuse, and context checks.
+    - Record and retrieve evidence-grounded claims.
+    - Provide project status and documentation checks.
 """
 from __future__ import annotations
-import json,os,platform,re,sys
+
+import json
+import os
 from pathlib import Path
 from typing import Any
-from .db import connect,schema_status
-from .models import ClarityAssessment
-from .policy import load
-from .tooling import guard_tool,record_tool_execution,egress_report
-from .cache import cache_lookup,cache_store
-from .indexing import index_build,index_query,duplicate_report,index_status
-from .documentation import documentation_scan
-FORBIDDEN_INSTRUCTION_FILES={'CLAUDE.md','GEMINI.md','COPILOT.md','CODEX.md','CURSOR.md'}
-def project_root(start:str|Path='.') -> Path:
-    """Locate the AgentOS project root.
+
+from . import __version__
+from .db import SCHEMA_VERSION, connect
+from .indexing import duplicate_report, index_query
+from .policy import CLAIM_TYPES, RISK_LEVELS, load_policy
+
+
+def start_task(root: Path, task_id: str, request: str) -> dict[str, Any]:
+    """Create a governance task.
 
     Args:
-        start: Starting path for upward discovery.
+        root: Project root.
+        task_id: Unique task identifier.
+        request: Original user request.
 
     Returns:
-        Absolute directory containing AGENTS.md and .agents/.
-
-    Raises:
-        RuntimeError: No AgentOS root is found.
-    """
-    p=Path(start).resolve()
-    for c in [p,*p.parents]:
-        if (c/'AGENTS.md').is_file() and (c/'.agents').is_dir():return c
-    raise RuntimeError('AgentOS project root not found')
-def load_governance(root:Path)->dict[str,Any]:
-    """Load validated governance configuration.
-
-    Args:
-        root: Absolute project root.
-
-    Returns:
-        Validated policy dictionary.
-    """
-    return load(root)
-def db_connect(root:Path):
-    """Open the migrated AgentOS database.
-
-    Args:
-        root: Absolute project root.
-
-    Returns:
-        Initialized SQLite connection.
-    """
-    return connect(root)
-def assess_clarity(payload:dict[str,Any])->ClarityAssessment:
-    """Assess semantic completeness of a user request.
-
-    Args:
-        payload: Intent, target, behavior, criteria, scope, risk, and change flags.
-
-    Returns:
-        Clarity assessment with ambiguities and readiness status.
-    """
-    clean=lambda v:str(v).strip() if v is not None and str(v).strip() else None
-    intent=clean(payload.get('intent'));target=clean(payload.get('target'));expected=clean(payload.get('expected_behavior'));current=clean(payload.get('current_behavior'));criteria=[str(x).strip() for x in payload.get('acceptance_criteria',[]) if str(x).strip()];scope=clean(payload.get('scope'));risk=str(payload.get('risk') or 'medium').lower();assumptions=[str(x).strip() for x in payload.get('assumptions',[]) if str(x).strip()];a=[]
-    if not intent:a.append('Không xác định được ý định chính.')
-    if not target:a.append('Chưa xác định chức năng, module, file hoặc hành vi bị ảnh hưởng.')
-    if not expected:a.append('Chưa mô tả kết quả mong muốn.')
-    if intent in {'fix','modify_existing_feature','debug'} and not current:a.append('Chưa mô tả hành vi hiện tại hoặc lỗi đang xảy ra.')
-    if not criteria:a.append('Chưa có tiêu chí nghiệm thu có thể kiểm chứng.')
-    if not scope:a.append('Chưa xác định phạm vi thay đổi.')
-    if any(payload.get(k) for k in ('destructive','schema_change','permission_change','security_change')):risk='high'
-    return ClarityAssessment(intent,target,expected,current,criteria,scope,risk,a,assumptions,'ready' if not a else 'needs_clarification')
-def suggested_questions(x:ClarityAssessment)->list[str]:
-    """Build targeted clarification questions.
-
-    Args:
-        x: Requirement clarity result.
-
-    Returns:
-        Up to five Vietnamese clarification questions.
-    """
-    j=' '.join(x.ambiguities);q=[]
-    if 'chức năng' in j:q.append('Chức năng, màn hình, module hoặc file nào cần thay đổi?')
-    if 'hành vi hiện tại' in j:q.append('Hiện tại hệ thống đang hoạt động hoặc báo lỗi như thế nào?')
-    if 'kết quả mong muốn' in j:q.append('Kết quả chính xác bạn mong muốn sau khi sửa là gì?')
-    if 'tiêu chí nghiệm thu' in j:q.append('Những điều kiện nào phải đúng để xem task đã hoàn thành?')
-    if 'phạm vi' in j:q.append('Phạm vi thay đổi được phép gồm những phần nào?')
-    return q[:5]
-def save_task(root:Path,task_id:str,request:str,x:ClarityAssessment)->None:
-    """Persist or update a task brief.
-
-    Args:
-        root: Absolute project root.
-        task_id: Stable task identifier.
-        request: Unmodified user request.
-        x: Current clarity assessment.
-
-    Returns:
-        None.
-    """
-    with connect(root) as c:c.execute('INSERT INTO tasks(task_id,original_request,intent,target,expected_behavior,current_behavior,acceptance_criteria,scope,risk,ambiguities,assumptions,status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(task_id) DO UPDATE SET original_request=excluded.original_request,intent=excluded.intent,target=excluded.target,expected_behavior=excluded.expected_behavior,current_behavior=excluded.current_behavior,acceptance_criteria=excluded.acceptance_criteria,scope=excluded.scope,risk=excluded.risk,ambiguities=excluded.ambiguities,assumptions=excluded.assumptions,status=excluded.status,updated_at=CURRENT_TIMESTAMP',(task_id,request,x.intent,x.target,x.expected_behavior,x.current_behavior,json.dumps(x.acceptance_criteria,ensure_ascii=False),x.scope,x.risk,json.dumps(x.ambiguities,ensure_ascii=False),json.dumps(x.assumptions,ensure_ascii=False),x.status))
-def approve_task(root:Path,task_id:str)->None:
-    """Approve a ready task.
-
-    Args:
-        root: Absolute project root.
-        task_id: Existing task identifier.
-
-    Returns:
-        None.
-
-    Raises:
-        RuntimeError: Task is unknown or not ready.
+        Created task metadata.
     """
     with connect(root) as c:
-        r=c.execute('SELECT status FROM tasks WHERE task_id=?',(task_id,)).fetchone()
-        if not r:raise RuntimeError('Task does not exist')
-        if r['status']!='ready':raise RuntimeError('Task still needs clarification')
-        c.execute('UPDATE tasks SET approved=1 WHERE task_id=?',(task_id,))
-def check_write(root:Path,task_id:str,target:str|Path)->dict[str,Any]:
-    """Validate a requested write path.
+        c.execute("INSERT INTO tasks(id,request) VALUES(?,?)", (task_id, request))
+    return {"task_id": task_id, "approved": False}
+
+
+def approve_task(root: Path, task_id: str, scope: list[str]) -> dict[str, Any]:
+    """Approve an existing task for a bounded write scope.
 
     Args:
-        root: Absolute project root.
+        root: Project root.
         task_id: Existing task identifier.
-        target: Requested project-relative or absolute path.
+        scope: Project-relative paths or directory prefixes.
 
     Returns:
-        Write decision with resolved path and reason.
+        Approval metadata.
     """
-    with connect(root) as c:r=c.execute('SELECT status,approved FROM tasks WHERE task_id=?',(task_id,)).fetchone()
-    allowed=bool(r and r['status']=='ready' and r['approved']);reason='approved' if allowed else 'task_not_ready_or_approved';raw=Path(target);resolved=(root/raw).resolve() if not raw.is_absolute() else raw.resolve()
-    if allowed:
-        try:resolved.relative_to(root)
-        except ValueError:allowed,reason=False,'outside_project_root'
-    if allowed and '..' in raw.parts:allowed,reason=False,'path_traversal'
-    if allowed and resolved.parent==root and resolved.suffix in {'.py','.js','.ts','.java','.cs','.go','.rs'}:allowed,reason=False,'source_file_at_project_root'
-    with connect(root) as c:c.execute('INSERT INTO write_audit(task_id,path,allowed,reason) VALUES(?,?,?,?)',(task_id,str(resolved),int(allowed),reason))
-    return {'allowed':allowed,'reason':reason,'resolved_path':str(resolved)}
-def instruction_check(root:Path)->dict[str,Any]:
-    """Verify AGENTS.md is the only instruction source.
+    with connect(root) as c:
+        cur = c.execute("UPDATE tasks SET approved=1,approved_scope=? WHERE id=?", (json.dumps(scope), task_id))
+        if cur.rowcount != 1:
+            raise RuntimeError(f"task not found: {task_id}")
+    return {"task_id": task_id, "approved": True, "scope": scope}
+
+
+def _task(root: Path, task_id: str) -> dict[str, Any]:
+    with connect(root) as c:
+        row = c.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
+    if not row:
+        raise RuntimeError(f"task not found: {task_id}")
+    return dict(row)
+
+
+def _relative_resolved(root: Path, target: str) -> tuple[Path, str | None]:
+    base = root.resolve()
+    candidate = Path(target)
+    if candidate.is_absolute():
+        return candidate.resolve(), None
+    resolved = (base / candidate).resolve()
+    try:
+        rel = resolved.relative_to(base).as_posix()
+    except ValueError:
+        return resolved, None
+    return resolved, rel
+
+
+def check_write(root: Path, task_id: str, target: str) -> dict[str, Any]:
+    """Check whether a task may write a project-relative target.
 
     Args:
-        root: Absolute project root.
+        root: Project root.
+        task_id: Existing task identifier.
+        target: Requested path.
 
     Returns:
-        Instruction check result.
+        Write decision with a stable reason code.
     """
-    found=[]
-    for n in FORBIDDEN_INSTRUCTION_FILES:found.extend(str(p.relative_to(root)) for p in root.rglob(n))
-    return {'ok':not found,'duplicate_instruction_sources':sorted(found)}
-def docs_check(root:Path)->dict[str,Any]:
-    """Verify bilingual documentation and version synchronization.
+    task = _task(root, task_id)
+    _, rel = _relative_resolved(root, target)
+    allowed = False
+    reason = "outside_project_root"
+    if rel is not None:
+        if not task["approved"]:
+            reason = "task_not_approved"
+        else:
+            scope = json.loads(task["approved_scope"])
+            allowed = any(rel == s.rstrip("/") or rel.startswith(s.rstrip("/") + "/") for s in scope)
+            reason = "approved_scope" if allowed else "outside_approved_scope"
+    with connect(root) as c:
+        c.execute("INSERT INTO write_audit(task_id,target,allowed,reason) VALUES(?,?,?,?)", (task_id, target, int(allowed), reason))
+    return {"allowed": allowed, "reason": reason, "target": rel or target}
+
+
+def resolve_placement(root: Path, filename: str, intent: str, feature: str | None = None, layer: str | None = None, file_kind: str | None = None, temporary: bool = False, task_id: str | None = None) -> str:
+    """Resolve a deterministic project-relative placement for a new file.
 
     Args:
-        root: Absolute project root.
-
-    Returns:
-        Documentation consistency report.
-    """
-    cfg=load(root);p=cfg.get('documentation_policy',{});missing=[x for x in p.get('required_docs',[]) if not (root/x).is_file()];v=(root/'VERSION').read_text().strip();text=(root/'.agents/agentos/__init__.py').read_text();m=re.search(r"__version__\s*=\s*['\"]([^'\"]+)['\"]", text);iv=m.group(1) if m else None;guide=(root/p.get('developer_entry_point','huong_dan.md')).read_text();ch=(root/'.agents/docs/RULES_WORKFLOW_CHANGELOG.md').read_text();res={'missing_documents':missing,'version':{'VERSION':v,'governance.json':cfg['version'],'__init__.py':iv,'consistent':v==cfg['version']==iv},'bilingual_markers':{'vi':any(x in guide for x in ('Tiếng Việt','HƯỚNG DẪN','Mục đích')),'en':any(x in guide for x in ('English','Purpose','PROJECT STRUCTURE'))},'changelog_has_current_version':f'v{v}' in ch};res['ok']=not missing and res['version']['consistent'] and all(res['bilingual_markers'].values()) and res['changelog_has_current_version'];return res
-def detect_environment(root:Path,session_id:str)->dict[str,Any]:
-    """Detect and persist the execution environment.
-
-    Args:
-        root: Absolute project root.
-        session_id: Stable profile identifier.
-
-    Returns:
-        Platform and Python environment metadata.
-    """
-    p={'platform':platform.system().lower(),'shell':os.environ.get('SHELL') or os.environ.get('COMSPEC') or '','project_root':str(root),'python_executable':sys.executable,'path_separator':os.sep,'default_encoding':sys.getdefaultencoding(),'virtual_environment':os.environ.get('VIRTUAL_ENV')}
-    with connect(root) as c:c.execute('INSERT INTO environment_profiles(session_id,profile_json) VALUES(?,?) ON CONFLICT(session_id) DO UPDATE SET profile_json=excluded.profile_json',(session_id,json.dumps(p,ensure_ascii=False)))
-    return p
-def resolve_placement(root:Path,filename:str,feature:str|None,layer:str|None,temporary:bool,task_id:str|None)->str:
-    """Resolve a compliant persistent or temporary path.
-
-    Args:
-        root: Absolute project root.
+        root: Project root.
         filename: Requested file name.
-        feature: Optional feature name.
+        intent: Intended responsibility.
+        feature: Optional feature or bounded context.
         layer: Optional architecture layer.
-        temporary: Whether the file is disposable.
-        task_id: Required task identifier for temporary files.
+        file_kind: Optional source, test, script, or documentation kind.
+        temporary: Whether the file is task-scoped runtime material.
+        task_id: Task identifier required for temporary files.
 
     Returns:
-        Project-relative resolved path.
+        Project-relative path.
     """
+    del root, intent
     if temporary:
-        if not task_id:raise RuntimeError('task_id is required')
-        return str(Path('.agents/runtime/task-workspaces')/task_id/('tests' if filename.startswith('test_') else 'scripts')/filename)
-    if filename.startswith('test_'):return str(Path('tests')/(feature or 'integration')/filename)
-    p=Path('src');p=p/feature if feature else p;p=p/layer if layer else p;return str(p/filename)
-def runtime_path(root:Path,task_id:str,kind:str,filename:str)->str:
-    """Create and return a task-local artifact path.
+        if not task_id:
+            raise RuntimeError("task_id is required for temporary placement")
+        bucket = "tests" if file_kind == "test" else "scripts" if file_kind == "script" else "fixtures"
+        return f".agents/runtime/task-workspaces/{task_id}/{bucket}/{filename}"
+    if file_kind == "test":
+        return f"tests/{feature + '/' if feature else ''}{filename}"
+    if file_kind == "script":
+        return f"scripts/{filename}"
+    parts = ["src"]
+    if feature:
+        parts.append(feature)
+    if layer:
+        parts.append(layer)
+    parts.append(filename)
+    return "/".join(parts)
+
+
+def _recommended_context(root: Path, target: str, symbols: list[str], limit: int = 10) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    with connect(root) as c:
+        rows = c.execute("SELECT path,qualname,line_start,line_end FROM symbol_index WHERE path=? ORDER BY line_start", (target,)).fetchall()
+        for row in rows:
+            items.append({**dict(row), "reason": "same_file_symbol"})
+    for symbol in symbols:
+        for match in index_query(root, symbol, limit=5):
+            if match["path"] != target:
+                items.append({"path": match["path"], "qualname": match["qualname"], "line_start": match["line_start"], "line_end": match["line_end"], "reason": "similar_symbol_elsewhere"})
+    seen: set[tuple[str, str]] = set()
+    out = []
+    for item in items:
+        key = (item["path"], item["qualname"])
+        if key not in seen:
+            seen.add(key)
+            out.append(item)
+    return out[:limit]
+
+
+def prepare_change(root: Path, task_id: str, operation: str, target: str, intent: str, symbols: list[str] | None = None, feature: str | None = None, layer: str | None = None, file_kind: str | None = None, temporary: bool = False) -> dict[str, Any]:
+    """Prepare a bounded code change before execution.
 
     Args:
-        root: Absolute project root.
-        task_id: Stable task identifier.
-        kind: Temporary artifact type.
-        filename: Artifact file name.
+        root: Project root.
+        task_id: Existing task identifier.
+        operation: Create or modify.
+        target: Requested path or filename.
+        intent: Intended change.
+        symbols: Symbols involved in the change.
+        feature: Optional feature for create placement.
+        layer: Optional architecture layer for create placement.
+        file_kind: Optional file classification.
+        temporary: Whether a created file is task-scoped.
 
     Returns:
-        Absolute artifact path.
+        Composite preparation report.
+
+    Raises:
+        RuntimeError: Task or operation is invalid.
     """
-    m={'temporary_script':'scripts','temporary_test':'tests','fixture':'fixtures','validation_artifact':'validation-artifacts','download':'downloads','export':'exports'};p=root/'.agents/runtime/task-workspaces'/task_id/m.get(kind,kind)/filename;p.parent.mkdir(parents=True,exist_ok=True);return str(p)
-def project_status(root:Path,task_id:str|None=None)->dict[str,Any]:
-    """Return aggregate project and task state.
+    _task(root, task_id)
+    if operation not in {"create", "modify"}:
+        raise RuntimeError("operation must be create or modify")
+    symbols = symbols or []
+    effective_target = resolve_placement(root, Path(target).name, intent, feature, layer, file_kind, temporary, task_id) if operation == "create" else target
+    similar = []
+    for symbol in symbols:
+        similar.extend(index_query(root, symbol, limit=5))
+    seen = set()
+    similar = [m for m in similar if not ((m["path"], m["qualname"]) in seen or seen.add((m["path"], m["qualname"]))) ]
+    duplicates = [d for d in duplicate_report(root) if any(s["path"] == effective_target for s in d["symbols"])]
+    write = check_write(root, task_id, effective_target)
+    blockers = [] if write["allowed"] else [write["reason"]]
+    return {
+        "task_id": task_id,
+        "operation": operation,
+        "intent": intent,
+        "requested_target": target,
+        "effective_target": effective_target,
+        "placement": {"required": operation == "create", "resolved_path": effective_target},
+        "similar_symbols": similar,
+        "duplicate_candidates": duplicates,
+        "recommended_context": _recommended_context(root, effective_target, symbols),
+        "write": write,
+        "ready": not blockers,
+        "blockers": blockers,
+    }
+
+
+def record_tool_execution(root: Path, task_id: str, tool_name: str, input_data: dict[str, Any], success: bool, output_summary: str, classification: str = "local") -> dict[str, Any]:
+    """Record one tool execution for later evidence linkage.
 
     Args:
-        root: Absolute project root.
+        root: Project root.
+        task_id: Existing task identifier.
+        tool_name: Tool identifier.
+        input_data: Redacted input metadata.
+        success: Whether execution succeeded.
+        output_summary: Bounded output summary.
+        classification: Local, network, dynamic, or unknown.
+
+    Returns:
+        Recorded tool-call identifier.
+    """
+    _task(root, task_id)
+    if classification not in {"local", "network", "dynamic", "unknown"}:
+        raise RuntimeError("invalid tool classification")
+    with connect(root) as c:
+        cur = c.execute("INSERT INTO tool_calls(task_id,tool_name,classification,input_json,success,output_summary) VALUES(?,?,?,?,?,?)", (task_id, tool_name, classification, json.dumps(input_data), int(success), output_summary))
+        tool_call_id = int(cur.lastrowid)
+    return {"tool_call_id": tool_call_id}
+
+
+def record_claim(root: Path, task_id: str, claim_text: str, claim_type: str, risk: str, evidence_tool_call_ids: list[int] | None = None) -> dict[str, Any]:
+    """Record a claim linked atomically to valid supporting evidence.
+
+    Args:
+        root: Project root.
+        task_id: Existing task identifier.
+        claim_text: Conclusion being asserted.
+        claim_type: Controlled claim category.
+        risk: Low, medium, or high.
+        evidence_tool_call_ids: Supporting tool-call identifiers.
+
+    Returns:
+        Claim identifier and evidence metadata.
+    """
+    _task(root, task_id)
+    policy = load_policy(root)["claim_policy"]
+    text = claim_text.strip()
+    if not text:
+        raise RuntimeError("claim_text must not be empty")
+    if claim_type not in CLAIM_TYPES:
+        raise RuntimeError("invalid claim_type")
+    if risk not in RISK_LEVELS:
+        raise RuntimeError("invalid risk")
+    ids = list(dict.fromkeys(evidence_tool_call_ids or []))
+    required = risk == "high" or (risk == "medium" and claim_type in set(policy["require_evidence_for_medium_types"]))
+    if required and not ids:
+        raise RuntimeError("evidence is required for this claim")
+    with connect(root) as c:
+        for call_id in ids:
+            row = c.execute("SELECT task_id,success,classification FROM tool_calls WHERE id=?", (call_id,)).fetchone()
+            if not row:
+                raise RuntimeError(f"tool_call {call_id} not found")
+            if row["task_id"] != task_id:
+                raise RuntimeError(f"tool_call {call_id} belongs to another task")
+            if not row["success"]:
+                raise RuntimeError(f"tool_call {call_id} was not successful")
+            if row["classification"] != "local" and not policy.get("allow_network_evidence", False):
+                raise RuntimeError(f"tool_call {call_id} is not local evidence")
+        cur = c.execute("INSERT INTO claims(task_id,claim_text,claim_type,risk) VALUES(?,?,?,?)", (task_id, text, claim_type, risk))
+        claim_id = int(cur.lastrowid)
+        for call_id in ids:
+            c.execute("INSERT INTO claim_evidence(claim_id,tool_call_id,evidence_role) VALUES(?,?,?)", (claim_id, call_id, "supports"))
+    return {"claim_id": claim_id, "task_id": task_id, "claim_type": claim_type, "risk": risk, "evidence_count": len(ids), "linked_evidence": ids}
+
+
+def list_claims(root: Path, task_id: str) -> list[dict[str, Any]]:
+    """List claims for a task with evidence counts.
+
+    Args:
+        root: Project root.
+        task_id: Existing task identifier.
+
+    Returns:
+        Claims ordered by identifier.
+    """
+    _task(root, task_id)
+    with connect(root) as c:
+        rows = c.execute("""
+            SELECT c.id,c.claim_text,c.claim_type,c.risk,c.created_at,COUNT(ce.tool_call_id) AS evidence_count
+            FROM claims c LEFT JOIN claim_evidence ce ON ce.claim_id=c.id
+            WHERE c.task_id=? GROUP BY c.id ORDER BY c.id
+        """, (task_id,)).fetchall()
+    return [dict(r) for r in rows]
+
+
+def show_claim(root: Path, claim_id: int) -> dict[str, Any]:
+    """Return a claim and all linked tool evidence.
+
+    Args:
+        root: Project root.
+        claim_id: Claim identifier.
+
+    Returns:
+        Claim record and evidence records.
+    """
+    with connect(root) as c:
+        claim = c.execute("SELECT * FROM claims WHERE id=?", (claim_id,)).fetchone()
+        if not claim:
+            raise RuntimeError(f"claim not found: {claim_id}")
+        evidence = c.execute("""
+            SELECT tc.id AS tool_call_id,tc.tool_name,tc.classification,tc.success,tc.output_summary,ce.evidence_role
+            FROM claim_evidence ce JOIN tool_calls tc ON tc.id=ce.tool_call_id
+            WHERE ce.claim_id=? ORDER BY tc.id
+        """, (claim_id,)).fetchall()
+    return {"claim": dict(claim), "evidence": [dict(r) for r in evidence]}
+
+
+def docs_check(root: Path) -> dict[str, Any]:
+    """Check required documentation and version synchronization.
+
+    Args:
+        root: Project root.
+
+    Returns:
+        Documentation synchronization report.
+    """
+    required = ["README.md", "AGENTS.md", "huong_dan.md", ".agents/docs/USAGE.md", ".agents/docs/PROJECT_STRUCTURE.md", ".agents/docs/RULES_WORKFLOW_CHANGELOG.md", "VERSION"]
+    missing = [p for p in required if not (root / p).exists()]
+    version = (root / "VERSION").read_text(encoding="utf-8").strip() if (root / "VERSION").exists() else None
+    policy_version = load_policy(root)["version"] if not missing else None
+    changelog = (root / ".agents/docs/RULES_WORKFLOW_CHANGELOG.md").read_text(encoding="utf-8") if (root / ".agents/docs/RULES_WORKFLOW_CHANGELOG.md").exists() else ""
+    guide = (root / "huong_dan.md").read_text(encoding="utf-8") if (root / "huong_dan.md").exists() else ""
+    consistent = version == policy_version == __version__
+    return {"ok": not missing and consistent and version in changelog and "Tiếng Việt" in guide and "English" in guide, "missing_documents": missing, "version": {"VERSION": version, "governance.json": policy_version, "__init__.py": __version__, "consistent": consistent}, "bilingual_markers": {"vi": "Tiếng Việt" in guide, "en": "English" in guide}, "changelog_has_current_version": bool(version and version in changelog)}
+
+
+def instruction_check(root: Path) -> dict[str, Any]:
+    """Verify that AGENTS.md is the only model instruction source.
+
+    Args:
+        root: Project root.
+
+    Returns:
+        Instruction-source report.
+    """
+    forbidden = ["CLAUDE.md", "GEMINI.md", "COPILOT.md", "CODEX.md", "CURSOR.md", ".agents/README.md"]
+    found = [p for p in forbidden if (root / p).exists()]
+    return {"ok": (root / "AGENTS.md").exists() and not found, "duplicate_instruction_sources": found}
+
+
+def db_status(root: Path) -> dict[str, Any]:
+    """Return current database migration status.
+
+    Args:
+        root: Project root.
+
+    Returns:
+        Current and required schema versions.
+    """
+    with connect(root) as c:
+        current = c.execute("SELECT MAX(version) AS v FROM schema_migrations").fetchone()["v"]
+    return {"current": current, "required": SCHEMA_VERSION, "is_current": current == SCHEMA_VERSION}
+
+
+def project_status(root: Path, task_id: str | None = None) -> dict[str, Any]:
+    """Return aggregated AgentOS project status.
+
+    Args:
+        root: Project root.
         task_id: Optional task identifier.
 
     Returns:
-        Project checks and optional task status.
+        Aggregated runtime status.
     """
-    out={'project':{'instruction_check':instruction_check(root),'docs_check':docs_check(root),'schema':schema_status(root),'index':index_status(root)}}
+    result = {"version": __version__, "instruction": instruction_check(root), "documentation": docs_check(root), "database": db_status(root)}
     if task_id:
-        with connect(root) as c:r=c.execute('SELECT status,approved,risk FROM tasks WHERE task_id=?',(task_id,)).fetchone();used=c.execute('SELECT COUNT(*) n FROM tool_calls WHERE task_id=?',(task_id,)).fetchone()['n']
-        out['task']={'task_id':task_id,'status':r['status'] if r else 'unknown','approved':bool(r['approved']) if r else False,'risk':r['risk'] if r else None,'tool_calls_used':used,'egress_events':len(egress_report(root,task_id))}
-    return out
+        result["task"] = _task(root, task_id)
+        result["claims"] = list_claims(root, task_id)
+    return result

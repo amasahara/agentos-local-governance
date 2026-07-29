@@ -2,9 +2,10 @@
 File: .agents/agentos/__init__.py
 
 Purpose:
-    Expose the AgentOS package version.
+    Expose AgentOS package version metadata.
 
 Responsibilities:
-    - Provide a stable runtime version constant.
+    - Publish the runtime version.
 """
-__version__ = "0.7.0"
+
+__version__ = "0.7.1"

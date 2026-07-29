@@ -1,143 +1,59 @@
-# CẤU TRÚC PROJECT / PROJECT STRUCTURE
+# Project Structure
 
-Tài liệu này giải thích trách nhiệm của từng phần. Nó không thay thế `AGENTS.md`.
+## Authority and documentation
 
-This document explains component responsibilities. It does not replace `AGENTS.md`.
+- `AGENTS.md`: sole coding-agent instruction authority.
+- `README.md`: complete installation, architecture, command, and operational reference.
+- `huong_dan.md`: bilingual developer entry point.
+- `.agents/config/governance.json`: machine-readable active policy.
+- `.agents/docs/RULES_WORKFLOW_CHANGELOG.md`: governance decision history.
+- `.agents/docs/USAGE.md`: command recipes.
 
-## Root files
+## Runtime modules
 
-### `AGENTS.md`
+- `core.py`: task lifecycle, write guard, placement, composite preparation, tool audit, claims, checks, and status.
+- `cli.py`: command parsing, JSON argument handling, and JSON output.
+- `db.py`: SQLite connection, foreign keys, transactions, and migrations.
+- `policy.py`: fail-closed structured-policy validation.
+- `indexing.py`: Python AST symbol index and duplicate candidate reports.
 
-- VI: Nguồn instruction duy nhất cho mọi coding agent.
-- EN: Sole instruction authority for all coding agents.
+## Generated state
 
-### `huong_dan.md`
+- `.agents/state/agentos.db`: persistent project-local audit state.
+- `.agents/runtime/`: temporary task workspaces, validation artifacts, exports, and downloads.
 
-- VI: Điểm bắt đầu đọc project, mô tả song ngữ, workflow và checklist.
-- EN: Project reading entry point with bilingual workflow and checklists.
+## Tests
 
-### `VERSION`
+`.agents/tests/test_agentos.py` locks runtime guarantees, including:
 
-- VI: Phiên bản governance hiện tại.
-- EN: Current governance release version.
+- task and scope enforcement;
+- path traversal denial;
+- file and directory symlink escape denial;
+- internal symlink allowance when scope permits;
+- prepare-change consistency;
+- claim evidence policy and atomicity;
+- documentation and version synchronization.
 
-## `.agents/agentos/`
+## Reading paths
 
-### `core.py`
-
-- clarity assessment;
-- task approval and write gate;
-- environment profiling;
-- tool budget and failure-signature control;
-- placement, duplicate scan and context recommendation;
-- documentation synchronization check.
-
-### `cli.py`
-
-- VI: Giao diện dòng lệnh ổn định cho developer, LLM và MCP wrapper.
-- EN: Stable command-line interface for developers, LLMs, and MCP wrappers.
-
-## `.agents/config/governance.json`
-
-- VI: Các giá trị policy có cấu trúc và có thể kiểm tra tự động.
-- EN: Structured, machine-checkable policy values.
-
-Không đặt prose dài hoặc hướng dẫn sử dụng tại đây.
-
-Do not put long prose or usage guidance here.
-
-## `.agents/docs/`
-
-### `USAGE.md`
-
-Ví dụ command theo từng use case.
-
-Command examples by use case.
-
-### `PROJECT_STRUCTURE.md`
-
-Tài liệu hiện tại: trách nhiệm thành phần và đường dẫn đọc.
-
-This file: component ownership and reading paths.
-
-### `RULES_WORKFLOW_CHANGELOG.md`
-
-Audit trail cho thay đổi rules và workflow.
-
-Audit trail for rules and workflow changes.
-
-## `.agents/tests/`
-
-- VI: Thể hiện các invariant mà hệ thống cam kết.
-- EN: Encodes the invariants guaranteed by the system.
-
-Governance change có enforcement mới phải có test tương ứng.
-
-A governance change introducing new enforcement must include corresponding tests.
-
-## `.agents/state/`
-
-SQLite và state có thể tái tạo. Không commit database runtime.
-
-Regenerable SQLite and state. Do not commit runtime databases.
-
-## `.agents/cache/`
-
-Cache file reads, searches, graph metadata hoặc dữ liệu có thể tái tạo.
-
-Regenerable file-read, search, graph, or related caches.
-
-## `.agents/runtime/`
-
-Workspace, temporary scripts, tests, fixtures, downloads, exports và validation artifacts theo task.
-
-Per-task workspaces, temporary scripts, tests, fixtures, downloads, exports, and validation artifacts.
-
-## Luồng đọc theo mục tiêu / Goal-oriented reading paths
-
-### Hiểu một rule / Understand a rule
+To understand a rule:
 
 ```text
 AGENTS.md
 → governance.json
-→ core.py
+→ policy.py/core.py
 → tests
 → changelog
 ```
 
-### Hiểu một workflow / Understand a workflow
+To review a workflow change:
 
 ```text
-huong_dan.md
-→ AGENTS.md workflow
-→ USAGE.md
-→ cli.py
-→ tests
-```
-
-### Review governance change
-
-```text
-changelog entry
+changelog
 → AGENTS.md diff
 → governance.json diff
-→ implementation diff
+→ runtime diff
 → test diff
-→ docs-check result
+→ README/guide diff
+→ docs-check
 ```
-
-
-## v0.7.0 modules
-
-```text
-.agents/agentos/
-├── db.py
-├── models.py
-├── policy.py
-├── tooling.py
-├── cache.py
-├── indexing.py
-└── documentation.py
-```
-
-`documentation.py` validates file headers and input/output contracts. `indexing.py` incrementally indexes Python functions, async functions, classes, and methods. `tooling.py` implements tool classification, guards, redaction, and egress auditing.

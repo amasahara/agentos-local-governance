@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-from pathlib import Path
-import sys
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / ".agents"))
-from agentos.cli import main
-main()
+#!/usr/bin/env sh
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.cli --root "$ROOT" "$@"

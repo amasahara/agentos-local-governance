@@ -1,104 +1,27 @@
-# RULES & WORKFLOW CHANGELOG / NHẬT KÝ RULES VÀ WORKFLOW
+# Rules and Workflow Changelog
 
-Mỗi thay đổi governance phải được thêm vào đầu file.
+## 2026-07-29 — v0.7.1 — Governance synchronization and evidence-grounded claims
 
-Add each governance change at the top of this file.
+### Request
 
-## Entry template / Mẫu ghi nhận
-
-```markdown
-## YYYY-MM-DD — vX.Y.Z — Title
-
-### Yêu cầu / Request
-...
-
-### Quyết định / Decision
-...
-
-### Enforcement
-- instruction:
-- configuration:
-- runtime:
-- tests:
-
-### File ảnh hưởng / Affected files
-...
-
-### Migration note
-...
-```
-
----
-
-## 2026-07-29 — v0.7.0 — Code Intelligence and Documentation Governance
-
-### Yêu cầu / Request
-
-Đường dẫn xuất hiện một lần tại file header, mục đích module tại file header, và contract dữ liệu vào/ra đầy đủ tại docstring của class/function.
-
-Require one path declaration in each file header, module purpose in the header, and complete input/output contracts in class and function documentation.
+Upgrade the complete AgentOS system from v0.7.0 to v0.7.1 and provide a complete README.
 
 ### Decision
 
-Added local-first tool guards, sanitized egress auditing, file-read cache, incremental Python symbol index, AST-based documentation checks, schema migrations, and status reporting.
-
-### Migration
-
-```bash
-.agents/bin/agentos db-migrate
-.agents/bin/agentos index-build src
-.agents/bin/agentos docs-code-check src
-```
-
----
-
-## 2026-07-28 — v0.5.1 — Bilingual developer documentation and synchronization gate
-
-### Yêu cầu / Request
-
-Bổ sung tài liệu tiếng Việt/tiếng Anh để developer dễ hiểu cấu trúc project, đặc biệt khi yêu cầu người dùng thay đổi rules hoặc workflow.
-
-Add Vietnamese/English documentation so developers can understand the project, especially after user requests that modify project rules or workflows.
-
-### Quyết định / Decision
-
-- Thêm `huong_dan.md` làm điểm bắt đầu đọc project.
-- Thêm mô tả cấu trúc chi tiết.
-- Thêm changelog riêng cho rules/workflow.
-- Quy định governance change phải đánh giá và đồng bộ instruction, config, implementation, tests, documentation và version.
-- Thêm `docs-check` để phát hiện thiếu tài liệu hoặc version drift.
-
-- Add `huong_dan.md` as the project reading entry point.
-- Add a detailed structure document.
-- Add a dedicated rules/workflow changelog.
-- Require governance changes to evaluate and synchronize instructions, configuration, implementation, tests, documentation, and version.
-- Add `docs-check` to detect missing documentation or version drift.
+Implemented composite `prepare-change`; activated claim/evidence runtime and CLI; added `show-claim`; added `claim_policy`; enforced evidence type, risk, task ownership, success, and local classification; added schema indexes; locked symlink containment behavior; synchronized all documentation and version identities.
 
 ### Enforcement
 
-- instruction: `AGENTS.md`
-- configuration: `.agents/config/governance.json`
-- runtime: `.agents/agentos/core.py`, `.agents/agentos/cli.py`
-- tests: `.agents/tests/test_agentos.py`
+- instruction: `AGENTS.md`;
+- structured policy: `.agents/config/governance.json`;
+- runtime: `.agents/agentos/core.py`, `policy.py`, `db.py`, `cli.py`, `indexing.py`;
+- tests: `.agents/tests/test_agentos.py`;
+- human documentation: `README.md`, `huong_dan.md`, `.agents/docs/*`.
 
 ### Migration note
 
-Projects upgrading from v0.5.0 should copy the three documentation files, update the governance synchronization policy, and run:
+Migration 4 adds indexes for tool-call and claim/evidence lookup. Existing v0.7.0 state is migrated automatically when AgentOS opens the database.
 
-```bash
-.agents/bin/agentos docs-check
-```
+## 2026-07-28 — v0.7.0 — Local-first tools, cache, indexing, documentation contracts
 
----
-
-## 2026-07-28 — v0.5.0 — Clarification gate and tool-loop guard
-
-### Yêu cầu / Request
-
-Ngăn LLM tự suy diễn yêu cầu chưa rõ và giảm tool call lỗi lặp lại.
-
-Prevent LLMs from inferring unclear requirements and reduce repeated failing tool calls.
-
-### Quyết định / Decision
-
-Added clarity assessment, approval/write gates, environment detection, tool budgets, normalized failure signatures, and composite change preparation.
+Introduced local-first tool governance, file-read cache contracts, incremental Python symbol indexing, database migrations, documentation-code contracts, and aggregate status.

@@ -1,15 +1,5 @@
 {
-  "version": "0.7.0",
-  "instruction_policy": {
-    "single_source": "AGENTS.md",
-    "forbidden_files": [
-      "CLAUDE.md",
-      "GEMINI.md",
-      "COPILOT.md",
-      "CODEX.md",
-      "CURSOR.md"
-    ]
-  },
+  "version": "0.7.1",
   "language_policy": {
     "understand_user_language_directly": true,
     "preserve_original_request": true,
@@ -17,172 +7,30 @@
     "response_language": "user_language",
     "technical_identifiers_language": "english"
   },
-  "clarification_policy": {
-    "required_when": [
-      "target_is_unknown",
-      "requested_behavior_is_ambiguous",
-      "multiple_material_interpretations_exist",
-      "acceptance_criteria_are_missing",
-      "operation_has_destructive_effects",
-      "database_schema_may_change",
-      "permission_or_security_behavior_may_change",
-      "scope_cannot_be_determined"
-    ],
-    "low_risk": "proceed_with_documented_reversible_assumption",
-    "medium_risk": "ask_before_execution",
-    "high_risk": "require_explicit_scope_acceptance_criteria_and_approval"
-  },
-  "tool_execution_policy": {
-    "max_tool_calls_per_work_unit": 12,
-    "max_identical_tool_calls": 1,
-    "max_retries_per_failure_signature": 1,
-    "max_consecutive_failures": 3,
-    "stop_on_budget_exhaustion": true,
-    "cache_file_reads": true,
-    "cache_searches": true,
-    "bounded_output_default_lines": 120,
-    "error_context_lines": 20,
-    "search_result_limit": 20
+  "instruction_policy": {
+    "single_source": "AGENTS.md",
+    "forbid_model_specific_instruction_files": true
   },
   "filesystem_policy": {
     "project_root_containment": true,
     "deny_path_traversal": true,
     "deny_symlink_escape": true,
-    "runtime_root": ".agents/runtime",
-    "temporary_workspace": ".agents/runtime/task-workspaces/{task_id}"
+    "require_task_approval": true,
+    "require_approved_scope": true
   },
-  "documentation_policy": {
-    "bilingual_languages": [
-      "vi",
-      "en"
-    ],
-    "developer_entry_point": "huong_dan.md",
-    "required_docs": [
-      "huong_dan.md",
-      ".agents/docs/USAGE.md",
-      ".agents/docs/PROJECT_STRUCTURE.md",
-      ".agents/docs/RULES_WORKFLOW_CHANGELOG.md"
-    ],
-    "governance_change_sync_set": [
-      "AGENTS.md",
-      ".agents/config/governance.json",
-      "huong_dan.md",
-      ".agents/docs/PROJECT_STRUCTURE.md",
-      ".agents/docs/USAGE.md",
-      ".agents/docs/RULES_WORKFLOW_CHANGELOG.md",
-      ".agents/agentos",
-      ".agents/tests",
-      "VERSION"
-    ],
-    "require_changelog_for_governance_change": true,
-    "require_version_bump_for_governance_change": true,
-    "require_sync_matrix_in_final_report": true
-  },
-  "code_documentation_policy": {
+  "claim_policy": {
     "enabled": true,
-    "mode": "enforce",
-    "file_header": {
-      "required_for_owned_source": true,
-      "required_fields": [
-        "file",
-        "purpose",
-        "responsibilities"
-      ],
-      "path_comment_scope": "file_header_only"
-    },
-    "symbols": {
-      "public_function": "full",
-      "public_method": "full",
-      "public_class": "full",
-      "business_logic": "full",
-      "private_complex": "summary",
-      "private_trivial": "optional"
-    },
-    "function_contract_fields": [
-      "purpose",
-      "inputs",
-      "outputs",
-      "raises"
-    ],
-    "side_effects_required_when_present": true,
-    "python_style": "google",
-    "generated_files": "exclude",
-    "vendor_files": "exclude",
-    "migration_files": "reduced"
+    "claim_types": ["business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"],
+    "risk_levels": ["low", "medium", "high"],
+    "require_evidence_for_high_risk": true,
+    "require_evidence_for_medium_types": ["business_logic", "security", "data_behavior", "destructive_effect"],
+    "default_evidence_classification": "local",
+    "allow_network_evidence": false,
+    "require_successful_evidence": true,
+    "require_same_task_evidence": true
   },
-  "tool_policy": {
-    "mode": "enforce",
-    "network_requires_justification": true,
-    "network_requires_local_attempt": true,
-    "default_classification": {
-      "location": "unknown",
-      "effect": "execute",
-      "egress": true,
-      "risk": "high"
-    },
-    "tools": {
-      "bounded_file_read": {
-        "location": "local",
-        "effect": "read",
-        "egress": false,
-        "risk": "low"
-      },
-      "grep_search": {
-        "location": "local",
-        "effect": "read",
-        "egress": false,
-        "risk": "low"
-      },
-      "symbol_lookup": {
-        "location": "local",
-        "effect": "read",
-        "egress": false,
-        "risk": "low"
-      },
-      "test_run": {
-        "location": "local",
-        "effect": "execute",
-        "egress": false,
-        "risk": "medium"
-      },
-      "web_search": {
-        "location": "network",
-        "effect": "read",
-        "egress": true,
-        "risk": "medium"
-      },
-      "web_fetch": {
-        "location": "network",
-        "effect": "read",
-        "egress": true,
-        "risk": "medium"
-      },
-      "http_request": {
-        "location": "network",
-        "effect": "dynamic",
-        "egress": true,
-        "risk": "high"
-      },
-      "shell": {
-        "location": "dynamic",
-        "effect": "execute",
-        "egress": "inspect_arguments",
-        "risk": "high"
-      }
-    },
-    "justification_reason_codes": [
-      "current_external_fact_required",
-      "official_documentation_required",
-      "dependency_metadata_missing_locally",
-      "user_explicitly_requested_web",
-      "local_evidence_inconclusive",
-      "remote_repository_operation",
-      "other"
-    ]
-  },
-  "caching_policy": {
-    "file_read_cache_enabled": true,
-    "symbol_index_enabled": true,
-    "symbol_index_scope": "src"
+  "workflows": {
+    "default": ["receive_request", "assess_requirement_clarity", "clarify_if_needed", "approve_task", "detect_environment", "build_or_update_local_index", "prepare_change", "execute_guarded", "documentation_check", "tests", "evidence_review", "egress_review", "structural_review", "synchronize", "report"],
+    "governance_change": ["classify_governance_change", "identify_authoritative_files", "assess_compatibility", "update_instruction", "update_structured_policy", "update_runtime", "update_tests", "update_bilingual_docs", "append_changelog", "bump_version", "run_checks", "report_matrix"]
   }
 }

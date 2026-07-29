@@ -2,83 +2,151 @@
 File: .agents/agentos/db.py
 
 Purpose:
-    Manage the AgentOS SQLite database and additive schema migrations.
+    Provide the SQLite persistence layer for AgentOS governance state.
 
 Responsibilities:
-    - Open the project-local database.
-    - Create compatibility, cache, index, evidence, and audit tables.
-    - Report the active schema version.
+    - Open project-local database connections.
+    - Apply ordered schema migrations.
+    - Preserve relational integrity for tasks, tool calls, claims, and evidence.
 """
 from __future__ import annotations
-import sqlite3
-from pathlib import Path
-SCHEMA_VERSION=3
 
-def connect(root:Path)->sqlite3.Connection:
-    """Open the database and apply missing migrations.
+import sqlite3
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Iterator
+
+SCHEMA_VERSION = 4
+
+
+def _db_path(root: Path) -> Path:
+    """Return the project-local SQLite database path.
 
     Args:
-        root: Absolute AgentOS project root.
+        root: Absolute or relative project root.
 
     Returns:
-        Initialized SQLite connection with named row access.
-
-    Raises:
-        sqlite3.Error: Database creation or migration fails.
+        Path to the AgentOS state database.
     """
-    path=root/'.agents/state/agentos.sqlite3'; path.parent.mkdir(parents=True,exist_ok=True)
-    c=sqlite3.connect(path); c.row_factory=sqlite3.Row; migrate(c); return c
+    path = root.resolve() / ".agents" / "state" / "agentos.db"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
 
-def migrate(c:sqlite3.Connection)->None:
-    """Apply additive migrations in version order.
+
+@contextmanager
+def connect(root: Path) -> Iterator[sqlite3.Connection]:
+    """Open a migrated SQLite connection with foreign keys enabled.
 
     Args:
-        c: Open SQLite connection.
+        root: Project root.
+
+    Yields:
+        Configured SQLite connection.
+    """
+    connection = sqlite3.connect(_db_path(root))
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
+    migrate(connection)
+    try:
+        yield connection
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def migrate(connection: sqlite3.Connection) -> None:
+    """Apply all required schema migrations.
+
+    Args:
+        connection: Open SQLite connection.
 
     Returns:
         None.
-
-    Raises:
-        sqlite3.Error: A migration statement fails.
     """
-    c.execute("CREATE TABLE IF NOT EXISTS schema_metadata (key TEXT PRIMARY KEY,value TEXT NOT NULL)")
-    row=c.execute("SELECT value FROM schema_metadata WHERE key='schema_version'").fetchone(); current=int(row['value']) if row else 0
-    for v in range(current+1,SCHEMA_VERSION+1):
-        (_m1 if v==1 else _m2 if v==2 else _m3)(c)
-        c.execute("INSERT INTO schema_metadata(key,value) VALUES('schema_version',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",(str(v),)); c.commit()
+    connection.execute("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY)")
+    current = connection.execute("SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations").fetchone()["v"]
+    migrations = [_m1, _m2, _m3, _m4]
+    for version, fn in enumerate(migrations, start=1):
+        if version > current:
+            fn(connection)
+            connection.execute("INSERT INTO schema_migrations(version) VALUES(?)", (version,))
 
-def schema_status(root:Path)->dict:
-    """Return current and required schema versions.
 
-    Args:
-        root: Absolute AgentOS project root.
-
-    Returns:
-        Schema status dictionary.
-    """
-    with connect(root) as c: row=c.execute("SELECT value FROM schema_metadata WHERE key='schema_version'").fetchone()
-    current=int(row['value']) if row else 0
-    return {'current':current,'required':SCHEMA_VERSION,'is_current':current==SCHEMA_VERSION}
-
-def _m1(c):
+def _m1(c: sqlite3.Connection) -> None:
     c.executescript("""
-    CREATE TABLE IF NOT EXISTS tasks(task_id TEXT PRIMARY KEY,original_request TEXT NOT NULL,intent TEXT,target TEXT,expected_behavior TEXT,current_behavior TEXT,acceptance_criteria TEXT NOT NULL DEFAULT '[]',scope TEXT,risk TEXT NOT NULL,ambiguities TEXT NOT NULL DEFAULT '[]',assumptions TEXT NOT NULL DEFAULT '[]',status TEXT NOT NULL,approved INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-    CREATE TABLE IF NOT EXISTS tool_calls(id INTEGER PRIMARY KEY AUTOINCREMENT,task_id TEXT NOT NULL,tool_name TEXT NOT NULL,normalized_args TEXT NOT NULL,success INTEGER,failure_signature TEXT,output_summary TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-    CREATE TABLE IF NOT EXISTS write_audit(id INTEGER PRIMARY KEY AUTOINCREMENT,task_id TEXT NOT NULL,path TEXT NOT NULL,allowed INTEGER NOT NULL,reason TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-    CREATE TABLE IF NOT EXISTS environment_profiles(session_id TEXT PRIMARY KEY,profile_json TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE tasks(
+        id TEXT PRIMARY KEY,
+        request TEXT NOT NULL,
+        approved INTEGER NOT NULL DEFAULT 0,
+        approved_scope TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE write_audit(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT,
+        target TEXT NOT NULL,
+        allowed INTEGER NOT NULL,
+        reason TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(task_id) REFERENCES tasks(id)
+    );
     """)
-def _m2(c):
+
+
+def _m2(c: sqlite3.Connection) -> None:
     c.executescript("""
-    CREATE TABLE IF NOT EXISTS tool_events(id INTEGER PRIMARY KEY AUTOINCREMENT,task_id TEXT NOT NULL,tool_name TEXT NOT NULL,event_type TEXT NOT NULL,classification_json TEXT NOT NULL,args_hash TEXT,decision TEXT,reason TEXT,success INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-    CREATE TABLE IF NOT EXISTS egress_events(id INTEGER PRIMARY KEY AUTOINCREMENT,task_id TEXT NOT NULL,tool_name TEXT NOT NULL,target TEXT,reason_code TEXT,justification TEXT,decision TEXT NOT NULL,success INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-    CREATE TABLE IF NOT EXISTS file_read_cache(task_id TEXT NOT NULL,path TEXT NOT NULL,range_key TEXT NOT NULL,mtime_ns INTEGER NOT NULL,size INTEGER NOT NULL,content_hash TEXT,summary TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,accessed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(task_id,path,range_key));
-    CREATE TABLE IF NOT EXISTS index_metadata(scope TEXT PRIMARY KEY,generation INTEGER NOT NULL DEFAULT 0,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-    CREATE TABLE IF NOT EXISTS symbol_index(path TEXT NOT NULL,name TEXT NOT NULL,qualname TEXT NOT NULL,kind TEXT NOT NULL,parent_qualname TEXT,line_start INTEGER NOT NULL,line_end INTEGER,signature TEXT,fingerprint TEXT NOT NULL,mtime_ns INTEGER NOT NULL,size INTEGER NOT NULL,generation INTEGER NOT NULL,PRIMARY KEY(path,qualname,line_start));
-    CREATE INDEX IF NOT EXISTS idx_symbol_name ON symbol_index(name); CREATE INDEX IF NOT EXISTS idx_symbol_fingerprint ON symbol_index(fingerprint);
+    CREATE TABLE tool_calls(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT NOT NULL,
+        tool_name TEXT NOT NULL,
+        classification TEXT NOT NULL,
+        input_json TEXT NOT NULL,
+        success INTEGER NOT NULL,
+        output_summary TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(task_id) REFERENCES tasks(id)
+    );
+    CREATE TABLE symbol_index(
+        path TEXT NOT NULL,
+        qualname TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        line_start INTEGER NOT NULL,
+        line_end INTEGER NOT NULL,
+        signature TEXT NOT NULL,
+        fingerprint TEXT NOT NULL,
+        PRIMARY KEY(path, qualname)
+    );
     """)
-def _m3(c):
+
+
+def _m3(c: sqlite3.Connection) -> None:
     c.executescript("""
-    CREATE TABLE IF NOT EXISTS claims(id INTEGER PRIMARY KEY AUTOINCREMENT,task_id TEXT NOT NULL,claim_text TEXT NOT NULL,claim_type TEXT NOT NULL,risk TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-    CREATE TABLE IF NOT EXISTS claim_evidence(claim_id INTEGER NOT NULL,tool_call_id INTEGER NOT NULL,evidence_role TEXT NOT NULL,PRIMARY KEY(claim_id,tool_call_id));
-    CREATE TABLE IF NOT EXISTS documentation_findings(id INTEGER PRIMARY KEY AUTOINCREMENT,path TEXT NOT NULL,symbol TEXT,line_start INTEGER,severity TEXT NOT NULL,code TEXT NOT NULL,message TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE claims(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT NOT NULL,
+        claim_text TEXT NOT NULL,
+        claim_type TEXT NOT NULL,
+        risk TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(task_id) REFERENCES tasks(id)
+    );
+    CREATE TABLE claim_evidence(
+        claim_id INTEGER NOT NULL,
+        tool_call_id INTEGER NOT NULL,
+        evidence_role TEXT NOT NULL DEFAULT 'supports',
+        FOREIGN KEY(claim_id) REFERENCES claims(id) ON DELETE CASCADE,
+        FOREIGN KEY(tool_call_id) REFERENCES tool_calls(id),
+        PRIMARY KEY(claim_id, tool_call_id, evidence_role)
+    );
+    """)
+
+
+def _m4(c: sqlite3.Connection) -> None:
+    c.executescript("""
+    CREATE INDEX IF NOT EXISTS idx_tool_calls_task_id ON tool_calls(task_id);
+    CREATE INDEX IF NOT EXISTS idx_claims_task_id ON claims(task_id);
+    CREATE INDEX IF NOT EXISTS idx_claim_evidence_claim_id ON claim_evidence(claim_id);
     """)

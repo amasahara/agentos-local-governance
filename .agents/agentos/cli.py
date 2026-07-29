@@ -1,120 +1,79 @@
-from __future__ import annotations
-import argparse
-import json
-from pathlib import Path
-from .core import (
-    project_root, assess_clarity, suggested_questions, save_task, approve_task,
-    instruction_check, detect_environment, enforce_tool_budget, record_tool_call,
-    resolve_placement, duplicate_scan, similar_symbols, check_write,
-    prepare_change, runtime_path, docs_check
-)
+"""
+File: .agents/agentos/cli.py
 
+Purpose:
+    Expose AgentOS governance through a JSON command-line interface.
 
-def emit(value):
-    print(json.dumps(value, ensure_ascii=False, indent=2))
+Responsibilities:
+    - Parse developer and agent commands.
+    - Delegate to governance modules.
+    - Emit stable machine-readable responses.
+"""
+import argparse,json
+from .core import *
+from .db import schema_status
+from .tooling import guard_tool,record_tool_execution,egress_report
+from .cache import cache_lookup,cache_store
+from .indexing import index_build,index_query,duplicate_report,index_status
+from .documentation import documentation_scan
+def emit(value)->None:
+    """Print a JSON-serializable result.
 
+    Args:
+        value: Result object.
 
-def main():
-    p = argparse.ArgumentParser(prog="agentos")
-    sub = p.add_subparsers(dest="cmd", required=True)
+    Returns:
+        None.
+    """
+    print(json.dumps(value,ensure_ascii=False,indent=2))
+def main()->None:
+    """Parse and execute one AgentOS command.
 
-    s = sub.add_parser("clarity-check")
-    s.add_argument("--task-id", required=True)
-    s.add_argument("--request", required=True)
-    s.add_argument("--payload", required=True, help="JSON object")
+    Args:
+        None.
 
-    s = sub.add_parser("approve-task")
-    s.add_argument("task_id")
-
-    sub.add_parser("instruction-check")
-    sub.add_parser("docs-check")
-
-    s = sub.add_parser("detect-environment")
-    s.add_argument("--session-id", required=True)
-
-    s = sub.add_parser("tool-guard")
-    s.add_argument("--task-id", required=True)
-    s.add_argument("--tool", required=True)
-    s.add_argument("--args", required=True)
-
-    s = sub.add_parser("record-tool")
-    s.add_argument("--task-id", required=True)
-    s.add_argument("--tool", required=True)
-    s.add_argument("--args", required=True)
-    s.add_argument("--success", action="store_true")
-    s.add_argument("--error")
-    s.add_argument("--summary", default="")
-
-    s = sub.add_parser("resolve-placement")
-    s.add_argument("filename")
-    s.add_argument("--feature")
-    s.add_argument("--layer")
-    s.add_argument("--temporary", action="store_true")
-    s.add_argument("--task-id")
-
-    s = sub.add_parser("duplicate-scan")
-    s.add_argument("scope", nargs="?", default="src")
-
-    s = sub.add_parser("similar-symbols")
-    s.add_argument("query")
-
-    s = sub.add_parser("check-write")
-    s.add_argument("path")
-    s.add_argument("--task-id", required=True)
-
-    s = sub.add_parser("prepare-change")
-    s.add_argument("--task-id", required=True)
-    s.add_argument("--operation", choices=["create", "modify", "delete"], required=True)
-    s.add_argument("--target", required=True)
-    s.add_argument("--intent", required=True)
-    s.add_argument("--symbols", default="[]")
-    s.add_argument("--feature")
-    s.add_argument("--layer")
-
-    s = sub.add_parser("runtime-path")
-    s.add_argument("task_id")
-    s.add_argument("kind")
-    s.add_argument("filename")
-
-    args = p.parse_args()
-    root = project_root()
-
-    if args.cmd == "clarity-check":
-        payload = json.loads(args.payload)
-        a = assess_clarity(payload)
-        save_task(root, args.task_id, args.request, a)
-        out = a.__dict__.copy()
-        out["clarification_questions"] = suggested_questions(a) if a.status != "ready" else []
-        emit(out)
-    elif args.cmd == "approve-task":
-        approve_task(root, args.task_id)
-        emit({"approved": True, "task_id": args.task_id})
-    elif args.cmd == "instruction-check":
-        emit(instruction_check(root))
-    elif args.cmd == "docs-check":
-        emit(docs_check(root))
-    elif args.cmd == "detect-environment":
-        emit(detect_environment(root, args.session_id))
-    elif args.cmd == "tool-guard":
-        emit(enforce_tool_budget(root, args.task_id, args.tool, json.loads(args.args)))
-    elif args.cmd == "record-tool":
-        emit(record_tool_call(root, args.task_id, args.tool, json.loads(args.args),
-                              args.success, args.error, args.summary))
-    elif args.cmd == "resolve-placement":
-        emit({"path": resolve_placement(root, args.filename, args.feature, args.layer,
-                                         args.temporary, args.task_id)})
-    elif args.cmd == "duplicate-scan":
-        emit(duplicate_scan(root, args.scope))
-    elif args.cmd == "similar-symbols":
-        emit(similar_symbols(root, args.query))
-    elif args.cmd == "check-write":
-        emit(check_write(root, args.task_id, args.path))
-    elif args.cmd == "prepare-change":
-        emit(prepare_change(root, args.task_id, args.operation, args.target, args.intent,
-                            json.loads(args.symbols), args.feature, args.layer))
-    elif args.cmd == "runtime-path":
-        emit({"path": runtime_path(root, args.task_id, args.kind, args.filename)})
-
-
-if __name__ == "__main__":
-    main()
+    Returns:
+        None.
+    """
+    p=argparse.ArgumentParser(prog='agentos');s=p.add_subparsers(dest='cmd',required=True)
+    a=s.add_parser('clarity-check');a.add_argument('--task-id',required=True);a.add_argument('--request',required=True);a.add_argument('--payload',required=True)
+    a=s.add_parser('approve-task');a.add_argument('task_id')
+    for n in ('instruction-check','docs-check','db-status','db-migrate','duplicate-scan'):s.add_parser(n)
+    a=s.add_parser('detect-environment');a.add_argument('--session-id',required=True)
+    a=s.add_parser('tool-guard');a.add_argument('--task-id',required=True);a.add_argument('--tool',required=True);a.add_argument('--args',required=True);a.add_argument('--justification');a.add_argument('--target')
+    a=s.add_parser('record-tool');a.add_argument('--task-id',required=True);a.add_argument('--tool',required=True);a.add_argument('--args',required=True);a.add_argument('--success',action='store_true');a.add_argument('--error');a.add_argument('--summary',default='')
+    for n in ('cache-lookup','cache-store'):
+        a=s.add_parser(n);a.add_argument('--task-id',required=True);a.add_argument('--path',required=True);a.add_argument('--start',type=int);a.add_argument('--end',type=int)
+        if n=='cache-store':a.add_argument('--summary',required=True)
+    a=s.add_parser('index-build');a.add_argument('scope',nargs='?',default='src')
+    a=s.add_parser('index-query');a.add_argument('query');a.add_argument('--limit',type=int,default=20)
+    a=s.add_parser('index-status');a.add_argument('scope',nargs='?',default='src')
+    for n in ('docs-code-check','docs-code-scan'):
+        a=s.add_parser(n);a.add_argument('scope',nargs='?',default='src')
+    a=s.add_parser('egress-report');a.add_argument('--task-id',required=True)
+    a=s.add_parser('status');a.add_argument('--task-id')
+    a=s.add_parser('resolve-placement');a.add_argument('filename');a.add_argument('--feature');a.add_argument('--layer');a.add_argument('--temporary',action='store_true');a.add_argument('--task-id')
+    a=s.add_parser('check-write');a.add_argument('path');a.add_argument('--task-id',required=True)
+    a=s.add_parser('runtime-path');a.add_argument('task_id');a.add_argument('kind');a.add_argument('filename')
+    x=p.parse_args();root=project_root()
+    if x.cmd=='clarity-check':r=assess_clarity(json.loads(x.payload));save_task(root,x.task_id,x.request,r);o=r.__dict__.copy();o['clarification_questions']=suggested_questions(r) if r.status!='ready' else [];emit(o)
+    elif x.cmd=='approve-task':approve_task(root,x.task_id);emit({'approved':True})
+    elif x.cmd=='instruction-check':emit(instruction_check(root))
+    elif x.cmd=='docs-check':emit(docs_check(root))
+    elif x.cmd in ('db-status','db-migrate'):emit(schema_status(root))
+    elif x.cmd=='detect-environment':emit(detect_environment(root,x.session_id))
+    elif x.cmd=='tool-guard':emit(guard_tool(root,x.task_id,x.tool,json.loads(x.args),json.loads(x.justification) if x.justification else None,x.target))
+    elif x.cmd=='record-tool':emit(record_tool_execution(root,x.task_id,x.tool,json.loads(x.args),x.success,x.summary,x.error))
+    elif x.cmd=='cache-lookup':emit(cache_lookup(root,x.task_id,x.path,x.start,x.end))
+    elif x.cmd=='cache-store':emit(cache_store(root,x.task_id,x.path,x.summary,x.start,x.end))
+    elif x.cmd=='index-build':emit(index_build(root,x.scope))
+    elif x.cmd=='index-query':emit(index_query(root,x.query,x.limit))
+    elif x.cmd=='index-status':emit(index_status(root,x.scope))
+    elif x.cmd=='duplicate-scan':emit(duplicate_report(root))
+    elif x.cmd in ('docs-code-check','docs-code-scan'):emit(documentation_scan(root,x.scope))
+    elif x.cmd=='egress-report':emit(egress_report(root,x.task_id))
+    elif x.cmd=='status':emit(project_status(root,x.task_id))
+    elif x.cmd=='resolve-placement':emit({'path':resolve_placement(root,x.filename,x.feature,x.layer,x.temporary,x.task_id)})
+    elif x.cmd=='check-write':emit(check_write(root,x.task_id,x.path))
+    elif x.cmd=='runtime-path':emit({'path':runtime_path(root,x.task_id,x.kind,x.filename)})
+if __name__=='__main__':main()

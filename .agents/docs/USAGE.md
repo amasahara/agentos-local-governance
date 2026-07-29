@@ -1,4 +1,4 @@
-# AgentOS v0.5.1 usage
+# AgentOS v0.7.0 usage
 
 ## Initialize the project state
 
@@ -115,3 +115,15 @@ When a user asks to add, remove, or change a rule or workflow:
 6. bump `VERSION`;
 7. run `docs-check` and tests;
 8. include a synchronization matrix in the final report.
+
+
+## v0.7.0 commands
+
+```bash
+.agents/bin/agentos db-migrate
+.agents/bin/agentos index-build src
+.agents/bin/agentos index-query "OrderService.create_order"
+.agents/bin/agentos duplicate-scan
+.agents/bin/agentos docs-code-check src
+.agents/bin/agentos status
+```

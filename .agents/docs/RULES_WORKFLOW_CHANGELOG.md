@@ -30,6 +30,28 @@ Add each governance change at the top of this file.
 
 ---
 
+## 2026-07-29 — v0.7.0 — Code Intelligence and Documentation Governance
+
+### Yêu cầu / Request
+
+Đường dẫn xuất hiện một lần tại file header, mục đích module tại file header, và contract dữ liệu vào/ra đầy đủ tại docstring của class/function.
+
+Require one path declaration in each file header, module purpose in the header, and complete input/output contracts in class and function documentation.
+
+### Decision
+
+Added local-first tool guards, sanitized egress auditing, file-read cache, incremental Python symbol index, AST-based documentation checks, schema migrations, and status reporting.
+
+### Migration
+
+```bash
+.agents/bin/agentos db-migrate
+.agents/bin/agentos index-build src
+.agents/bin/agentos docs-code-check src
+```
+
+---
+
 ## 2026-07-28 — v0.5.1 — Bilingual developer documentation and synchronization gate
 
 ### Yêu cầu / Request

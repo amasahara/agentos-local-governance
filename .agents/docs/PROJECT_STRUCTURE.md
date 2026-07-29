@@ -125,3 +125,19 @@ changelog entry
 → test diff
 → docs-check result
 ```
+
+
+## v0.7.0 modules
+
+```text
+.agents/agentos/
+├── db.py
+├── models.py
+├── policy.py
+├── tooling.py
+├── cache.py
+├── indexing.py
+└── documentation.py
+```
+
+`documentation.py` validates file headers and input/output contracts. `indexing.py` incrementally indexes Python functions, async functions, classes, and methods. `tooling.py` implements tool classification, guards, redaction, and egress auditing.

@@ -168,3 +168,16 @@ Not every file must be modified, but every item must be evaluated. The final rep
 A governance change is incomplete when instruction text, structured configuration, runtime enforcement, tests, human documentation, changelog, or version identity materially disagree.
 
 Run `agentos docs-check` and the relevant tests before reporting completion.
+
+
+## Local-first guarded execution
+
+All tool access must pass through AgentOS guard. Unknown tools fail closed. Network calls require structured justification and a successful prior local evidence attempt.
+
+## Code documentation governance
+
+Every owned source file must declare its project-relative path exactly once in the file header. The header must contain `File:`, `Purpose:`, and `Responsibilities:`. Do not repeat the path inside each class or function.
+
+Every public class, public function, public method, and business-logic symbol must document its own contract. Function and method documentation must describe purpose, every meaningful input, returned output, relevant errors, and side effects. Private trivial functions may omit long documentation.
+
+After changing source, run `agentos docs-code-check` before final validation. A stale path header, missing input contract, or missing output contract fails enforcement mode.

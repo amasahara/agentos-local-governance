@@ -345,3 +345,22 @@ Windows:
 Khi phát hiện không đồng bộ, không được sửa một phần rồi tiếp tục. Hãy phân loại thành governance synchronization issue và hoàn tất synchronization gate.
 
 When synchronization drift is detected, do not patch one file and continue. Classify it as a governance synchronization issue and complete the synchronization gate.
+
+
+---
+
+## 13. Tài liệu mã nguồn v0.7.0 / Source documentation v0.7.0
+
+### Tiếng Việt
+
+Đường dẫn chỉ xuất hiện một lần tại file header. File header phải mô tả đường dẫn, mục đích và trách nhiệm module. Contract class/hàm nằm tại docstring của chính symbol; function/method phải mô tả đầy đủ dữ liệu vào và dữ liệu ra, đồng thời ghi lỗi và side effect khi có.
+
+### English
+
+The project-relative path appears exactly once in the file header. The header documents the module path, purpose, and responsibilities. Class/function contracts live in the symbol's own docstring; function and method contracts describe every meaningful input and returned output, plus errors and side effects when applicable.
+
+```bash
+.agents/bin/agentos db-migrate
+.agents/bin/agentos index-build src
+.agents/bin/agentos docs-code-check src
+```

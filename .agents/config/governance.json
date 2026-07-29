@@ -1,5 +1,5 @@
 {
-  "version": "0.5.1",
+  "version": "0.7.0",
   "instruction_policy": {
     "single_source": "AGENTS.md",
     "forbidden_files": [
@@ -77,5 +77,112 @@
     "require_changelog_for_governance_change": true,
     "require_version_bump_for_governance_change": true,
     "require_sync_matrix_in_final_report": true
+  },
+  "code_documentation_policy": {
+    "enabled": true,
+    "mode": "enforce",
+    "file_header": {
+      "required_for_owned_source": true,
+      "required_fields": [
+        "file",
+        "purpose",
+        "responsibilities"
+      ],
+      "path_comment_scope": "file_header_only"
+    },
+    "symbols": {
+      "public_function": "full",
+      "public_method": "full",
+      "public_class": "full",
+      "business_logic": "full",
+      "private_complex": "summary",
+      "private_trivial": "optional"
+    },
+    "function_contract_fields": [
+      "purpose",
+      "inputs",
+      "outputs",
+      "raises"
+    ],
+    "side_effects_required_when_present": true,
+    "python_style": "google",
+    "generated_files": "exclude",
+    "vendor_files": "exclude",
+    "migration_files": "reduced"
+  },
+  "tool_policy": {
+    "mode": "enforce",
+    "network_requires_justification": true,
+    "network_requires_local_attempt": true,
+    "default_classification": {
+      "location": "unknown",
+      "effect": "execute",
+      "egress": true,
+      "risk": "high"
+    },
+    "tools": {
+      "bounded_file_read": {
+        "location": "local",
+        "effect": "read",
+        "egress": false,
+        "risk": "low"
+      },
+      "grep_search": {
+        "location": "local",
+        "effect": "read",
+        "egress": false,
+        "risk": "low"
+      },
+      "symbol_lookup": {
+        "location": "local",
+        "effect": "read",
+        "egress": false,
+        "risk": "low"
+      },
+      "test_run": {
+        "location": "local",
+        "effect": "execute",
+        "egress": false,
+        "risk": "medium"
+      },
+      "web_search": {
+        "location": "network",
+        "effect": "read",
+        "egress": true,
+        "risk": "medium"
+      },
+      "web_fetch": {
+        "location": "network",
+        "effect": "read",
+        "egress": true,
+        "risk": "medium"
+      },
+      "http_request": {
+        "location": "network",
+        "effect": "dynamic",
+        "egress": true,
+        "risk": "high"
+      },
+      "shell": {
+        "location": "dynamic",
+        "effect": "execute",
+        "egress": "inspect_arguments",
+        "risk": "high"
+      }
+    },
+    "justification_reason_codes": [
+      "current_external_fact_required",
+      "official_documentation_required",
+      "dependency_metadata_missing_locally",
+      "user_explicitly_requested_web",
+      "local_evidence_inconclusive",
+      "remote_repository_operation",
+      "other"
+    ]
+  },
+  "caching_policy": {
+    "file_read_cache_enabled": true,
+    "symbol_index_enabled": true,
+    "symbol_index_scope": "src"
   }
 }

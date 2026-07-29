@@ -8,8 +8,8 @@ AgentOS Local Governance helps developers keep AI coding agents aligned with one
 AgentOS Local Governance giúp developer kiểm soát AI coding agent bằng một hệ thống quản trị nằm trực tiếp trong repository, gồm instruction thống nhất, policy có cấu trúc, approval gate, giới hạn filesystem, yêu cầu bằng chứng, kiểm thử và tài liệu đồng bộ.
 
 > Repository slug: `agentos-local-governance`  
-> Current version: `v0.7.1`  
-> Database schema: `4`  
+> Current version: `v0.8.1`  
+> Database schema: `5`  
 > Primary runtime: Python standard library  
 > Test dependency: `pytest`
 
@@ -66,7 +66,7 @@ CURSOR.md
 
 The agent should inspect local code, local indexes, recorded tool calls, and repository state before relying on network tools.
 
-In v0.7.1, evidence-grounded claims accept successful `local` tool calls by default. Network evidence is disabled by the active policy.
+In v0.8.1, evidence-grounded claims accept successful `local` tool calls by default. Network evidence is disabled by the active policy.
 
 #### 3. Fail-closed writes
 
@@ -103,7 +103,7 @@ claim
 
 A governance change is incomplete when instruction text, structured policy, runtime enforcement, tests, developer documentation, changelog, or version identity materially disagree.
 
-### Core capabilities in v0.7.1
+### Core capabilities in v0.8.1
 
 - **Single instruction authority** through `AGENTS.md`
 - **Task creation and bounded approval scopes**
@@ -147,7 +147,7 @@ receive_request
 → report
 ```
 
-The current v0.7.1 CLI directly implements the following runtime portions of that workflow:
+The current v0.8.1 CLI directly implements the following runtime portions of that workflow:
 
 ```text
 start-task
@@ -522,7 +522,7 @@ Shared code is appropriate only when:
 
 ### Python symbol index
 
-The v0.7.1 index supports Python source and records information such as:
+The v0.8.1 index supports Python source and records information such as:
 
 - symbol name;
 - qualified name;
@@ -568,7 +568,7 @@ medium
 high
 ```
 
-Evidence requirements in the default v0.7.1 policy:
+Evidence requirements in the default v0.8.1 policy:
 
 | Risk and type | Evidence requirement |
 |---|---|
@@ -587,7 +587,7 @@ Evidence must be:
 - successful when policy requires success;
 - classified as allowed by policy.
 
-The active v0.7.1 policy uses `local` evidence and keeps network evidence disabled.
+The active v0.8.1 policy uses `local` evidence and keeps network evidence disabled.
 
 Claim insertion and claim-evidence insertion occur in one transaction. If any referenced evidence is invalid, the claim is not partially stored.
 
@@ -765,7 +765,7 @@ v0.7.0 expanded the system toward runtime-enforced local governance:
 
 #### v0.7.1 — Governance synchronization and evidence-grounded claims
 
-v0.7.1 closes gaps between documented behavior and runtime implementation:
+v0.7.1 closed gaps between documented behavior and runtime implementation:
 
 - implements composite `prepare-change` for create and modify;
 - uses a consistent `effective_target` across placement, context, and write checks;
@@ -778,6 +778,29 @@ v0.7.1 closes gaps between documented behavior and runtime implementation:
 - advances the database schema to migration 4;
 - synchronizes runtime, policy, tests, bilingual documentation, changelog, and version identity.
 
+#### v0.8.1 — Runtime repair and documentation enforcement patch
+
+v0.8.1 is a focused compatibility patch based on the post-v0.7.1 audit. It does not introduce the heartbeat, persistent workflow checklist, governance drift baseline, installer, or git-hook design reserved for v0.8.x. It repairs the runtime contracts already promised by v0.7.0/v0.7.1:
+
+- restores `tooling.py`, `cache.py`, and `documentation.py` as importable runtime modules;
+- keeps `core.record_tool_execution()` as the single canonical writer to `tool_calls`;
+- adds migration 5 for `tool_events`, `egress_events`, and `file_read_cache`;
+- adds fail-closed `tool-guard`, result audit, and task-scoped `egress-report`;
+- adds content-validated `cache-store` and `cache-lookup`;
+- exposes `docs-scan --scope ...` through the CLI;
+- enforces module `File`, `Purpose`, and `Responsibilities` headers plus public-symbol docstrings;
+- adds regression tests for migration 5, tool audit, egress policy, cache invalidation, and documentation scanning;
+- advances the release database schema to migration 5.
+
+Pre-merge validation for v0.8.1:
+
+```bash
+.agents/bin/agentos instruction-check
+.agents/bin/agentos docs-check
+.agents/bin/agentos docs-scan --scope .agents/agentos
+PYTHONPATH=.agents python3 -m pytest .agents/tests -q
+```
+
 ### Tests
 
 Run:
@@ -786,7 +809,7 @@ Run:
 PYTHONPATH=.agents python3 -m pytest .agents/tests -q
 ```
 
-The v0.7.1 test suite covers:
+The v0.8.1 test suite covers:
 
 - task creation and approval;
 - approved write scopes;
@@ -812,7 +835,7 @@ The v0.7.1 test suite covers:
 
 ### Current scope and limitations
 
-Version `v0.7.1` focuses on:
+Version `v0.8.1` focuses on:
 
 - repository-local Python governance utilities;
 - CLI integration;
@@ -926,7 +949,7 @@ CURSOR.md
 
 Agent nên kiểm tra code local, symbol index local, tool call đã ghi và trạng thái repository trước khi dựa vào network tool.
 
-Trong v0.7.1, evidence-grounded claim mặc định chỉ chấp nhận tool call thành công có classification `local`. Network evidence đang bị tắt trong policy hiện hành.
+Trong v0.8.1, evidence-grounded claim mặc định chỉ chấp nhận tool call thành công có classification `local`. Network evidence đang bị tắt trong policy hiện hành.
 
 #### 3. Write fail-closed
 
@@ -963,7 +986,7 @@ claim
 
 Một governance change chưa hoàn chỉnh khi instruction, structured policy, runtime enforcement, test, tài liệu developer, changelog hoặc version identity còn bất đồng đáng kể.
 
-### Chức năng chính trong v0.7.1
+### Chức năng chính trong v0.8.1
 
 - **Một nguồn instruction duy nhất** qua `AGENTS.md`
 - **Tạo task và phê duyệt phạm vi ghi có giới hạn**
@@ -1007,7 +1030,7 @@ receive_request
 → report
 ```
 
-CLI v0.7.1 hiện triển khai trực tiếp các phần runtime sau:
+CLI v0.8.1 hiện triển khai trực tiếp các phần runtime sau:
 
 ```text
 start-task
@@ -1382,7 +1405,7 @@ Chỉ đưa code vào shared khi:
 
 ### Python symbol index
 
-Index v0.7.1 hỗ trợ Python và ghi nhận:
+Index v0.8.1 hỗ trợ Python và ghi nhận:
 
 - symbol name;
 - qualified name;
@@ -1428,7 +1451,7 @@ medium
 high
 ```
 
-Yêu cầu evidence mặc định trong v0.7.1:
+Yêu cầu evidence mặc định trong v0.8.1:
 
 | Risk và loại claim | Yêu cầu evidence |
 |---|---|
@@ -1447,7 +1470,7 @@ Evidence phải:
 - thành công khi policy yêu cầu;
 - có classification được policy cho phép.
 
-Policy v0.7.1 chỉ dùng evidence `local` và chưa cho phép network evidence.
+Policy v0.8.1 chỉ dùng evidence `local` và chưa cho phép network evidence.
 
 Claim và claim evidence được insert trong cùng transaction. Nếu bất kỳ evidence nào không hợp lệ, claim không bị lưu dang dở.
 
@@ -1638,6 +1661,29 @@ v0.7.1 đóng khoảng trống giữa hành vi đã tài liệu hóa và impleme
 - nâng database schema lên migration 4;
 - đồng bộ runtime, policy, tests, tài liệu song ngữ, changelog và version identity.
 
+#### v0.8.1 — Bản vá runtime và enforcement tài liệu source
+
+v0.8.1 là patch tương thích tập trung theo báo cáo audit sau v0.7.1. Phiên bản này chưa đưa heartbeat, workflow checklist bền vững, governance drift baseline, installer hoặc git hook của lộ trình v0.8.x vào runtime. Bản vá sửa các contract đã được công bố từ v0.7.0/v0.7.1:
+
+- phục hồi `tooling.py`, `cache.py` và `documentation.py` thành các runtime module có thể import;
+- giữ `core.record_tool_execution()` là nơi duy nhất ghi vào `tool_calls`;
+- thêm migration 5 cho `tool_events`, `egress_events` và `file_read_cache`;
+- thêm `tool-guard` fail-closed, audit kết quả và `egress-report` theo task;
+- thêm `cache-store` và `cache-lookup` có kiểm tra content identity;
+- expose `docs-scan --scope ...` qua CLI;
+- enforce header `File`, `Purpose`, `Responsibilities` và docstring cho public symbol;
+- thêm regression test cho migration 5, tool audit, egress policy, cache invalidation và documentation scan;
+- nâng schema phát hành lên migration 5.
+
+Kiểm tra pre-merge cho v0.8.1:
+
+```bash
+.agents/bin/agentos instruction-check
+.agents/bin/agentos docs-check
+.agents/bin/agentos docs-scan --scope .agents/agentos
+PYTHONPATH=.agents python3 -m pytest .agents/tests -q
+```
+
 ### Kiểm thử
 
 Chạy:
@@ -1646,7 +1692,7 @@ Chạy:
 PYTHONPATH=.agents python3 -m pytest .agents/tests -q
 ```
 
-Test suite v0.7.1 bao phủ:
+Test suite v0.8.1 bao phủ:
 
 - tạo task và approval;
 - approved write scope;
@@ -1672,7 +1718,7 @@ Test suite v0.7.1 bao phủ:
 
 ### Phạm vi và giới hạn hiện tại
 
-Phiên bản `v0.7.1` tập trung vào:
+Phiên bản `v0.8.1` tập trung vào:
 
 - governance utility Python nằm trong repository;
 - tích hợp qua CLI;
@@ -1738,6 +1784,259 @@ Phiên bản này chưa có file `LICENSE`. Cần bổ sung giấy phép rõ rà
 
 ## Project status
 
-AgentOS Local Governance is under active development. Version `v0.7.1` is suitable for evaluation, experimentation, and repository-local integration. Review the policy and implementation before security-critical or production use.
+AgentOS Local Governance is under active development. Version `v0.8.1` is suitable for evaluation, experimentation, and repository-local integration. Review the policy and implementation before security-critical or production use.
 
-AgentOS Local Governance đang được phát triển tích cực. Phiên bản `v0.7.1` phù hợp để đánh giá, thử nghiệm và tích hợp local trong repository. Cần review policy và implementation trước khi dùng trong production hoặc môi trường bảo mật cao.
+AgentOS Local Governance đang được phát triển tích cực. Phiên bản `v0.8.1` phù hợp để đánh giá, thử nghiệm và tích hợp local trong repository. Cần review policy và implementation trước khi dùng trong production hoặc môi trường bảo mật cao.
+
+
+---
+
+## v0.8.1 runtime repair command reference / Tham chiếu lệnh sửa runtime v0.8.1
+
+### Source documentation enforcement
+
+```bash
+.agents/bin/agentos docs-scan --scope src
+.agents/bin/agentos docs-scan --scope .agents/agentos
+```
+
+A failed scan returns `status: failed`, `ok: false`, and deterministic findings such as `missing_file_header`, `invalid_file_path_header`, `missing_module_purpose`, `missing_module_responsibilities`, and `missing_symbol_docstring`.
+
+Scan thất bại trả `status: failed`, `ok: false` và danh sách finding xác định như `missing_file_header`, `invalid_file_path_header`, `missing_module_purpose`, `missing_module_responsibilities`, `missing_symbol_docstring`.
+
+### Local-first tool guard and egress audit
+
+```bash
+.agents/bin/agentos tool-guard --task-id TASK-001 --tool bounded_file_read --args '{"path":"src/a.py"}'
+.agents/bin/agentos tool-guard --task-id TASK-001 --tool web --args '{"query":"..."}' --reason-code research --justification "Current external evidence is required" --target example.org
+.agents/bin/agentos record-tool-result --task-id TASK-001 --tool web --args '{"query":"..."}' --success
+.agents/bin/agentos egress-report --task-id TASK-001
+```
+
+Unknown tools fail closed. Network tools require a reason, justification, and at least one prior successful local tool call for the same task. `tooling.py` only records guard/audit events; canonical evidence records remain in `core.record_tool_execution()` through `record-tool`.
+
+Tool không đăng ký bị chặn fail-closed. Network tool cần reason, justification và ít nhất một local tool call thành công trước đó trong cùng task. `tooling.py` chỉ ghi guard/audit event; evidence chuẩn trong `tool_calls` vẫn do `core.record_tool_execution()` qua lệnh `record-tool` quản lý.
+
+### File-read cache
+
+```bash
+.agents/bin/agentos cache-store --task-id TASK-001 --path src/a.py --range-key 1:160 --summary "Relevant implementation summary"
+.agents/bin/agentos cache-lookup --task-id TASK-001 --path src/a.py --range-key 1:160
+```
+
+A cache hit requires matching task ID, normalized project-relative path, range key, modification time, size, and SHA-256 content hash. Changed files invalidate and remove stale entries.
+
+Cache chỉ hit khi task ID, path chuẩn hóa, range key, thời gian sửa, kích thước và SHA-256 content hash còn khớp. File thay đổi làm entry cũ bị vô hiệu và xóa.
+
+---
+
+# v0.8.1 — Persistent workflow, drift awareness, and safe installation
+
+Version 0.8.1 completes the v0.8 proposal on top of the v0.7.2 runtime repair. Its central change is that workflow state no longer depends on an LLM remembering the conversation. Required progress is persisted in SQLite and the current task is stored under `.agents/runtime/current_task.json`.
+
+## New persistent task commands
+
+```bash
+.agents/bin/agentos start-task --task-id TASK-042 --request "Change order validation"
+.agents/bin/agentos use-task --task-id TASK-042
+.agents/bin/agentos whoami
+.agents/bin/agentos next-step
+```
+
+`start-task` now performs three actions atomically from the user's perspective:
+
+1. creates the task record;
+2. seeds all configured workflow steps;
+3. selects the task as the current local task.
+
+Commands accepting a task can omit `--task-id`; AgentOS resolves the current task. Every normal CLI response is wrapped with a `context_reminder` containing the active task, original request, approval scope, workflow progress, next pending step, and governance drift count.
+
+## Persistent workflow checklist
+
+Migration 6 adds `workflow_steps`. Existing commands automatically mark their corresponding steps after successful execution. Manual steps can be recorded explicitly:
+
+```bash
+.agents/bin/agentos mark-step \
+  --step structural_review \
+  --status done \
+  --note "Reviewed placement and duplicate candidates."
+
+.agents/bin/agentos mark-step \
+  --step egress_review \
+  --status skipped \
+  --note "No network calls were made."
+```
+
+A skipped step without a note is rejected. Inspect progress with:
+
+```bash
+.agents/bin/agentos workflow-status
+```
+
+Run tests through the governance wrapper so the `tests` step can be recorded:
+
+```bash
+.agents/bin/agentos run-tests --path .agents/tests
+```
+
+Run instruction and documentation synchronization together:
+
+```bash
+.agents/bin/agentos sync-check
+```
+
+The final gate is:
+
+```bash
+.agents/bin/agentos report
+```
+
+It exits with code `2` and lists pending steps until the workflow is complete.
+
+## Governance drift detection
+
+Migration 7 adds `governance_baseline` and `governance_change_log`. AgentOS tracks:
+
+- `AGENTS.md`;
+- `.agents/config/governance.json`;
+- `.agents/config/governance.local.json` when present;
+- `VERSION`;
+- every Python module under `.agents/agentos/`.
+
+Create the first reviewed baseline manually:
+
+```bash
+.agents/bin/agentos ack-baseline --acknowledged-by human
+```
+
+A coding agent must not run this command on behalf of the user. Review changes with:
+
+```bash
+.agents/bin/agentos drift-check
+.agents/bin/agentos drift-diff --file AGENTS.md
+```
+
+`status`, `whoami`, and normal CLI responses expose the number of unacknowledged governance changes. Drift detection reports that content changed; it does not decide whether the change is correct.
+
+## Safe installation
+
+Linux and macOS:
+
+```bash
+/path/to/agentos/.agents/bin/install.sh /path/to/existing-project
+```
+
+Windows:
+
+```bat
+C:\path\to\agentos\.agents\bin\install.cmd
+```
+
+The installer copies the private `.agents/` namespace and never overwrites existing root files. When `AGENTS.md`, `README.md`, `huong_dan.md`, or `VERSION` already exists, the AgentOS version is written using an `.agentos` suffix for manual merge. The first installation runs instruction, documentation, and database checks, then creates an installer baseline.
+
+For a non-standard source root:
+
+```bash
+SOURCE_ROOT=app .agents/bin/install.sh /path/to/project
+```
+
+This creates `.agents/config/governance.local.json` rather than editing the distributed policy.
+
+## Local policy override
+
+`governance.local.json` overlays project-specific values. Nested policy sections are merged one level so a small override does not remove unrelated mandatory fields:
+
+```json
+{
+  "source_root": "app",
+  "claim_policy": {
+    "allow_network_evidence": true
+  }
+}
+```
+
+Local overrides are tracked by drift detection.
+
+## Optional git gate
+
+Install the supplied pre-commit hook:
+
+```bash
+.agents/bin/install-git-hooks.sh
+```
+
+The hook runs:
+
+```text
+instruction-check
+→ docs-check
+→ docs-scan
+→ drift-check
+→ AgentOS tests
+```
+
+The hook is an additional defense layer, not an operating-system sandbox. Direct writes outside AgentOS remain possible; review, drift detection, Git policy, and human approval remain necessary.
+
+## Database schema v7
+
+| Migration | Tables | Purpose |
+|---|---|---|
+| 5 | `tool_events`, `egress_events`, `file_read_cache` | Tool governance and cache repair |
+| 6 | `workflow_steps` | Persistent workflow checklist |
+| 7 | `governance_baseline`, `governance_change_log` | Human-visible governance drift |
+
+## v0.8.1 validation checklist
+
+```bash
+.agents/bin/agentos instruction-check
+.agents/bin/agentos docs-check
+.agents/bin/agentos docs-scan --scope .agents/agentos
+PYTHONPATH=.agents python3 -m pytest .agents/tests -q
+.agents/bin/agentos db-status
+```
+
+Expected release state:
+
+```text
+version: 0.8.1
+schema: 7
+38 tests passed
+instruction-check: ok
+
+docs-check: ok
+
+docs-scan: passed
+```
+
+---
+
+# v0.8.1 — Workflow bền vững, cảnh báo drift và cài đặt an toàn
+
+Phiên bản 0.8.1 hoàn thiện đề xuất v0.8 trên nền bản vá v0.7.2. Thay đổi trọng tâm là trạng thái workflow không còn phụ thuộc vào việc LLM nhớ nội dung hội thoại. Tiến trình bắt buộc được lưu trong SQLite và task hiện tại được lưu tại `.agents/runtime/current_task.json`.
+
+## Lệnh task mới
+
+```bash
+.agents/bin/agentos start-task --task-id TASK-042 --request "Thay đổi validation đơn hàng"
+.agents/bin/agentos use-task --task-id TASK-042
+.agents/bin/agentos whoami
+.agents/bin/agentos next-step
+```
+
+Mỗi phản hồi CLI thông thường có `context_reminder`, gồm task hiện tại, yêu cầu gốc, trạng thái approval, phạm vi được duyệt, tiến độ workflow, bước tiếp theo và số thay đổi governance chưa được xác nhận.
+
+## Checklist workflow bắt buộc
+
+Migration 6 bổ sung bảng `workflow_steps`. Các lệnh thành công tự đánh dấu step tương ứng. Step thủ công dùng `mark-step`. Khi bỏ qua, `--note` là bắt buộc. Lệnh `report` chặn fail-closed và trả exit code `2` nếu còn step bắt buộc chưa hoàn thành.
+
+## Phát hiện thay đổi governance
+
+Migration 7 bổ sung baseline hash và change log. Người dùng tạo mốc đã review bằng `ack-baseline`; agent không được tự gọi lệnh này thay người dùng. `drift-check` phát hiện thay đổi chưa xác nhận, còn `drift-diff` hỗ trợ review nội dung cụ thể.
+
+## Cài đặt không ghi đè
+
+`install.sh` và `install.cmd` không ghi đè các file root đã có. File AgentOS xung đột được ghi với hậu tố `.agentos` để merge thủ công. Source root hoặc policy riêng của project được lưu trong `governance.local.json`.
+
+## Git hook tùy chọn
+
+`install-git-hooks.sh` cài pre-commit gate để chạy instruction check, docs check, source documentation scan, drift check và test. Đây là lớp phòng thủ bổ sung; AgentOS không phải sandbox hệ điều hành.

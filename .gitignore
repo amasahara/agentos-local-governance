@@ -1,7 +1,9 @@
-.agents/state/*.sqlite3
-.agents/runtime/*
-!.agents/runtime/.gitkeep
+.agents/state/*
+!.agents/state/.gitkeep
 .agents/cache/*
 !.agents/cache/.gitkeep
+.agents/runtime/*
+!.agents/runtime/.gitkeep
 __pycache__/
 .pytest_cache/
+*.pyc

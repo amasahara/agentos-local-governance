@@ -370,17 +370,28 @@ def db_status(root: Path) -> dict[str, Any]:
 
 
 def project_status(root: Path, task_id: str | None = None) -> dict[str, Any]:
-    """Return aggregated AgentOS project status.
+    """Return aggregate project, task, workflow, and drift status.
 
     Args:
         root: Project root.
         task_id: Optional task identifier.
 
     Returns:
-        Aggregated runtime status.
+        Aggregate status report.
     """
-    result = {"version": __version__, "instruction": instruction_check(root), "documentation": docs_check(root), "database": db_status(root)}
-    if task_id:
-        result["task"] = _task(root, task_id)
-        result["claims"] = list_claims(root, task_id)
+    from .drift import drift_check
+    from .workflow import current_task_id, workflow_status
+
+    active = task_id or current_task_id(root)
+    result: dict[str, Any] = {
+        "version": __version__,
+        "instruction": instruction_check(root),
+        "documentation": docs_check(root),
+        "database": db_status(root),
+        "drift": drift_check(root, task_id=active),
+        "current_task": active,
+    }
+    if active:
+        result["task"] = _task(root, active)
+        result["workflow"] = workflow_status(root, active)
     return result

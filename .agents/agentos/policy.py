@@ -34,6 +34,16 @@ def load_policy(root: Path) -> dict[str, Any]:
     if not path.exists():
         raise RuntimeError("governance policy not found")
     policy = json.loads(path.read_text(encoding="utf-8"))
+    local_path = root.resolve() / ".agents" / "config" / "governance.local.json"
+    if local_path.exists():
+        override = json.loads(local_path.read_text(encoding="utf-8"))
+        if not isinstance(override, dict):
+            raise RuntimeError("governance.local.json must contain an object")
+        for key, value in override.items():
+            if isinstance(value, dict) and isinstance(policy.get(key), dict):
+                policy[key] = {**policy[key], **value}
+            else:
+                policy[key] = value
     validate_policy(policy)
     return policy
 

@@ -72,3 +72,64 @@ Create:
 .agents/bin/agentos instruction-check
 .agents/bin/agentos status --task-id T1
 ```
+
+
+## v0.8.1 repaired runtime commands
+
+### Documentation scan
+
+```bash
+.agents/bin/agentos docs-scan --scope src
+.agents/bin/agentos docs-scan --scope .agents/agentos
+```
+
+### Tool guard and egress audit
+
+```bash
+.agents/bin/agentos tool-guard --task-id TASK-001 --tool bounded_file_read --args '{"path":"src/a.py"}'
+.agents/bin/agentos tool-guard --task-id TASK-001 --tool web --args '{"query":"..."}' --reason-code research --justification "Need current evidence" --target example.org
+.agents/bin/agentos record-tool-result --task-id TASK-001 --tool web --args '{"query":"..."}' --success
+.agents/bin/agentos egress-report --task-id TASK-001
+```
+
+### File-read cache
+
+```bash
+.agents/bin/agentos cache-store --task-id TASK-001 --path src/a.py --range-key 1:160 --summary "Relevant functions"
+.agents/bin/agentos cache-lookup --task-id TASK-001 --path src/a.py --range-key 1:160
+```
+
+## v0.8.1 task heartbeat and workflow
+
+```bash
+agentos start-task --task-id TASK-042 --request "..."
+agentos use-task --task-id TASK-042
+agentos whoami
+agentos next-step
+agentos workflow-status
+agentos mark-step --step structural_review --status done --note "Reviewed."
+agentos run-tests
+agentos sync-check
+agentos report
+```
+
+Commands that accept `--task-id` may omit it after a current task has been selected.
+
+## Governance drift
+
+```bash
+agentos ack-baseline --acknowledged-by human
+agentos drift-check
+agentos drift-diff --file AGENTS.md
+```
+
+Only the user should acknowledge a governance baseline.
+
+## Safe installation
+
+```bash
+.agents/bin/install.sh /path/to/project
+.agents/bin/install-git-hooks.sh
+```
+
+Use `.agents/bin/install.cmd` on Windows. Existing root files are preserved.

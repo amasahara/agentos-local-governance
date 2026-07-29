@@ -1,5 +1,5 @@
 {
-  "version": "0.7.1",
+  "version": "0.8.1",
   "language_policy": {
     "understand_user_language_directly": true,
     "preserve_original_request": true,
@@ -20,17 +20,92 @@
   },
   "claim_policy": {
     "enabled": true,
-    "claim_types": ["business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"],
-    "risk_levels": ["low", "medium", "high"],
+    "claim_types": [
+      "business_logic",
+      "security",
+      "data_behavior",
+      "destructive_effect",
+      "governance",
+      "other"
+    ],
+    "risk_levels": [
+      "low",
+      "medium",
+      "high"
+    ],
     "require_evidence_for_high_risk": true,
-    "require_evidence_for_medium_types": ["business_logic", "security", "data_behavior", "destructive_effect"],
+    "require_evidence_for_medium_types": [
+      "business_logic",
+      "security",
+      "data_behavior",
+      "destructive_effect"
+    ],
     "default_evidence_classification": "local",
     "allow_network_evidence": false,
     "require_successful_evidence": true,
     "require_same_task_evidence": true
   },
   "workflows": {
-    "default": ["receive_request", "assess_requirement_clarity", "clarify_if_needed", "approve_task", "detect_environment", "build_or_update_local_index", "prepare_change", "execute_guarded", "documentation_check", "tests", "evidence_review", "egress_review", "structural_review", "synchronize", "report"],
-    "governance_change": ["classify_governance_change", "identify_authoritative_files", "assess_compatibility", "update_instruction", "update_structured_policy", "update_runtime", "update_tests", "update_bilingual_docs", "append_changelog", "bump_version", "run_checks", "report_matrix"]
+    "default": [
+      "receive_request",
+      "assess_requirement_clarity",
+      "clarify_if_needed",
+      "approve_task",
+      "detect_environment",
+      "build_or_update_local_index",
+      "prepare_change",
+      "execute_guarded",
+      "documentation_check",
+      "tests",
+      "evidence_review",
+      "egress_review",
+      "structural_review",
+      "synchronize",
+      "report"
+    ],
+    "governance_change": [
+      "classify_governance_change",
+      "identify_authoritative_files",
+      "assess_compatibility",
+      "update_instruction",
+      "update_structured_policy",
+      "update_runtime",
+      "update_tests",
+      "update_bilingual_docs",
+      "append_changelog",
+      "bump_version",
+      "run_checks",
+      "report_matrix"
+    ]
+  },
+  "task_context_policy": {
+    "persist_current_task": true,
+    "context_reminder_on_every_cli_command": true,
+    "allow_implicit_current_task": true,
+    "require_explicit_use_task_for_resume": false
+  },
+  "workflow_policy": {
+    "persist_steps": true,
+    "require_skip_reason": true,
+    "report_requires_complete_workflow": true,
+    "failure_exit_code": 2
+  },
+  "drift_policy": {
+    "enabled": true,
+    "tracked_files": [
+      "AGENTS.md",
+      ".agents/config/governance.json",
+      "VERSION",
+      ".agents/agentos/*.py",
+      ".agents/config/governance.local.json"
+    ],
+    "human_acknowledgement_command": "ack-baseline",
+    "agent_must_not_ack_for_user": true
+  },
+  "installation_policy": {
+    "never_overwrite_existing_root_files": true,
+    "fallback_suffix": ".agentos",
+    "support_local_policy_override": true,
+    "git_hook_optional": true
   }
 }

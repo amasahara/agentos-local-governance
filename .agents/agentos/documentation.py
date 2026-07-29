@@ -2,71 +2,74 @@
 File: .agents/agentos/documentation.py
 
 Purpose:
-    Enforce file-header and symbol-contract documentation for Python source.
+    Enforce source-file header and public-symbol documentation contracts.
 
 Responsibilities:
-    - Require the project-relative path once in the module header.
-    - Require module purpose and responsibilities in the file header.
-    - Require public class and function contracts.
-    - Compare documented inputs and outputs with actual signatures.
+    - Scan Python source files under a bounded project-relative scope.
+    - Validate File, Purpose, and Responsibilities header fields.
+    - Validate public class, function, and method docstrings.
+    - Emit deterministic findings suitable for CLI and CI gates.
 """
-import ast,re
+from __future__ import annotations
+
+import ast
 from pathlib import Path
 from typing import Any
-from .models import DocumentationFinding
 
-def documentation_scan(root:Path,scope:str='src')->dict[str,Any]:
-    """Scan a source scope for documentation violations.
+
+def _finding(path: str, code: str, message: str, symbol: str | None = None) -> dict[str, Any]:
+    result: dict[str, Any] = {"path": path, "severity": "error", "code": code, "message": message}
+    if symbol:
+        result["symbol"] = symbol
+    return result
+
+
+def _public(name: str) -> bool:
+    return not name.startswith("_")
+
+
+def documentation_scan(root: Path, scope: str = "src") -> dict[str, Any]:
+    """Scan Python files for required module and public-symbol documentation.
 
     Args:
-        root: Absolute project root.
-        scope: Project-relative file or directory.
+        root: Project root.
+        scope: Project-relative file or directory to scan.
 
     Returns:
-        Scan status, counts, unsupported files, and findings.
+        Pass/fail status, scanned file count, and structured findings.
     """
-    target=(root/scope).resolve();paths=[target] if target.is_file() else sorted(target.rglob('*')) if target.exists() else [];findings=[];unsupported=[];scanned=0
-    for p in paths:
-        if not p.is_file() or any(x in {'vendor','node_modules','.git','__pycache__','generated'} for x in p.parts):continue
-        if p.suffix=='.py':findings.extend(_scan(root,p));scanned+=1
-        elif p.suffix in {'.js','.jsx','.ts','.tsx','.java','.cs','.go','.rs'}:unsupported.append(str(p.relative_to(root)))
-    return {'status':'failed' if any(x.severity=='error' for x in findings) else 'passed','files_scanned':scanned,'unsupported_files':unsupported,'findings':[x.__dict__ for x in findings]}
-def _scan(root,p):
-    rel=str(p.relative_to(root)).replace('\\','/')
-    try:tree=ast.parse(p.read_text(encoding='utf-8'))
-    except (OSError,UnicodeError,SyntaxError) as e:return [DocumentationFinding(rel,None,1,'error','python_parse_failed',str(e))]
-    out=[];doc=ast.get_docstring(tree,clean=False) or ''
-    if not doc:out.append(DocumentationFinding(rel,None,1,'error','missing_file_header','Missing module docstring header.'))
-    else:
-        for f in ('File:','Purpose:','Responsibilities:'):
-            if f not in doc:out.append(DocumentationFinding(rel,None,1,'error','missing_'+f[:-1].lower(),f'Missing {f} in module header.'))
-        m=re.search(r'(?m)^\s*File:\s*(.+?)\s*$',doc)
-        if m and m.group(1).strip().replace('\\','/')!=rel:out.append(DocumentationFinding(rel,None,1,'error','stale_file_path','Header path does not match actual path.'))
-    for node,qn in _symbols(tree):
-        if _required(node):out.extend(_contract(rel,node,qn))
-    return out
-def _symbols(tree):
-    def visit(node,parents):
-        for c in ast.iter_child_nodes(node):
-            if isinstance(c,(ast.ClassDef,ast.FunctionDef,ast.AsyncFunctionDef)):
-                q='.'.join([*parents,c.name]);yield c,q;yield from visit(c,[*parents,c.name])
-            else:yield from visit(c,parents)
-    return visit(tree,[])
-def _required(node):return not getattr(node,'name','').startswith('_') or len(getattr(node,'body',[]))>2
-def _contract(path,node,qn):
-    line=getattr(node,'lineno',1);doc=ast.get_docstring(node,clean=False) or ''
-    if not doc:return [DocumentationFinding(path,qn,line,'error','missing_symbol_docstring','Missing symbol docstring.')]
-    out=[];first=next((x.strip() for x in doc.splitlines() if x.strip()),'')
-    if len(first.split())<3:out.append(DocumentationFinding(path,qn,line,'error','missing_symbol_purpose','Docstring must explain symbol purpose.'))
-    if isinstance(node,ast.ClassDef):return out
-    actual={a.arg for a in [*node.args.posonlyargs,*node.args.args,*node.args.kwonlyargs] if a.arg not in {'self','cls'}};documented=set(_args(doc))
-    for a in sorted(actual-documented):out.append(DocumentationFinding(path,qn,line,'error','missing_input_documentation',f'Missing input documentation for {a}.'))
-    for a in sorted(documented-actual):out.append(DocumentationFinding(path,qn,line,'warning','stale_input_documentation',f'Documented input {a} is not in signature.'))
-    if _returns(node) and not re.search(r'(?m)^\s*Returns:\s*$',doc):out.append(DocumentationFinding(path,qn,line,'error','missing_output_documentation','Function returns data but has no Returns contract.'))
-    return out
-def _args(doc):
-    m=re.search(r'(?ms)^\s*Args:\s*$\n(.*?)(?=^\s*(?:Returns|Raises|Side Effects):\s*$|\Z)',doc)
-    return [] if not m else re.findall(r'(?m)^\s{4,}([A-Za-z_][A-Za-z0-9_]*)(?:\s*\([^)]*\))?:\s*',m.group(1))
-def _returns(node):
-    if node.returns is not None:return not (isinstance(node.returns,ast.Constant) and node.returns.value is None)
-    return any(isinstance(x,ast.Return) and x.value is not None for x in ast.walk(node))
+    project = root.resolve()
+    target = (project / scope).resolve()
+    try:
+        target.relative_to(project)
+    except ValueError as exc:
+        raise RuntimeError("documentation scope is outside project root") from exc
+    files = [target] if target.is_file() else sorted(target.rglob("*.py")) if target.exists() else []
+    findings: list[dict[str, Any]] = []
+    for file in files:
+        rel = file.relative_to(project).as_posix()
+        try:
+            tree = ast.parse(file.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError) as exc:
+            findings.append(_finding(rel, "source_parse_error", str(exc)))
+            continue
+        module_doc = ast.get_docstring(tree, clean=False) or ""
+        if not module_doc:
+            findings.append(_finding(rel, "missing_file_header", "Python source file is missing a module documentation header."))
+        else:
+            expected = f"File: {rel}"
+            if expected not in module_doc:
+                findings.append(_finding(rel, "invalid_file_path_header", f"Module header must contain '{expected}'."))
+            if "Purpose:" not in module_doc:
+                findings.append(_finding(rel, "missing_module_purpose", "Module header is missing Purpose."))
+            if "Responsibilities:" not in module_doc:
+                findings.append(_finding(rel, "missing_module_responsibilities", "Module header is missing Responsibilities."))
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and _public(node.name):
+                if not ast.get_docstring(node):
+                    findings.append(_finding(rel, "missing_symbol_docstring", "Public symbol is missing a docstring.", node.name))
+            if isinstance(node, ast.ClassDef):
+                for child in node.body:
+                    if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)) and _public(child.name) and not ast.get_docstring(child):
+                        findings.append(_finding(rel, "missing_symbol_docstring", "Public method is missing a docstring.", f"{node.name}.{child.name}"))
+    return {"status": "passed" if not findings else "failed", "ok": not findings, "scope": scope, "scanned_files": len(files), "findings": findings}

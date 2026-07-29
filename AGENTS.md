@@ -33,7 +33,8 @@ Before creating or modifying code:
 5. review similar symbols and duplicate candidates;
 6. verify write permission;
 7. execute the change;
-8. run documentation, tests, structural review, and synchronization checks.
+8. run `docs-scan` for the affected source scope;
+9. run tests, structural review, and synchronization checks.
 
 A failed write check blocks execution.
 
@@ -65,3 +66,27 @@ For every governance change, evaluate and report the status of:
 - `README.md` and `huong_dan.md`;
 - `.agents/docs/`;
 - `VERSION` and package version.
+
+
+## v0.8.1 runtime repair gates
+
+- Run `agentos docs-scan --scope <source-root-or-affected-path>` before reporting a source change complete. A failed source documentation scan blocks completion.
+- Use `tool-guard` before governed tool execution. Unknown tools fail closed; network tools require reason, justification, and prior successful local evidence.
+- Keep `record-tool` as the canonical evidence writer. `record-tool-result` records guard/audit outcomes and must not replace evidence records.
+- Use `cache-lookup` before repeating an identical bounded file read and `cache-store` only for bounded, non-sensitive summaries. A stale cache entry must not be reused.
+
+## Persistent task heartbeat and workflow gates (v0.8.1)
+
+AgentOS workflow state is persisted outside the conversation context. Starting a task sets `.agents/runtime/current_task.json` and seeds `workflow_steps` from the configured workflow. Commands may resolve the current task when `--task-id` is omitted.
+
+Before continuing a resumed task, inspect `whoami` or `next-step`. Do not bypass a pending required workflow step because a conversation is long or because a user asks to skip governance. A skipped step must be recorded with `mark-step --status skipped --note ...`; the reason is mandatory.
+
+The final `report` command is fail-closed and must return a non-zero exit code while any required step other than `report` remains pending.
+
+## Governance drift acknowledgement
+
+Governance files are compared against a human-acknowledged hash baseline. Use `drift-check` and `drift-diff` to review changes. A coding agent must not call `ack-baseline` on behalf of the user. Human acknowledgement is required after reviewing intentional governance changes.
+
+## Safe installation and local policy
+
+Installers must preserve existing root files. Conflicting files are written with an `.agentos` suffix for manual merge. Project-specific overrides belong in `.agents/config/governance.local.json`; the canonical `.agents/config/governance.json` remains the distributed baseline.

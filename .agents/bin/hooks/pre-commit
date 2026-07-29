@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+set -eu
+.agents/bin/agentos instruction-check >/dev/null
+.agents/bin/agentos docs-check >/dev/null
+.agents/bin/agentos docs-scan --scope "${AGENTOS_SOURCE_ROOT:-src}" >/dev/null
+.agents/bin/agentos drift-check >/dev/null
+PYTHONPATH=.agents python3 -m pytest .agents/tests -q

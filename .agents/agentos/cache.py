@@ -2,56 +2,93 @@
 File: .agents/agentos/cache.py
 
 Purpose:
-    Cache bounded local file-read evidence.
+    Provide a task-scoped, content-validated file-read cache.
 
 Responsibilities:
-    - Reuse unchanged file reads.
-    - Invalidate entries when file metadata changes.
-    - Normalize whole-file and bounded range keys.
+    - Store bounded summaries for local file reads.
+    - Invalidate cache entries when file metadata or content changes.
+    - Keep cache data isolated by task, path, and requested range.
 """
+from __future__ import annotations
+
 import hashlib
 from pathlib import Path
 from typing import Any
+
 from .db import connect
 
-def cache_lookup(root:Path,task_id:str,path:str,start:int|None=None,end:int|None=None)->dict[str,Any]:
-    """Look up a fresh cached file-read result.
+
+def _metadata(path: Path) -> tuple[int, int, str]:
+    data = path.read_bytes()
+    stat = path.stat()
+    return stat.st_mtime_ns, stat.st_size, hashlib.sha256(data).hexdigest()
+
+
+def cache_store(root: Path, task_id: str, path: str, range_key: str, summary: str) -> dict[str, Any]:
+    """Store or replace a validated file-read summary.
 
     Args:
-        root: Absolute project root.
-        task_id: Stable task identifier.
+        root: Project root.
+        task_id: Existing task identifier.
         path: Project-relative file path.
-        start: Optional first line.
-        end: Optional last line.
+        range_key: Stable identifier for the read range.
+        summary: Bounded non-sensitive summary.
 
     Returns:
-        Cache hit or miss result.
+        Stored cache identity and content hash.
     """
-    p=(root/path).resolve()
-    if not p.is_file():return {'status':'miss','reason':'file_missing'}
-    s=p.stat(); key=_key(start,end)
+    relative = Path(path)
+    absolute = (root.resolve() / relative).resolve()
+    absolute.relative_to(root.resolve())
+    mtime_ns, size, content_hash = _metadata(absolute)
+    normalized = absolute.relative_to(root.resolve()).as_posix()
     with connect(root) as c:
-        r=c.execute('SELECT mtime_ns,size,content_hash,summary FROM file_read_cache WHERE task_id=? AND path=? AND range_key=?',(task_id,str(p),key)).fetchone()
-        if r and r['mtime_ns']==s.st_mtime_ns and r['size']==s.st_size:return {'status':'hit','summary':r['summary'],'content_hash':r['content_hash']}
-    return {'status':'miss','reason':'not_cached_or_stale'}
-def cache_store(root:Path,task_id:str,path:str,summary:str,start:int|None=None,end:int|None=None)->dict[str,Any]:
-    """Store a bounded file-read summary.
+        if not c.execute("SELECT 1 FROM tasks WHERE id=?", (task_id,)).fetchone():
+            raise RuntimeError(f"task not found: {task_id}")
+        c.execute(
+            """INSERT INTO file_read_cache(task_id,path,range_key,mtime_ns,size,content_hash,summary,accessed_at)
+               VALUES(?,?,?,?,?,?,?,CURRENT_TIMESTAMP)
+               ON CONFLICT(task_id,path,range_key) DO UPDATE SET
+               mtime_ns=excluded.mtime_ns,size=excluded.size,content_hash=excluded.content_hash,
+               summary=excluded.summary,accessed_at=CURRENT_TIMESTAMP""",
+            (task_id, normalized, range_key, mtime_ns, size, content_hash, summary),
+        )
+    return {"stored": True, "task_id": task_id, "path": normalized, "range_key": range_key, "content_hash": content_hash}
+
+
+def cache_lookup(root: Path, task_id: str, path: str, range_key: str) -> dict[str, Any]:
+    """Return a cache hit only when current file identity still matches.
 
     Args:
-        root: Absolute project root.
-        task_id: Stable task identifier.
+        root: Project root.
+        task_id: Existing task identifier.
         path: Project-relative file path.
-        summary: Bounded result summary.
-        start: Optional first line.
-        end: Optional last line.
+        range_key: Stable identifier for the read range.
 
     Returns:
-        Stored range key and content hash.
-
-    Raises:
-        FileNotFoundError: The requested file does not exist.
+        Cache hit state and summary when valid.
     """
-    p=(root/path).resolve(); s=p.stat(); digest=hashlib.sha256(p.read_bytes()).hexdigest(); key=_key(start,end)
-    with connect(root) as c:c.execute('INSERT INTO file_read_cache(task_id,path,range_key,mtime_ns,size,content_hash,summary) VALUES(?,?,?,?,?,?,?) ON CONFLICT(task_id,path,range_key) DO UPDATE SET mtime_ns=excluded.mtime_ns,size=excluded.size,content_hash=excluded.content_hash,summary=excluded.summary,accessed_at=CURRENT_TIMESTAMP',(task_id,str(p),key,s.st_mtime_ns,s.st_size,digest,summary[:4000]))
-    return {'stored':True,'range_key':key,'content_hash':digest}
-def _key(start,end):return 'all' if start is None and end is None else f"{'' if start is None else start}:{'' if end is None else end}"
+    absolute = (root.resolve() / path).resolve()
+    try:
+        normalized = absolute.relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return {"hit": False, "reason": "outside_project_root"}
+    if not absolute.is_file():
+        return {"hit": False, "reason": "file_not_found"}
+    mtime_ns, size, content_hash = _metadata(absolute)
+    with connect(root) as c:
+        row = c.execute(
+            "SELECT * FROM file_read_cache WHERE task_id=? AND path=? AND range_key=?",
+            (task_id, normalized, range_key),
+        ).fetchone()
+        if not row:
+            return {"hit": False, "reason": "not_cached"}
+        valid = row["mtime_ns"] == mtime_ns and row["size"] == size and row["content_hash"] == content_hash
+        if not valid:
+            c.execute("DELETE FROM file_read_cache WHERE task_id=? AND path=? AND range_key=?", (task_id, normalized, range_key))
+            return {"hit": False, "reason": "stale"}
+        c.execute(
+            "UPDATE file_read_cache SET accessed_at=CURRENT_TIMESTAMP WHERE task_id=? AND path=? AND range_key=?",
+            (task_id, normalized, range_key),
+        )
+    return {"hit": True, "path": normalized, "range_key": range_key, "summary": row["summary"], "content_hash": content_hash}

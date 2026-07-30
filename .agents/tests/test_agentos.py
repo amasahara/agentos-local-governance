@@ -1,4 +1,4 @@
-"""AgentOS v0.9.0 adversarial and regression tests."""
+"""AgentOS v0.10.1 adversarial and regression tests."""
 from __future__ import annotations
 
 import json
@@ -44,9 +44,9 @@ def guarded_local_call(root: Path, task_id: str = "T1", session: str = "S1", sum
     return result["tool_call_id"]
 
 
-def test_schema_v8(tmp_path: Path) -> None:
+def test_schema_v9_legacy_and_hardening_tables(tmp_path: Path) -> None:
     root = project(tmp_path)
-    assert db_status(root) == {"current": 8, "required": 8, "is_current": True}
+    assert db_status(root) == {"current": 9, "required": 9, "is_current": True}
     with connect(root) as c:
         tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"guarded_executions", "policy_override_approvals", "audit_events"} <= tables
@@ -219,7 +219,7 @@ def test_instruction_check_detects_modern_rule_files(tmp_path: Path) -> None:
 def test_release_docs_and_version_are_synchronized() -> None:
     assert docs_check(ROOT)["ok"] is True
     assert instruction_check(ROOT)["ok"] is True
-    assert load_policy(ROOT)["version"] == "0.9.0"
+    assert load_policy(ROOT)["version"] == "0.10.1"
 
 
 def test_prepare_change_still_enforces_write_scope(tmp_path: Path) -> None:
@@ -227,3 +227,69 @@ def test_prepare_change_still_enforces_write_scope(tmp_path: Path) -> None:
     (root / "src" / "a.py").write_text("def a():\n    return 1\n")
     result = prepare_change(root, "T1", "modify", "src/a.py", "Change a")
     assert result["ready"] is True
+
+
+def test_schema_v9_proxy_tables(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    assert db_status(root) == {"current": 9, "required": 9, "is_current": True}
+    with connect(root) as c:
+        tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert {"proxy_executions", "external_audit_checkpoints"} <= tables
+
+
+def test_proxy_read_creates_signed_external_evidence(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentos.external_audit import verify_external_log
+    from agentos.proxy import proxy_execute
+    root = project(tmp_path); ready(root)
+    monkeypatch.setenv("AGENTOS_AUDIT_HOME", str(tmp_path / "audit-home"))
+    ack_baseline(root, "ci", force_noninteractive=True)
+    (root / "src" / "a.py").write_text("value = 1\n", encoding="utf-8")
+    result = proxy_execute(root, "T1", "S1", "agentos.read_file", {"path": "src/a.py"})
+    assert result["success"] is True
+    assert result["tool_call_id"]
+    assert result["external_audit"]["signature"]
+    assert verify_external_log(root)["ok"] is True
+    with connect(root) as c:
+        assert c.execute("SELECT COUNT(*) n FROM proxy_executions").fetchone()["n"] == 1
+
+
+def test_proxy_blocks_when_baseline_not_initialized(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentos.proxy import proxy_execute
+    root = project(tmp_path); ready(root)
+    monkeypatch.setenv("AGENTOS_AUDIT_HOME", str(tmp_path / "audit-home"))
+    (root / "src" / "a.py").write_text("x=1\n")
+    with pytest.raises(RuntimeError, match="baseline"):
+        proxy_execute(root, "T1", "S1", "agentos.read_file", {"path": "src/a.py"})
+
+
+def test_external_audit_detects_tampering(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentos.external_audit import append_signed_event, log_path, verify_external_log
+    root = project(tmp_path)
+    monkeypatch.setenv("AGENTOS_AUDIT_HOME", str(tmp_path / "audit-home"))
+    append_signed_event(root, "test", {"value": 1}, None, "S1")
+    path = log_path(root)
+    text = path.read_text(encoding="utf-8").replace('"value": 1', '"value": 2')
+    path.write_text(text, encoding="utf-8")
+    assert verify_external_log(root)["ok"] is False
+
+
+def test_proxy_rejects_unexposed_backend_tool(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentos.proxy import proxy_execute
+    root = project(tmp_path); ready(root)
+    monkeypatch.setenv("AGENTOS_AUDIT_HOME", str(tmp_path / "audit-home"))
+    ack_baseline(root, "ci", force_noninteractive=True)
+    with pytest.raises(RuntimeError, match="not exposed"):
+        proxy_execute(root, "T1", "S1", "raw_shell", {"command": ["echo", "x"]})
+
+
+def test_mcp_server_advertises_only_proxy_tools() -> None:
+    from agentos.mcp_server import TOOLS
+    names = {item["name"] for item in TOOLS}
+    assert names == {"agentos.read_file", "agentos.write_file", "agentos.run_command", "agentos.http_request"}
+
+
+def test_external_audit_is_outside_repository_by_default(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentos.external_audit import log_path
+    root = project(tmp_path)
+    monkeypatch.setenv("AGENTOS_AUDIT_HOME", str(tmp_path / "external-audit"))
+    assert root.resolve() not in log_path(root).parents

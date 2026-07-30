@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "agentos": {
+      "command": "/absolute/path/to/project/.agents/bin/agentos-mcp",
+      "args": [
+        "--task-id",
+        "TASK-001",
+        "--session-id",
+        "IDE-SESSION-1"
+      ],
+      "env": {
+        "AGENTOS_AUDIT_HOME": "/user-owned/path/outside/project/agentos-audit"
+      }
+    }
+  }
+}

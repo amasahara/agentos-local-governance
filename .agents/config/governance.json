@@ -1,5 +1,5 @@
 {
-  "version": "0.9.0",
+  "version": "0.10.1",
   "language_policy": {
     "understand_user_language_directly": true,
     "preserve_original_request": true,
@@ -142,5 +142,34 @@
       "task_context_policy"
     ],
     "sensitive_override_requires_approval": true
+  },
+  "proxy_policy": {
+    "enabled": true,
+    "mcp_gateway": true,
+    "direct_backend_access_forbidden": true,
+    "block_on_uninitialized_baseline": true,
+    "block_on_drift": true,
+    "capabilities": [
+      "filesystem.read",
+      "filesystem.write",
+      "process.exec",
+      "network.http"
+    ],
+    "shell_mode": "argv_only_no_shell",
+    "http_max_response_bytes": 1048576
+  },
+  "external_audit_policy": {
+    "enabled": true,
+    "storage": "external_jsonl",
+    "default_home": "~/.agentos/audit",
+    "signature_algorithm": "Ed25519",
+    "hash_chain": true,
+    "fail_closed_for": [
+      "filesystem.write",
+      "process.exec",
+      "network.http"
+    ],
+    "verify_before_report": true,
+    "private_key_outside_repository": true
   }
 }

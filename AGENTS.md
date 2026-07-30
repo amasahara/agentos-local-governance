@@ -99,3 +99,12 @@ Installers must preserve existing root files. Conflicting files are written with
 - Use a distinct session ID for each concurrent agent or IDE session.
 - Do not approve sensitive local overrides or acknowledge baselines on behalf of a human.
 - Do not report completion while baseline, drift, provenance, or override gates are blocked.
+
+
+## v0.10.1 MCP enforcement boundary
+
+When the AgentOS MCP proxy is available, all filesystem, process, network, Git, database, deployment, and secret-access operations must pass through the proxy. Do not call or expose a backend tool directly. A proxy deployment is not an enforcement boundary while the agent retains any bypass path.
+
+The proxy must derive capability and classification, bind the request to the active task and session, evaluate approval, workflow, scope, drift, overrides, and egress policy, invoke the backend itself, and create canonical evidence from the actual result.
+
+Signed external audit records must be stored outside the repository. The coding agent must not receive the signing private key or write/delete access to the audit home. A failed audit write blocks filesystem writes, process execution, and network calls.

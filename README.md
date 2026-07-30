@@ -8,7 +8,7 @@ AgentOS Local Governance helps developers keep AI coding agents aligned with one
 AgentOS Local Governance giúp developer kiểm soát AI coding agent bằng một hệ thống quản trị nằm trực tiếp trong repository, gồm instruction thống nhất, policy có cấu trúc, approval gate, giới hạn filesystem, yêu cầu bằng chứng, kiểm thử và tài liệu đồng bộ.
 
 > Repository slug: `agentos-local-governance`  
-> Current version: `v0.9.0`  
+> Current version: `v0.10.1`  
 > Database schema: `5`  
 > Primary runtime: Python standard library  
 > Test dependency: `pytest`
@@ -2084,3 +2084,80 @@ agentos approve-local-override --reviewed-by USER --note "Reviewed project polic
 The installer no longer acknowledges the governance baseline. After installation,
 a human reviews the governance files and runs `ack-baseline` interactively.
 Non-interactive acknowledgement is labeled `ci_machine`, never `interactive_human`.
+
+
+# v0.10.1 — MCP Enforcement Gateway and External Signed Audit Storage
+
+Version 0.10.1 moves AgentOS enforcement into the actual tool path. An agent should be connected only to the AgentOS MCP gateway, while filesystem, process, and network backends remain reachable only by the proxy. The gateway normalizes each request to a stable capability, evaluates task approval, workflow state, write scope, governance drift, sensitive override status, and egress policy, then invokes the bounded backend adapter itself.
+
+## Enforced proxy tools
+
+```text
+agentos.read_file      → filesystem.read
+agentos.write_file     → filesystem.write
+agentos.run_command    → process.exec
+agentos.http_request   → network.http
+```
+
+Start the stdio MCP gateway for one task and session:
+
+```bash
+.agents/bin/agentos-mcp --task-id TASK-001 --session-id IDE-SESSION-1
+```
+
+Or run one proxy call from the CLI:
+
+```bash
+.agents/bin/agentos --session-id IDE-SESSION-1 proxy-execute \
+  --task-id TASK-001 \
+  --tool agentos.read_file \
+  --args '{"path":"src/orders/service.py"}'
+```
+
+The agent must not retain direct filesystem, shell, HTTP, Git, database, or backend MCP credentials. If a direct path remains available, the gateway is advisory rather than an enforcement boundary.
+
+## External signed audit storage
+
+Proxy request and completion records are appended outside the repository by default:
+
+```text
+~/.agentos/audit/<project-id>.jsonl
+```
+
+Each record contains a sequence number, previous hash, event hash, Ed25519 signature, key ID, task ID, session ID, and redacted payload. The private key is stored outside the repository with user-only permissions where supported. Verify the complete chain with:
+
+```bash
+.agents/bin/agentos audit-verify
+```
+
+Override the storage location with `AGENTOS_AUDIT_HOME`. For production, point it to a user-owned or service-owned directory that the coding agent cannot modify. The local signed JSONL sink improves tamper detection, but an organization should use a separate daemon or remote append-only service for a stronger trust boundary.
+
+## Fail-closed behavior
+
+The proxy blocks write, process, and network capabilities when the baseline is uninitialized, governance drift exists, a sensitive override is pending, task approval is missing, write scope fails, `prepare_change` is incomplete for writes, network justification is missing, or signed audit persistence fails. Shell execution accepts only an argument array and uses `shell=False`. HTTP responses are bounded to 1 MiB by default.
+
+## Installation dependency
+
+```bash
+python3 -m pip install -r .agents/requirements.txt
+```
+
+## Schema
+
+Schema version 9 adds `proxy_executions` and `external_audit_checkpoints`. Existing migrations remain unchanged.
+
+---
+
+# v0.10.1 — MCP Enforcement Gateway và kho audit ngoài repository có chữ ký
+
+Phiên bản 0.10.1 đưa enforcement vào đúng đường thực thi tool. Agent chỉ nên được kết nối với AgentOS MCP gateway; filesystem, process, network và các MCP backend thật không được cấp trực tiếp cho agent. Gateway tự chuẩn hóa capability, kiểm tra task, approval, workflow, write scope, drift, local override và egress policy trước khi gọi adapter thật.
+
+Khởi động MCP gateway:
+
+```bash
+.agents/bin/agentos-mcp --task-id TASK-001 --session-id IDE-SESSION-1
+```
+
+Audit được lưu mặc định tại `~/.agentos/audit/<project-id>.jsonl`, nối hash và ký Ed25519. Chạy `.agents/bin/agentos audit-verify` để xác minh. Trong production, thư mục audit phải thuộc user hoặc service account riêng mà coding agent không có quyền sửa.
+
+Điều kiện quan trọng nhất: agent không được giữ đường gọi trực tiếp tới filesystem, shell, HTTP, Git, database hoặc MCP backend. Nếu vẫn tồn tại đường vòng, proxy chỉ là lớp advisory.

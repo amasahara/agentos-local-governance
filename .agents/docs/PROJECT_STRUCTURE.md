@@ -83,3 +83,14 @@ changelog
 - `drift.py`: recursive tracking, baseline states, acknowledgement methods.
 - `policy.py`: safe override merge and sensitive override approval staging.
 - migration 8: `guarded_executions`, `policy_override_approvals`, `audit_events`, and provenance columns.
+
+
+## v0.10.1 enforcement components
+
+- `.agents/agentos/proxy.py`: policy decision and bounded backend adapters.
+- `.agents/agentos/mcp_server.py`: agent-facing MCP-compatible stdio gateway.
+- `.agents/agentos/external_audit.py`: external Ed25519-signed JSONL audit chain.
+- `.agents/bin/agentos-mcp`: MCP gateway launcher.
+- `.agents/requirements.txt`: cryptography and test dependencies.
+- `proxy_executions`: canonical proxy execution metadata.
+- `external_audit_checkpoints`: verified external audit checkpoints.

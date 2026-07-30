@@ -1,4 +1,4 @@
-# Hướng dẫn AgentOS v0.9.0 / AgentOS v0.9.0 Developer Guide
+# Hướng dẫn AgentOS v0.10.1 / AgentOS v0.10.1 Developer Guide
 
 > Tài liệu này là điểm bắt đầu dành cho developer khi đưa AgentOS vào một project.
 > Phần quan trọng nhất là lựa chọn đúng quy trình cho **project mới** hoặc **project đang tồn tại**.
@@ -1026,3 +1026,20 @@ Automated workflow gates require canonical command provenance. Use a unique sess
 ID for concurrent agents. The installer does not acknowledge the baseline. Final
 reporting is blocked by uninitialized baseline, drift, invalid provenance, or an
 unapproved sensitive local override.
+
+
+## Tiếng Việt — Triển khai MCP proxy và external signed audit
+
+1. Cài dependency: `python3 -m pip install -r .agents/requirements.txt`.
+2. Tạo task, approval, index và `prepare-change` như workflow chuẩn.
+3. Review governance rồi tạo baseline bằng `ack-baseline`.
+4. Cấu hình IDE/agent chỉ kết nối lệnh `.agents/bin/agentos-mcp --task-id TASK-ID --session-id SESSION-ID`.
+5. Gỡ hoặc vô hiệu hóa mọi filesystem/shell/network MCP server được cấp trực tiếp cho agent. Backend credentials chỉ thuộc proxy.
+6. Đặt `AGENTOS_AUDIT_HOME` tới thư mục ngoài repository do người dùng hoặc service account sở hữu.
+7. Chạy `agentos audit-verify` trong pre-merge/CI.
+
+Project cũ nên triển khai theo ba giai đoạn: chạy proxy ở chế độ quan sát; loại bỏ direct backend access; cuối cùng chuyển write/process/network sang fail-closed khi audit sink không khả dụng. Không bật enforcement nếu agent vẫn có terminal hoặc filesystem tool trực tiếp nằm ngoài proxy.
+
+## English — Deploying the MCP proxy and signed external audit
+
+Install `.agents/requirements.txt`, bind the MCP gateway to an approved task and session, remove direct backend tools from the agent configuration, place `AGENTOS_AUDIT_HOME` outside the repository under a separate owner, and run `agentos audit-verify` in CI. Adopt in observe, restricted, and enforced phases for existing repositories.

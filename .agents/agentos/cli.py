@@ -24,6 +24,8 @@ from .documentation import documentation_scan
 from .drift import ack_baseline, drift_check, drift_diff
 from .indexing import duplicate_report, index_build, index_query
 from .policy import approve_local_override, local_override_status
+from .proxy import proxy_execute
+from .external_audit import verify_external_log
 from .tooling import complete_tool, egress_report, guard_tool
 from .workflow import complete_automated_step, current_task_id, mark_step, next_step, normalize_session_id, resolve_task_id, seed_workflow, set_current_task, workflow_status
 
@@ -88,6 +90,9 @@ def parser() -> argparse.ArgumentParser:
     a=s.add_parser("approve-local-override"); a.add_argument("--reviewed-by",required=True); a.add_argument("--note",required=True)
     s.add_parser("local-override-status")
     s.add_parser("docs-check"); s.add_parser("instruction-check"); s.add_parser("db-status")
+    a=s.add_parser("proxy-execute"); _task_arg(a); a.add_argument("--tool",required=True); a.add_argument("--args",default="{}"); a.add_argument("--reason-code"); a.add_argument("--justification"); a.add_argument("--target")
+    s.add_parser("audit-verify")
+    a=s.add_parser("mcp-serve"); _task_arg(a)
     a=s.add_parser("status"); _task_arg(a)
     return p
 
@@ -118,7 +123,7 @@ def main() -> int:
     args=parser().parse_args(); root=Path(args.root).resolve(); session=normalize_session_id(args.session_id)
     try:
         tid=getattr(args,"task_id",None)
-        task_commands={"approve-task","mark-step","workflow-status","index-build","guard-tool","prepare-change","record-claim","list-claims","egress-report","cache-store","cache-lookup","report"}
+        task_commands={"approve-task","mark-step","workflow-status","index-build","guard-tool","prepare-change","record-claim","list-claims","egress-report","cache-store","cache-lookup","report","proxy-execute","mcp-serve"}
         if args.cmd in task_commands:
             tid=resolve_task_id(root,tid,session)
         if args.cmd=="start-task":
@@ -137,6 +142,13 @@ def main() -> int:
             result=complete_tool(root,args.execution_token,_json_arg(args.input,"input"),args.success,args.output,session)
             if result["success"]: complete_automated_step(root,result["task_id"],"execute_guarded","complete-tool",result,evidence_type="tool_call",evidence_id=str(result["tool_call_id"]))
         elif args.cmd=="record-tool": result=record_tool_execution(root,tid,args.tool,_json_arg(args.input,"input"),args.success,args.output,args.classification)
+        elif args.cmd=="proxy-execute":
+            result=proxy_execute(root,tid,session,args.tool,_json_arg(args.args,"args"),args.reason_code,args.justification,args.target)
+            if result.get("success"): complete_automated_step(root,tid,"execute_guarded","proxy-execute",result,evidence_type="tool_call",evidence_id=str(result["tool_call_id"]))
+        elif args.cmd=="audit-verify": result=verify_external_log(root)
+        elif args.cmd=="mcp-serve":
+            from .mcp_server import serve
+            serve(root,tid,session); return 0
         elif args.cmd=="prepare-change":
             result=prepare_change(root,tid,args.operation,args.target,args.intent,_json_arg(args.symbols,"symbols"),args.feature,args.layer,args.file_kind,args.temporary)
             if result.get("ready"): complete_automated_step(root,tid,"prepare_change","prepare-change",result)
@@ -157,11 +169,11 @@ def main() -> int:
             dc,ic=docs_check(root),instruction_check(root); result={"ok":dc["ok"] and ic["ok"],"docs":dc,"instruction":ic}
             if tid and result["ok"]: complete_automated_step(root,tid,"synchronize","sync-check",result)
         elif args.cmd=="report":
-            status=workflow_status(root,tid); pending=[x for x in status["required_pending"] if x!="report"]; drift=drift_check(root,task_id=tid); override=local_override_status(root)
-            blockers={"pending_steps":pending,"invalid_provenance":status["invalid_provenance"],"baseline_state":drift["baseline_state"],"drift_changes":drift["changes"],"sensitive_override_status":override["status"]}
-            blocked=bool(pending or status["invalid_provenance"] or drift["baseline_state"]!="initialized" or drift["drift_detected"] or (override["sensitive"] and override["status"]!="approved"))
+            status=workflow_status(root,tid); pending=[x for x in status["required_pending"] if x!="report"]; drift=drift_check(root,task_id=tid); override=local_override_status(root); audit=verify_external_log(root)
+            blockers={"pending_steps":pending,"invalid_provenance":status["invalid_provenance"],"baseline_state":drift["baseline_state"],"drift_changes":drift["changes"],"sensitive_override_status":override["status"],"external_audit":audit}
+            blocked=bool(pending or status["invalid_provenance"] or drift["baseline_state"]!="initialized" or drift["drift_detected"] or (override["sensitive"] and override["status"]!="approved") or not audit["ok"])
             if blocked: result={"ok":False,"blocked":True,**blockers}
-            else: mark_step(root,tid,"report","done","Final report produced after all automated gates and governance review passed."); result={"ok":True,"workflow":workflow_status(root,tid),"drift":drift,"override":override}
+            else: mark_step(root,tid,"report","done","Final report produced after all automated gates and governance review passed."); result={"ok":True,"workflow":workflow_status(root,tid),"drift":drift,"override":override,"external_audit":audit}
         elif args.cmd=="ack-baseline": result=ack_baseline(root,args.identity,force_noninteractive=args.force_noninteractive,session_id=session)
         elif args.cmd=="drift-check": result=drift_check(root,task_id=current_task_id(root,session))
         elif args.cmd=="drift-diff": result=drift_diff(root,args.file)

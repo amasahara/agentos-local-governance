@@ -155,3 +155,20 @@ agentos approve-local-override --reviewed-by USER --note "Reviewed"
 ## Session isolation
 
 Pass global `--session-id NAME` or set `AGENTOS_SESSION_ID`.
+
+
+## v0.10.1 MCP enforcement gateway
+
+```bash
+python3 -m pip install -r .agents/requirements.txt
+.agents/bin/agentos-mcp --task-id TASK-001 --session-id IDE-1
+.agents/bin/agentos audit-verify
+```
+
+CLI smoke call:
+
+```bash
+.agents/bin/agentos --session-id IDE-1 proxy-execute --task-id TASK-001 --tool agentos.read_file --args '{"path":"src/a.py"}'
+```
+
+Set `AGENTOS_AUDIT_HOME` to a directory outside the repository and outside the coding agent's write scope.

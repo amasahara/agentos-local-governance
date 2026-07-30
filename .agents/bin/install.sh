@@ -15,7 +15,7 @@ for f in AGENTS.md README.md huong_dan.md VERSION; do
     printf '%s\n' "Preserved existing $f; AgentOS copy written to ${out#$TARGET_DIR/}."
   fi
 done
-chmod +x "$TARGET_DIR/.agents/bin/agentos" "$TARGET_DIR/.agents/bin/install-git-hooks.sh" 2>/dev/null || true
+chmod +x "$TARGET_DIR/.agents/bin/agentos" "$TARGET_DIR/.agents/bin/agentos-mcp" "$TARGET_DIR/.agents/bin/install-git-hooks.sh" 2>/dev/null || true
 if [ "$SOURCE_ROOT" != "src" ]; then
   printf '{\n  "source_root": "%s"\n}\n' "$SOURCE_ROOT" > "$TARGET_DIR/.agents/config/governance.local.json"
 fi

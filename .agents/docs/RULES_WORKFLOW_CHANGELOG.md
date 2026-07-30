@@ -1,5 +1,19 @@
 # Rules and Workflow Changelog
 
+## 2026-07-30 — v0.10.1 — MCP Enforcement Gateway and External Signed Audit
+
+### Request
+Move enforcement from voluntary CLI calls into the actual MCP/tool path and persist signed audit evidence outside the repository.
+
+### Decision
+Add an MCP-compatible stdio gateway, stable capability normalization, bounded filesystem/process/HTTP adapters, fail-closed proxy preflight, Ed25519 signed external JSONL audit, verification CLI, schema migration 9, adversarial tests, and bilingual deployment documentation.
+
+### Security boundary
+The proxy is enforceable only when direct backend tools and credentials are removed from the agent. External audit storage must be outside the repository and outside agent write permissions.
+
+### Affected files
+`proxy.py`, `mcp_server.py`, `external_audit.py`, `cli.py`, `db.py`, `governance.json`, tests, README, AGENTS.md, bilingual guide, usage, structure, VERSION.
+
 ## 2026-07-29 — v0.8.1 — Runtime repair: tooling, cache, and docs-scan
 
 ### Request

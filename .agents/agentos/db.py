@@ -16,7 +16,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 
 def _db_path(root: Path) -> Path:
@@ -68,7 +68,7 @@ def migrate(connection: sqlite3.Connection) -> None:
     """
     connection.execute("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY)")
     current = connection.execute("SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations").fetchone()["v"]
-    migrations = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8]
+    migrations = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9]
     for version, fn in enumerate(migrations, start=1):
         if version > current:
             fn(connection)
@@ -328,5 +328,40 @@ def _m8(c: sqlite3.Connection) -> None:
         previous_hash TEXT,
         event_hash TEXT NOT NULL UNIQUE,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+
+def _m9(c: sqlite3.Connection) -> None:
+    """Add MCP proxy and external audit checkpoint state.
+
+    Args:
+        c: Open SQLite connection.
+
+    Returns:
+        None.
+    """
+    c.executescript("""
+    CREATE TABLE proxy_executions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        tool_name TEXT NOT NULL,
+        capability TEXT NOT NULL,
+        decision TEXT NOT NULL,
+        success INTEGER,
+        tool_call_id INTEGER,
+        external_event_hash TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(task_id) REFERENCES tasks(id),
+        FOREIGN KEY(tool_call_id) REFERENCES tool_calls(id)
+    );
+    CREATE INDEX idx_proxy_executions_task ON proxy_executions(task_id);
+    CREATE TABLE external_audit_checkpoints(
+        project_id TEXT PRIMARY KEY,
+        last_sequence INTEGER NOT NULL,
+        last_event_hash TEXT NOT NULL,
+        key_id TEXT NOT NULL,
+        verified_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
     """)

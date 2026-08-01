@@ -318,22 +318,43 @@ def show_claim(root: Path, claim_id: int) -> dict[str, Any]:
 
 
 def docs_check(root: Path) -> dict[str, Any]:
-    """Check required documentation and version synchronization.
-
-    Args:
-        root: Project root.
-
-    Returns:
-        Documentation synchronization report.
-    """
+    """Check required documentation, current version, schema, and command status."""
     required = ["README.md", "AGENTS.md", "huong_dan.md", ".agents/docs/USAGE.md", ".agents/docs/PROJECT_STRUCTURE.md", ".agents/docs/RULES_WORKFLOW_CHANGELOG.md", "VERSION"]
-    missing = [p for p in required if not (root / p).exists()]
+    missing = [rel for rel in required if not (root / rel).exists()]
     version = (root / "VERSION").read_text(encoding="utf-8").strip() if (root / "VERSION").exists() else None
-    policy_version = load_policy(root)["version"] if not missing else None
+    policy = load_policy(root) if not missing else {}
+    policy_version = policy.get("version")
     changelog = (root / ".agents/docs/RULES_WORKFLOW_CHANGELOG.md").read_text(encoding="utf-8") if (root / ".agents/docs/RULES_WORKFLOW_CHANGELOG.md").exists() else ""
     guide = (root / "huong_dan.md").read_text(encoding="utf-8") if (root / "huong_dan.md").exists() else ""
     consistent = version == policy_version == __version__
-    return {"ok": not missing and consistent and version in changelog and "Tiếng Việt" in guide and "English" in guide, "missing_documents": missing, "version": {"VERSION": version, "governance.json": policy_version, "__init__.py": __version__, "consistent": consistent}, "bilingual_markers": {"vi": "Tiếng Việt" in guide, "en": "English" in guide}, "changelog_has_current_version": bool(version and version in changelog)}
+    doc_policy = policy.get("documentation_policy", {})
+    history_begin, history_end = doc_policy.get("history_begin", "AGENTOS_VERSION_HISTORY_BEGIN"), doc_policy.get("history_end", "AGENTOS_VERSION_HISTORY_END")
+    stale: list[str] = []
+    schema_mismatches: list[str] = []
+    for rel in doc_policy.get("current_version_files", ["README.md", "huong_dan.md", "AGENTS.md"]):
+        path = root / rel
+        if not path.exists() or not version:
+            continue
+        text = path.read_text(encoding="utf-8")
+        while f"<!-- {history_begin} -->" in text and f"<!-- {history_end} -->" in text:
+            before, rest = text.split(f"<!-- {history_begin} -->", 1)
+            _, after = rest.split(f"<!-- {history_end} -->", 1)
+            text = before + after
+        for marker in ("Current version:", "Current release:", "Phiên bản hiện tại:"):
+            for line in text.splitlines():
+                if marker in line and version not in line:
+                    stale.append(f"{rel}: {line.strip()}")
+    expected_schema = int(doc_policy.get("current_schema", SCHEMA_VERSION))
+    for rel in ["README.md", "huong_dan.md", ".agents/docs/PROJECT_STRUCTURE.md"]:
+        path = root / rel
+        if path.exists():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if "Database schema:" in line or "Schema database:" in line:
+                    if str(expected_schema) not in line:
+                        schema_mismatches.append(f"{rel}: {line.strip()}")
+    content_ok = not stale and not schema_mismatches
+    ok = not missing and consistent and bool(version and version in changelog) and "Tiếng Việt" in guide and "English" in guide and content_ok
+    return {"ok": ok, "missing_documents": missing, "version": {"VERSION": version, "governance.json": policy_version, "__init__.py": __version__, "consistent": consistent}, "bilingual_markers": {"vi": "Tiếng Việt" in guide, "en": "English" in guide}, "changelog_has_current_version": bool(version and version in changelog), "content_consistency": {"ok": content_ok, "stale_current_version_references": stale, "schema_mismatches": schema_mismatches}}
 
 
 def instruction_check(root: Path) -> dict[str, Any]:

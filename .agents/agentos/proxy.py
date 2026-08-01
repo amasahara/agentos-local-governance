@@ -2,24 +2,30 @@
 File: .agents/agentos/proxy.py
 
 Purpose:
-    Enforce AgentOS policy at the actual tool invocation boundary.
+    Enforce AgentOS policy at the actual MCP/tool invocation boundary.
 
 Responsibilities:
     - Normalize agent-facing tool names into stable capabilities.
-    - Evaluate task, workflow, drift, scope, and egress policy before execution.
-    - Invoke tightly bounded filesystem, shell, and HTTP adapters.
+    - Enforce approval, workflow, scope, process, and egress policy before execution.
+    - Invoke bounded filesystem, process, and HTTP adapters.
     - Produce canonical execution evidence and signed external audit records.
 """
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import json
+import os
+import socket
 import subprocess
+import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
 
 from .core import check_write
+from .concurrency import atomic_write, file_hash
 from .db import connect
 from .drift import drift_check
 from .external_audit import append_signed_event
@@ -32,10 +38,6 @@ CAPABILITIES = {
     "agentos.write_file": "filesystem.write",
     "agentos.run_command": "process.exec",
     "agentos.http_request": "network.http",
-    "filesystem_read": "filesystem.read",
-    "filesystem_write": "filesystem.write",
-    "shell_local": "process.exec",
-    "http": "network.http",
 }
 TOOL_NAMES = {
     "filesystem.read": "filesystem_read",
@@ -43,99 +45,197 @@ TOOL_NAMES = {
     "process.exec": "shell_local",
     "network.http": "http",
 }
+SECRET_ENV_MARKERS = ("TOKEN", "SECRET", "PASSWORD", "API_KEY", "AUTH", "COOKIE", "CREDENTIAL")
+NETWORK_EXECUTABLES = {"curl", "wget", "nc", "netcat", "ssh", "scp", "sftp", "ftp"}
+SHELL_EXECUTABLES = {"bash", "sh", "zsh", "powershell", "pwsh", "cmd"}
 
 
 def normalize_capability(tool_name: str) -> str:
-    """Map a concrete tool name to one stable capability.
-
-    Args:
-        tool_name: Agent-facing tool name.
-
-    Returns:
-        Stable capability identifier.
-    """
+    """Map an exposed proxy tool name to one stable capability."""
     if tool_name not in CAPABILITIES:
         raise RuntimeError(f"tool is not exposed by AgentOS proxy: {tool_name}")
     return CAPABILITIES[tool_name]
 
 
-def _preflight(root: Path, task_id: str, capability: str, args: dict[str, Any]) -> None:
+def _steps(root: Path, task_id: str) -> dict[str, str]:
+    return {item["step_name"]: item["status"] for item in workflow_status(root, task_id)["steps"]}
+
+
+def _inside(root: Path, value: str | None) -> Path:
+    candidate = (root / (value or ".")).resolve() if not Path(value or ".").is_absolute() else Path(value or ".").resolve()
+    candidate.relative_to(root.resolve())
+    return candidate
+
+
+def _command_profile(command: list[str], policy: dict[str, Any]) -> str:
+    if not command or not all(isinstance(x, str) and x for x in command):
+        raise RuntimeError("command must be a non-empty JSON array of strings")
+    executable = Path(command[0]).name.lower()
+    cfg = policy["proxy_policy"]["process_exec"]
+    if executable in set(cfg.get("denied_executables", [])) | NETWORK_EXECUTABLES | SHELL_EXECUTABLES:
+        raise RuntimeError(f"process blocked: executable is denied: {executable}")
+    if executable not in set(cfg.get("allowed_executables", [])):
+        raise RuntimeError(f"process blocked: executable is not allowlisted: {executable}")
+    lowered = [x.lower() for x in command[1:]]
+    joined = " ".join(command)
+    if any(scheme in joined.lower() for scheme in ("http://", "https://", "ftp://")):
+        raise RuntimeError("process blocked: network behavior must use agentos.http_request")
+    if executable in {"python", "python3"}:
+        if "-c" in lowered:
+            raise RuntimeError("process blocked: inline Python is forbidden")
+        if "-m" in lowered:
+            index = lowered.index("-m")
+            module = lowered[index + 1] if index + 1 < len(lowered) else ""
+            if module not in set(cfg.get("allowed_python_modules", [])):
+                raise RuntimeError(f"process blocked: Python module is not allowlisted: {module}")
+            return "test" if module in {"pytest", "unittest"} else "inspect"
+        raise RuntimeError("process blocked: Python execution requires an allowlisted -m module")
+    if executable == "pytest":
+        return "test"
+    if executable in {"ruff", "mypy"}:
+        return "inspect"
+    if executable == "node" and "-e" in lowered:
+        raise RuntimeError("process blocked: inline Node.js is forbidden")
+    if executable == "npm":
+        action = lowered[0] if lowered else ""
+        if action not in set(cfg.get("allowed_npm_commands", [])):
+            raise RuntimeError(f"process blocked: npm action is not allowlisted: {action}")
+        return "test" if action == "test" else "build"
+    if cfg.get("require_known_command_profile", True):
+        raise RuntimeError("process blocked: no known command profile")
+    return "custom"
+
+
+def _filtered_env(extra: dict[str, Any] | None = None) -> dict[str, str]:
+    allowed_names = {"PATH", "PYTHONPATH", "LANG", "LC_ALL", "TMP", "TEMP", "TMPDIR", "SYSTEMROOT", "WINDIR"}
+    env = {k: v for k, v in os.environ.items() if k in allowed_names and not any(marker in k.upper() for marker in SECRET_ENV_MARKERS)}
+    for key, value in (extra or {}).items():
+        key = str(key)
+        if any(marker in key.upper() for marker in SECRET_ENV_MARKERS) or key.upper() in {"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "SSH_AUTH_SOCK"}:
+            continue
+        env[key] = str(value)
+    return env
+
+
+def _validate_host(hostname: str, policy: dict[str, Any]) -> None:
+    cfg = policy["proxy_policy"]["network_http"]
+    host = hostname.rstrip(".").lower()
+    allowed = [x.lower() for x in cfg.get("allowed_domains", [])]
+    if cfg.get("default", "deny") == "deny" and not allowed:
+        raise RuntimeError("network blocked: no domains are approved")
+    exact = host in allowed
+    subdomain = cfg.get("allow_subdomains", False) and any(host.endswith("." + item) for item in allowed)
+    if allowed and not (exact or subdomain):
+        raise RuntimeError(f"network blocked: domain is not allowlisted: {host}")
+    try:
+        addresses = {item[4][0] for item in socket.getaddrinfo(host, None)}
+    except socket.gaierror as exc:
+        raise RuntimeError(f"network blocked: DNS resolution failed for {host}") from exc
+    for value in addresses:
+        ip = ipaddress.ip_address(value)
+        if cfg.get("blocked_loopback", True) and ip.is_loopback:
+            raise RuntimeError("network blocked: loopback address")
+        if cfg.get("blocked_private_networks", True) and ip.is_private:
+            raise RuntimeError("network blocked: private address")
+        if cfg.get("blocked_link_local", True) and ip.is_link_local:
+            raise RuntimeError("network blocked: link-local address")
+
+
+def _validate_url(url: str, policy: dict[str, Any]) -> None:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme.lower() not in set(policy["proxy_policy"]["network_http"].get("allowed_schemes", ["https"])):
+        raise RuntimeError(f"network blocked: scheme is not allowed: {parsed.scheme}")
+    if not parsed.hostname:
+        raise RuntimeError("network blocked: URL has no hostname")
+    _validate_host(parsed.hostname, policy)
+
+
+class _SafeRedirect(urllib.request.HTTPRedirectHandler):
+    def __init__(self, policy: dict[str, Any]):
+        self.policy = policy
+        self.count = 0
+        super().__init__()
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[override]
+        """Validate every redirect destination before following it."""
+        self.count += 1
+        if self.count > int(self.policy["proxy_policy"]["network_http"].get("max_redirects", 3)):
+            raise urllib.error.HTTPError(newurl, code, "too many redirects", headers, fp)
+        _validate_url(newurl, self.policy)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _preflight(root: Path, task_id: str, capability: str, args: dict[str, Any]) -> dict[str, Any]:
     drift = drift_check(root, task_id=task_id)
     override = local_override_status(root)
     policy = load_policy(root)
-    if policy.get("proxy_policy", {}).get("block_on_uninitialized_baseline", True) and drift["baseline_state"] != "initialized":
+    if policy["proxy_policy"].get("block_on_uninitialized_baseline", True) and drift["baseline_state"] != "initialized":
         raise RuntimeError("proxy blocked: governance baseline is not initialized")
-    if policy.get("proxy_policy", {}).get("block_on_drift", True) and drift["drift_detected"]:
+    if policy["proxy_policy"].get("block_on_drift", True) and drift["drift_detected"]:
         raise RuntimeError("proxy blocked: unacknowledged governance drift")
     if override.get("sensitive") and override.get("status") != "approved":
         raise RuntimeError("proxy blocked: sensitive local override is pending approval")
-    status = workflow_status(root, task_id)
-    if capability in {"filesystem.write", "process.exec", "network.http"}:
-        steps = {item["step_name"]: item["status"] for item in status["steps"]}
-        if steps.get("approve_task") != "done":
-            raise RuntimeError("proxy blocked: task is not approved")
-        if steps.get("prepare_change") != "done" and capability == "filesystem.write":
-            raise RuntimeError("proxy blocked: prepare_change is incomplete")
+    steps = _steps(root, task_id)
+    if capability in {"filesystem.write", "process.exec", "network.http"} and steps.get("approve_task") != "done":
+        raise RuntimeError("proxy blocked: task is not approved")
     if capability == "filesystem.write":
-        target = str(args.get("path", ""))
-        decision = check_write(root, task_id, target)
+        if steps.get("prepare_change") != "done":
+            raise RuntimeError("proxy blocked: prepare_change is incomplete")
+        decision = check_write(root, task_id, str(args.get("path", "")))
         if not decision["allowed"]:
             raise RuntimeError(f"proxy blocked: {decision['reason']}")
+    metadata: dict[str, Any] = {}
+    if capability == "process.exec":
+        if steps.get("prepare_change") != "done":
+            raise RuntimeError("proxy blocked: prepare_change is incomplete")
+        metadata["command_profile"] = _command_profile(args.get("command"), policy)
+        metadata["cwd"] = _inside(root, str(args.get("cwd", "."))).relative_to(root.resolve()).as_posix() or "."
+    if capability == "network.http":
+        _validate_url(str(args.get("url", "")), policy)
+    return metadata
 
 
-def _execute_adapter(root: Path, capability: str, args: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str, args: dict[str, Any], metadata: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+    policy = load_policy(root)
     if capability == "filesystem.read":
-        path = (root / str(args["path"])).resolve()
-        path.relative_to(root.resolve())
+        path = _inside(root, str(args["path"]))
         content = path.read_text(encoding=str(args.get("encoding", "utf-8")))
-        start = int(args.get("start", 1)); end = int(args.get("end", 0))
+        start, end = int(args.get("start", 1)), int(args.get("end", 0))
         if end:
             content = "\n".join(content.splitlines()[start - 1:end])
-        return True, {"content": content, "sha256": hashlib.sha256(content.encode("utf-8")).hexdigest()}
+        digest = hashlib.sha256(content.encode()).hexdigest()
+        with connect(root) as c:
+            row = c.execute("SELECT COALESCE(MAX(version),0) AS version FROM file_versions WHERE path=?", (path.relative_to(root.resolve()).as_posix(),)).fetchone()
+        return True, {"content": content, "sha256": digest, "content_hash": digest, "version": row["version"]}
     if capability == "filesystem.write":
-        path = (root / str(args["path"])).resolve(); path.relative_to(root.resolve())
-        path.parent.mkdir(parents=True, exist_ok=True)
-        text = str(args.get("content", "")); path.write_text(text, encoding=str(args.get("encoding", "utf-8")))
-        return True, {"path": path.relative_to(root).as_posix(), "bytes_written": len(text.encode("utf-8")), "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest()}
+        result = atomic_write(root, task_id, session_id, str(args["path"]), str(args.get("content", "")), args.get("expected_hash"), str(args.get("encoding", "utf-8")))
+        return bool(result.get("allowed")), result
     if capability == "process.exec":
-        command = args.get("command")
-        if not isinstance(command, list) or not command or not all(isinstance(x, str) for x in command):
-            raise RuntimeError("command must be a non-empty JSON array of strings")
-        timeout = min(int(args.get("timeout", 120)), 600)
-        proc = subprocess.run(command, cwd=root, text=True, capture_output=True, timeout=timeout, shell=False)
-        return proc.returncode == 0, {"exit_code": proc.returncode, "stdout": proc.stdout[:8000], "stderr": proc.stderr[:8000]}
+        cfg = policy["proxy_policy"]["process_exec"]
+        timeout = min(int(args.get("timeout", 120)), int(cfg.get("max_timeout_seconds", 600)))
+        cwd = _inside(root, str(args.get("cwd", ".")))
+        proc = subprocess.run(args["command"], cwd=cwd, text=True, capture_output=True, timeout=timeout, shell=False, env=_filtered_env(args.get("env")))
+        limit = int(cfg.get("max_output_bytes", 65536))
+        return proc.returncode == 0, {"exit_code": proc.returncode, "profile": metadata["command_profile"], "cwd": metadata["cwd"], "stdout": proc.stdout[:limit], "stderr": proc.stderr[:limit]}
     if capability == "network.http":
+        url = str(args["url"]); _validate_url(url, policy)
         method = str(args.get("method", "GET")).upper()
-        data = args.get("body")
-        body = data.encode("utf-8") if isinstance(data, str) else None
-        request = urllib.request.Request(str(args["url"]), data=body, method=method, headers={str(k): str(v) for k, v in args.get("headers", {}).items()})
-        with urllib.request.urlopen(request, timeout=min(int(args.get("timeout", 30)), 120)) as response:
-            payload = response.read(min(int(args.get("max_bytes", 1048576)), 1048576))
-            return True, {"status": response.status, "headers": dict(response.headers.items()), "body": payload.decode("utf-8", errors="replace")}
+        data = args.get("body"); body = data.encode() if isinstance(data, str) else None
+        request = urllib.request.Request(url, data=body, method=method, headers={str(k): str(v) for k, v in args.get("headers", {}).items()})
+        opener = urllib.request.build_opener(_SafeRedirect(policy))
+        with opener.open(request, timeout=min(int(args.get("timeout", 30)), 120)) as response:
+            final_url = response.geturl(); _validate_url(final_url, policy)
+            payload = response.read(min(int(args.get("max_bytes", 1048576)), int(policy["proxy_policy"].get("http_max_response_bytes", 1048576))))
+            return True, {"status": response.status, "url": final_url, "headers": dict(response.headers.items()), "body": payload.decode("utf-8", errors="replace")}
     raise RuntimeError(f"unsupported capability: {capability}")
 
 
 def proxy_execute(root: Path, task_id: str, session_id: str, tool_name: str, args: dict[str, Any], reason_code: str | None = None, justification: str | None = None, target: str | None = None) -> dict[str, Any]:
-    """Evaluate and execute one tool request through the enforced proxy.
-
-    Args:
-        root: Project root.
-        task_id: Existing approved task.
-        session_id: Transport-bound session identifier.
-        tool_name: Agent-facing proxy tool name.
-        args: Structured tool arguments.
-        reason_code: Required reason code for network access.
-        justification: Required network justification.
-        target: Optional network target.
-
-    Returns:
-        Canonical execution result and evidence identifiers.
-    """
+    """Evaluate and execute one tool request through the enforced proxy."""
     capability = normalize_capability(tool_name)
-    _preflight(root, task_id, capability, args)
+    metadata = _preflight(root, task_id, capability, args)
     canonical_tool = TOOL_NAMES[capability]
-    clean_args = redact_value(args)
-    requested = {"tool": tool_name, "capability": capability, "args": clean_args}
+    requested = {"tool": tool_name, "capability": capability, "args": redact_value(args), "metadata": metadata}
     append_audit_event(root, "proxy.request", requested, task_id, session_id)
     append_signed_event(root, "proxy.request", requested, task_id, session_id)
     guard = guard_tool(root, task_id, session_id, canonical_tool, args, reason_code, justification, target)
@@ -144,14 +244,16 @@ def proxy_execute(root: Path, task_id: str, session_id: str, tool_name: str, arg
         append_signed_event(root, "proxy.denied", denied, task_id, session_id)
         return denied
     try:
-        success, output = _execute_adapter(root, capability, args)
+        success, output = _execute_adapter(root, task_id, session_id, capability, args, metadata)
     except Exception as exc:
         success, output = False, {"error": type(exc).__name__, "message": str(exc)}
     summary = json.dumps(redact_value(output), sort_keys=True, ensure_ascii=False)
     canonical = complete_tool(root, guard["execution_token"], args, success, summary, session_id)
-    event = {"allowed": True, "success": success, "capability": capability, "tool_call_id": canonical["tool_call_id"], "output": redact_value(output)}
+    event = {"allowed": True, "success": success, "capability": capability, "tool_call_id": canonical["tool_call_id"], "output": redact_value(output), "metadata": metadata}
     append_audit_event(root, "proxy.completed", event, task_id, session_id)
     signed = append_signed_event(root, "proxy.completed", event, task_id, session_id)
     with connect(root) as c:
         c.execute("INSERT INTO proxy_executions(task_id,session_id,tool_name,capability,decision,success,tool_call_id,external_event_hash) VALUES(?,?,?,?,?,?,?,?)", (task_id, session_id, tool_name, capability, "allowed", int(success), canonical["tool_call_id"], signed["event_hash"]))
+        if capability == "process.exec":
+            c.execute("INSERT INTO process_exec_events(task_id,session_id,command_json,cwd,command_profile,decision,success,exit_code) VALUES(?,?,?,?,?,?,?,?)", (task_id, session_id, json.dumps(redact_value(args["command"])), metadata["cwd"], metadata["command_profile"], "allowed", int(success), output.get("exit_code")))
     return {**event, "external_audit": signed}

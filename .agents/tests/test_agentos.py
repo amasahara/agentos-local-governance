@@ -1,4 +1,4 @@
-"""AgentOS v0.10.1 adversarial and regression tests."""
+"""AgentOS v0.12.0 adversarial, concurrency, and regression tests."""
 from __future__ import annotations
 
 import json
@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT / ".agents") not in sys.path:
     sys.path.insert(0, str(ROOT / ".agents"))
 
+from agentos.concurrency import acquire_resource, atomic_write, claim_task, handoff_task, heartbeat_resource, list_resources, release_resource
 from agentos.core import approve_task, check_write, db_status, docs_check, instruction_check, prepare_change, record_claim, record_tool_execution, start_task
 from agentos.db import connect
 from agentos.drift import ack_baseline, drift_check, tracked_files
@@ -44,9 +45,9 @@ def guarded_local_call(root: Path, task_id: str = "T1", session: str = "S1", sum
     return result["tool_call_id"]
 
 
-def test_schema_v9_legacy_and_hardening_tables(tmp_path: Path) -> None:
+def test_schema_v11_legacy_and_hardening_tables(tmp_path: Path) -> None:
     root = project(tmp_path)
-    assert db_status(root) == {"current": 9, "required": 9, "is_current": True}
+    assert db_status(root) == {"current": 11, "required": 11, "is_current": True}
     with connect(root) as c:
         tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"guarded_executions", "policy_override_approvals", "audit_events"} <= tables
@@ -219,7 +220,7 @@ def test_instruction_check_detects_modern_rule_files(tmp_path: Path) -> None:
 def test_release_docs_and_version_are_synchronized() -> None:
     assert docs_check(ROOT)["ok"] is True
     assert instruction_check(ROOT)["ok"] is True
-    assert load_policy(ROOT)["version"] == "0.10.1"
+    assert load_policy(ROOT)["version"] == "0.12.0"
 
 
 def test_prepare_change_still_enforces_write_scope(tmp_path: Path) -> None:
@@ -229,12 +230,12 @@ def test_prepare_change_still_enforces_write_scope(tmp_path: Path) -> None:
     assert result["ready"] is True
 
 
-def test_schema_v9_proxy_tables(tmp_path: Path) -> None:
+def test_schema_v11_proxy_and_concurrency_tables(tmp_path: Path) -> None:
     root = project(tmp_path)
-    assert db_status(root) == {"current": 9, "required": 9, "is_current": True}
+    assert db_status(root) == {"current": 11, "required": 11, "is_current": True}
     with connect(root) as c:
         tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert {"proxy_executions", "external_audit_checkpoints"} <= tables
+    assert {"proxy_executions", "external_audit_checkpoints", "resource_leases", "file_versions", "task_handoffs"} <= tables
 
 
 def test_proxy_read_creates_signed_external_evidence(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -293,3 +294,133 @@ def test_external_audit_is_outside_repository_by_default(tmp_path: Path, monkeyp
     root = project(tmp_path)
     monkeypatch.setenv("AGENTOS_AUDIT_HOME", str(tmp_path / "external-audit"))
     assert root.resolve() not in log_path(root).parents
+
+
+def test_process_exec_rejects_network_client() -> None:
+    from agentos.proxy import _command_profile
+    policy = load_policy(ROOT)
+    with pytest.raises(RuntimeError, match="denied"):
+        _command_profile(["curl", "https://example.com"], policy)
+
+
+def test_process_exec_rejects_python_inline_code() -> None:
+    from agentos.proxy import _command_profile
+    policy = load_policy(ROOT)
+    with pytest.raises(RuntimeError, match="inline Python"):
+        _command_profile(["python3", "-c", "print('x')"], policy)
+
+
+def test_process_exec_accepts_pytest_profile() -> None:
+    from agentos.proxy import _command_profile
+    policy = load_policy(ROOT)
+    assert _command_profile(["python3", "-m", "pytest", "-q"], policy) == "test"
+
+
+def test_file_symlink_escape_is_denied(tmp_path: Path) -> None:
+    root = project(tmp_path); ready(root)
+    outside = tmp_path / "outside.py"; outside.write_text("x=1\n")
+    link = root / "src" / "outside-link.py"
+    try:
+        link.symlink_to(outside)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlink creation unavailable")
+    assert check_write(root, "T1", str(link))["allowed"] is False
+
+
+def test_directory_symlink_escape_is_denied(tmp_path: Path) -> None:
+    root = project(tmp_path); ready(root)
+    outside = tmp_path / "outside-dir"; outside.mkdir()
+    link = root / "src" / "outside-dir-link"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlink creation unavailable")
+    assert check_write(root, "T1", str(link / "x.py"))["allowed"] is False
+
+
+def test_internal_symlink_is_allowed(tmp_path: Path) -> None:
+    root = project(tmp_path); ready(root)
+    real = root / "src" / "real.py"; real.write_text("x=1\n")
+    link = root / "src" / "alias.py"
+    try:
+        link.symlink_to(real)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlink creation unavailable")
+    assert check_write(root, "T1", str(link))["allowed"] is True
+
+
+def test_audit_key_rotation_preserves_verification(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentos.external_audit import append_signed_event, rotate_signing_key, verify_external_log
+    root = project(tmp_path)
+    monkeypatch.setenv("AGENTOS_AUDIT_HOME", str(tmp_path / "audit"))
+    append_signed_event(root, "before", {"x": 1}, None, "S1")
+    rotation = rotate_signing_key(root, "reviewer", "scheduled")
+    append_signed_event(root, "after", {"x": 2}, None, "S1")
+    assert rotation["old_key_id"] != rotation["new_key_id"]
+    assert verify_external_log(root)["ok"] is True
+
+
+def test_audit_verify_accepts_empty_log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentos.external_audit import verify_external_log
+    root = project(tmp_path); monkeypatch.setenv("AGENTOS_AUDIT_HOME", str(tmp_path / "empty-audit"))
+    assert verify_external_log(root)["state"] == "empty"
+
+
+def test_docs_check_current_release_is_consistent() -> None:
+    report = docs_check(ROOT)
+    assert report["content_consistency"]["ok"] is True
+    assert report["version"]["VERSION"] == "0.12.0"
+
+
+
+def test_exclusive_file_lease_blocks_other_session(tmp_path: Path) -> None:
+    root = project(tmp_path); ready(root, "T1"); start_task(root, "T2", "Other task"); seed_workflow(root, "T2"); approve_task(root, "T2", ["src"])
+    assert claim_task(root, "T1", "S1")["claimed"] is True
+    first = acquire_resource(root, "T1", "S1", "file", "src/a.py", "exclusive_write")
+    assert first["acquired"] is True
+    second = acquire_resource(root, "T2", "S2", "file", "src/a.py", "exclusive_write")
+    assert second["acquired"] is False
+    assert second["reason"] == "resource_lease_conflict"
+
+
+def test_shared_read_leases_are_compatible(tmp_path: Path) -> None:
+    root = project(tmp_path); ready(root, "T1"); start_task(root, "T2", "Other task"); seed_workflow(root, "T2"); approve_task(root, "T2", ["src"])
+    assert acquire_resource(root, "T1", "S1", "file", "src/a.py", "shared_read")["acquired"] is True
+    assert acquire_resource(root, "T2", "S2", "file", "src/a.py", "shared_read")["acquired"] is True
+
+
+def test_atomic_write_rejects_stale_expected_hash(tmp_path: Path) -> None:
+    root = project(tmp_path); ready(root); claim_task(root, "T1", "S1")
+    path = root / "src" / "a.py"; path.write_text("one\n", encoding="utf-8")
+    old_hash = __import__("hashlib").sha256(b"one\n").hexdigest()
+    first = atomic_write(root, "T1", "S1", "src/a.py", "two\n", old_hash)
+    assert first["allowed"] is True and first["atomic"] is True
+    stale = atomic_write(root, "T1", "S1", "src/a.py", "three\n", old_hash)
+    assert stale["allowed"] is False
+    assert stale["reason"] == "stale_write_conflict"
+    assert path.read_text(encoding="utf-8") == "two\n"
+
+
+def test_existing_file_write_requires_expected_hash(tmp_path: Path) -> None:
+    root = project(tmp_path); ready(root); claim_task(root, "T1", "S1")
+    (root / "src" / "a.py").write_text("one\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="expected_hash"):
+        atomic_write(root, "T1", "S1", "src/a.py", "two\n", None)
+
+
+def test_task_single_writer_and_handoff(tmp_path: Path) -> None:
+    root = project(tmp_path); ready(root)
+    assert claim_task(root, "T1", "S1")["claimed"] is True
+    blocked = claim_task(root, "T1", "S2")
+    assert blocked["claimed"] is False
+    moved = handoff_task(root, "T1", "S1", "S2", "Reviewed handoff")
+    assert moved["handed_off"] is True
+    assert claim_task(root, "T1", "S2")["claimed"] is True
+
+
+def test_lease_heartbeat_and_release(tmp_path: Path) -> None:
+    root = project(tmp_path); ready(root); claim_task(root, "T1", "S1")
+    lease = acquire_resource(root, "T1", "S1", "file", "src/a.py")
+    assert heartbeat_resource(root, lease["lease_id"], "T1", "S1")["renewed"] is True
+    assert release_resource(root, lease["lease_id"], "T1", "S1")["released"] is True
+    assert list_resources(root, "T1") == []

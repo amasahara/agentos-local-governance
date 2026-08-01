@@ -1,5 +1,24 @@
 # Rules and Workflow Changelog
 
+## 2026-07-30 — v0.11.0 — MCP boundary repair, process confinement, audit key rotation
+
+### Request
+
+Repair the v0.10.1 MCP boundary, remove process/network bypass paths, add real symlink regression tests, unify proxy-only execution, and add key rotation plus external sink foundations.
+
+### Enforcement
+
+- `process.exec` now uses executable/module/action allowlists, denies shells, network clients, inline code, URLs, out-of-root working directories, and secret-bearing environment variables.
+- `network.http` is default-deny and validates scheme, domain, resolved IP addresses, and redirects.
+- Legacy `guard-tool`/`complete-tool` calls are blocked when proxy-only mode is enabled.
+- External audit supports a historical public-key registry, cross-signed key rotation, and JSONL/daemon/remote sink modes.
+- Schema 10 adds process execution events and audit-key rotation records.
+- `agentos doctor` consolidates release and installation checks.
+
+### Compatibility
+
+Existing v0.10.1 state migrates in place. Commands that relied on unrestricted `process.exec` or the legacy guard lifecycle must migrate to approved proxy capabilities.
+
 ## 2026-07-30 — v0.10.1 — MCP Enforcement Gateway and External Signed Audit
 
 ### Request
@@ -123,3 +142,22 @@ governance recursively, and blocks final reports on drift or invalid provenance.
 
 Direct `record-tool` is intentionally disabled. Integrations must use
 `guard-tool` followed by `complete-tool`. Database migrations remain additive.
+
+## 2026-08-01 — v0.12.0 — Concurrent Work Coordination
+
+### Request
+
+Support multiple CLI processes and coding agents without lost updates or overlapping writes.
+
+### Enforcement
+
+- migration 11 adds task ownership, resource leases, file versions, and handoff records;
+- SQLite uses WAL, FULL synchronous mode, busy timeout, and immediate lease transactions;
+- proxy file writes require expected hashes for existing files;
+- proxy acquires exclusive file leases and performs atomic replacement;
+- task ownership and handoff are explicit and auditable;
+- multi-process deployments should use one external audit daemon.
+
+### Compatibility
+
+Existing v0.11.0 state migrates automatically. Clients writing existing files must add `expected_hash`.

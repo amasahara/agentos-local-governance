@@ -94,3 +94,21 @@ changelog
 - `.agents/requirements.txt`: cryptography and test dependencies.
 - `proxy_executions`: canonical proxy execution metadata.
 - `external_audit_checkpoints`: verified external audit checkpoints.
+
+## Current v0.11.0 runtime additions
+
+Database schema: `11`
+
+- `proxy.py`: proxy-only filesystem/process/network enforcement, command profiles, environment filtering, domain/IP/redirect validation.
+- `external_audit.py`: Ed25519 key registry, signed JSONL/daemon/remote sinks, key rotation, historical verification.
+- `audit_daemon.py`: minimal authenticated append-only audit ingestion service.
+- `process_exec_events`: command profile, working directory, decision, result, and exit-code audit state.
+- `audit_key_rotations`: durable key-rotation metadata linked to signed events.
+
+
+## v0.12.0 concurrency components
+
+- `concurrency.py`: resource leases, expected-hash compare-and-swap, atomic writes, task ownership and handoff.
+- `resource_leases`: expiring read/write ownership.
+- `file_versions`: version and hash history for committed file mutations.
+- `task_handoffs`: audited writer ownership transfers.

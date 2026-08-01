@@ -1,4 +1,29 @@
-# Hướng dẫn AgentOS v0.10.1 / AgentOS v0.10.1 Developer Guide
+# Hướng dẫn AgentOS v0.12.0 / AgentOS v0.12.0 Developer Guide
+
+> Phiên bản hiện tại: `v0.12.0`  
+> Current version: `v0.12.0`  
+> Database schema: `11`
+
+## Tiếng Việt — Điều phối nhiều CLI/agent
+
+v0.12.0 yêu cầu mỗi tiến trình dùng `session-id` riêng. File write phải đi qua proxy, có exclusive lease và gửi `expected_hash` đối với file hiện hữu. Khi hash đã thay đổi, AgentOS trả `stale_write_conflict`; agent phải đọc lại và merge. Task có một writer owner và chỉ được chuyển bằng `handoff-task`. Với nhiều proxy, dùng audit daemon thay vì nhiều process append trực tiếp JSONL.
+
+Các lệnh chính:
+
+```bash
+agentos claim-task --task-id TASK-A
+agentos acquire-resource --task-id TASK-A --type file --resource src/a.py --mode exclusive_write
+agentos heartbeat-resource --task-id TASK-A --lease-id 1
+agentos release-resource --task-id TASK-A --lease-id 1
+agentos handoff-task --task-id TASK-A --from-session A --to-session B --note "handoff reviewed"
+```
+
+## English — Concurrent CLI/agent coordination
+
+Version 0.12.0 requires a unique session ID per concurrent process. Existing-file writes must go through the proxy with an exclusive lease and an `expected_hash`. A changed hash produces `stale_write_conflict`, requiring reread and merge. Tasks use single-writer ownership and explicit handoff. Multi-process deployments should serialize signed audit writes through the audit daemon.
+
+---
+
 
 > Tài liệu này là điểm bắt đầu dành cho developer khi đưa AgentOS vào một project.
 > Phần quan trọng nhất là lựa chọn đúng quy trình cho **project mới** hoặc **project đang tồn tại**.
@@ -1043,3 +1068,25 @@ Project cũ nên triển khai theo ba giai đoạn: chạy proxy ở chế độ
 ## English — Deploying the MCP proxy and signed external audit
 
 Install `.agents/requirements.txt`, bind the MCP gateway to an approved task and session, remove direct backend tools from the agent configuration, place `AGENTOS_AUDIT_HOME` outside the repository under a separate owner, and run `agentos audit-verify` in CI. Adopt in observe, restricted, and enforced phases for existing repositories.
+
+## Triển khai v0.11.0 / v0.11.0 deployment
+
+### Tiếng Việt
+
+Ở v0.11.0, project phải cấu hình coding agent chỉ nhìn thấy AgentOS MCP gateway. Không expose đồng thời filesystem, shell hoặc HTTP tool thô. `process.exec` chỉ dành cho profile test/build/inspect đã được allowlist; không được dùng để sửa source hoặc gọi mạng.
+
+Các bước sau nâng cấp:
+
+1. Chạy `db-status` và xác nhận schema `10`.
+2. Cấu hình `proxy_policy.process_exec` và `proxy_policy.network_http.allowed_domains`.
+3. Loại bỏ tool backend trực tiếp khỏi cấu hình IDE/agent.
+4. Chạy `doctor`, sau đó review drift và tạo baseline mới.
+5. Cài lại Git hook để có `audit-verify` ở pre-commit.
+6. Thiết lập `AGENTOS_AUDIT_HOME` ở thư mục do người dùng hoặc service account quản lý.
+7. Lập lịch xoay khóa và lưu public-key registry ngoài repository.
+
+### English
+
+In v0.11.0, the coding agent must see only the AgentOS MCP gateway. Do not expose raw filesystem, shell, or HTTP tools alongside it. `process.exec` is limited to allowlisted test/build/inspection profiles and must not be used for source mutation or network access.
+
+After upgrading, verify schema `10`, configure command and domain allowlists, remove direct backend tools, run `doctor`, review drift, acknowledge the new baseline, reinstall the Git hook, and place `AGENTOS_AUDIT_HOME` under a user-owned or service-owned directory.

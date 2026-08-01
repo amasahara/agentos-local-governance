@@ -21,17 +21,26 @@ from pathlib import Path
 from typing import Any
 
 from .db import connect
+from .policy import load_policy
 
 
 def tracked_files(root: Path) -> list[str]:
-    """Return recursively monitored governance files."""
-    fixed = ["AGENTS.md", "README.md", "huong_dan.md", "VERSION", ".agents/config/governance.json"]
-    trees = []
-    for base in [root / ".agents" / "agentos", root / ".agents" / "bin", root / ".agents" / "docs"]:
-        if base.exists():
-            trees.extend(p.relative_to(root).as_posix() for p in base.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
-    local = [".agents/config/governance.local.json"] if (root / ".agents/config/governance.local.json").exists() else []
-    return sorted(set(fixed + trees + local))
+    """Return governance files selected by structured drift policy."""
+    policy = load_policy(root).get("drift_policy", {})
+    patterns = policy.get("tracked_paths") or ["AGENTS.md", "README.md", "huong_dan.md", "VERSION", ".agents/config/**/*.json", ".agents/agentos/**/*.py", ".agents/bin/**", ".agents/docs/**/*.md"]
+    excluded = policy.get("excluded_paths", [])
+    required = {"AGENTS.md", "VERSION", ".agents/config/governance.json", ".agents/agentos/policy.py", ".agents/agentos/drift.py", ".agents/agentos/proxy.py"}
+    found: set[str] = set()
+    for pattern in patterns:
+        for path in root.glob(pattern):
+            if path.is_file():
+                rel = path.relative_to(root).as_posix()
+                if not any(path.match(item) or Path(rel).match(item) for item in excluded):
+                    found.add(rel)
+    for rel in required:
+        if (root / rel).exists():
+            found.add(rel)
+    return sorted(found)
 
 
 def _hash(path: Path) -> str:

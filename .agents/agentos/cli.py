@@ -19,13 +19,14 @@ from pathlib import Path
 from typing import Any
 
 from .cache import cache_lookup, cache_store
+from .concurrency import acquire_resource, claim_task, handoff_task, heartbeat_resource, list_resources, release_resource
 from .core import approve_task, db_status, docs_check, instruction_check, list_claims, prepare_change, project_status, record_claim, record_tool_execution, show_claim, start_task
 from .documentation import documentation_scan
 from .drift import ack_baseline, drift_check, drift_diff
 from .indexing import duplicate_report, index_build, index_query
-from .policy import approve_local_override, local_override_status
+from .policy import approve_local_override, local_override_status, load_policy
 from .proxy import proxy_execute
-from .external_audit import verify_external_log
+from .external_audit import rotate_signing_key, verify_external_log
 from .tooling import complete_tool, egress_report, guard_tool
 from .workflow import complete_automated_step, current_task_id, mark_step, next_step, normalize_session_id, resolve_task_id, seed_workflow, set_current_task, workflow_status
 
@@ -65,6 +66,12 @@ def parser() -> argparse.ArgumentParser:
     a=s.add_parser("use-task"); a.add_argument("--task-id",required=True)
     s.add_parser("whoami"); s.add_parser("next-step")
     a=s.add_parser("approve-task"); _task_arg(a); a.add_argument("--scope",required=True)
+    a=s.add_parser("acquire-resource"); _task_arg(a); a.add_argument("--type",required=True,choices=["file","directory","symbol","governance"]); a.add_argument("--resource",required=True); a.add_argument("--mode",default="exclusive_write",choices=["shared_read","intent_write","exclusive_write"]); a.add_argument("--ttl",type=int); a.add_argument("--base-hash")
+    a=s.add_parser("heartbeat-resource"); _task_arg(a); a.add_argument("--lease-id",required=True,type=int); a.add_argument("--ttl",type=int)
+    a=s.add_parser("release-resource"); _task_arg(a); a.add_argument("--lease-id",required=True,type=int)
+    a=s.add_parser("list-resources"); _task_arg(a); a.add_argument("--all",action="store_true")
+    a=s.add_parser("claim-task"); _task_arg(a)
+    a=s.add_parser("handoff-task"); _task_arg(a); a.add_argument("--from-session",required=True); a.add_argument("--to-session",required=True); a.add_argument("--note",required=True)
     a=s.add_parser("mark-step"); _task_arg(a); a.add_argument("--step",required=True); a.add_argument("--status",required=True,choices=["done","skipped"]); a.add_argument("--note",required=True)
     a=s.add_parser("workflow-status"); _task_arg(a)
     a=s.add_parser("index-build"); a.add_argument("source",nargs="?",default="src"); _task_arg(a)
@@ -92,6 +99,8 @@ def parser() -> argparse.ArgumentParser:
     s.add_parser("docs-check"); s.add_parser("instruction-check"); s.add_parser("db-status")
     a=s.add_parser("proxy-execute"); _task_arg(a); a.add_argument("--tool",required=True); a.add_argument("--args",default="{}"); a.add_argument("--reason-code"); a.add_argument("--justification"); a.add_argument("--target")
     s.add_parser("audit-verify")
+    a=s.add_parser("rotate-audit-key"); a.add_argument("--identity",required=True); a.add_argument("--reason",required=True)
+    a=s.add_parser("doctor"); a.add_argument("--scope",default=".agents/agentos")
     a=s.add_parser("mcp-serve"); _task_arg(a)
     a=s.add_parser("status"); _task_arg(a)
     return p
@@ -114,6 +123,28 @@ def _reminder(root: Path, session: str, task_id: str | None = None) -> dict[str,
     return {"session_id":session,"task_id":active,"original_request":task["request"] if task else None,"approved":bool(task["approved"]) if task else False,"approved_scope":json.loads(task["approved_scope"]) if task else [],"workflow_progress":f"{done}/{len(status['steps'])} steps done","next_required_step":status["required_pending"][0] if status["required_pending"] else None,"invalid_workflow_provenance":status["invalid_provenance"],"baseline_state":drift["baseline_state"],"unacknowledged_governance_changes":len(drift["changes"]),"sensitive_override_status":override["status"]}
 
 
+
+def _doctor(root: Path, scope: str) -> dict[str, Any]:
+    """Run consolidated installation and enforcement health checks."""
+    policy = load_policy(root)
+    checks = {
+        "instruction": instruction_check(root),
+        "documentation": docs_check(root),
+        "source_docs": documentation_scan(root, scope),
+        "database": db_status(root),
+        "drift": drift_check(root),
+        "external_audit": verify_external_log(root),
+        "policy": {"ok": True, "version": policy["version"]},
+        "proxy": {
+            "ok": bool(policy.get("proxy_policy", {}).get("enabled") and policy.get("tool_policy", {}).get("proxy_only_mode")),
+            "proxy_only_mode": policy.get("tool_policy", {}).get("proxy_only_mode"),
+            "direct_backend_access_forbidden": policy.get("proxy_policy", {}).get("direct_backend_access_forbidden"),
+        },
+    }
+    ok = all(item.get("ok", False) for item in checks.values())
+    return {"ok": ok, "checks": checks}
+
+
 def main() -> int:
     """Execute one AgentOS command.
 
@@ -123,7 +154,7 @@ def main() -> int:
     args=parser().parse_args(); root=Path(args.root).resolve(); session=normalize_session_id(args.session_id)
     try:
         tid=getattr(args,"task_id",None)
-        task_commands={"approve-task","mark-step","workflow-status","index-build","guard-tool","prepare-change","record-claim","list-claims","egress-report","cache-store","cache-lookup","report","proxy-execute","mcp-serve"}
+        task_commands={"approve-task","acquire-resource","heartbeat-resource","release-resource","list-resources","claim-task","handoff-task","mark-step","workflow-status","index-build","guard-tool","prepare-change","record-claim","list-claims","egress-report","cache-store","cache-lookup","report","proxy-execute","mcp-serve"}
         if args.cmd in task_commands:
             tid=resolve_task_id(root,tid,session)
         if args.cmd=="start-task":
@@ -132,20 +163,34 @@ def main() -> int:
         elif args.cmd=="whoami": result=_reminder(root,session)
         elif args.cmd=="next-step": result=next_step(root,resolve_task_id(root,None,session))
         elif args.cmd=="approve-task": result=approve_task(root,tid,_json_arg(args.scope,"scope")); complete_automated_step(root,tid,"approve_task","approve-task",result,evidence_id=tid)
+        elif args.cmd=="acquire-resource": result=acquire_resource(root,tid,session,args.type,args.resource,args.mode,args.ttl,args.base_hash)
+        elif args.cmd=="heartbeat-resource": result=heartbeat_resource(root,args.lease_id,tid,session,args.ttl)
+        elif args.cmd=="release-resource": result=release_resource(root,args.lease_id,tid,session)
+        elif args.cmd=="list-resources": result=list_resources(root,tid,not args.all)
+        elif args.cmd=="claim-task": result=claim_task(root,tid,session)
+        elif args.cmd=="handoff-task": result=handoff_task(root,tid,args.from_session,args.to_session,args.note)
         elif args.cmd=="mark-step": result=mark_step(root,tid,args.step,args.status,args.note)
         elif args.cmd=="workflow-status": result=workflow_status(root,tid)
         elif args.cmd=="index-build": result=index_build(root,args.source); complete_automated_step(root,tid,"build_or_update_local_index","index-build",result)
         elif args.cmd=="index-query": result=index_query(root,args.query,args.limit)
         elif args.cmd=="duplicate-scan": result=duplicate_report(root)
-        elif args.cmd=="guard-tool": result=guard_tool(root,tid,session,args.tool,_json_arg(args.args,"args"),args.reason_code,args.justification,args.target)
-        elif args.cmd=="complete-tool":
-            result=complete_tool(root,args.execution_token,_json_arg(args.input,"input"),args.success,args.output,session)
-            if result["success"]: complete_automated_step(root,result["task_id"],"execute_guarded","complete-tool",result,evidence_type="tool_call",evidence_id=str(result["tool_call_id"]))
+        elif args.cmd in {"guard-tool", "complete-tool"}:
+            if load_policy(root).get("tool_policy", {}).get("proxy_only_mode", True):
+                raise RuntimeError("legacy guarded execution is disabled; use the MCP gateway or proxy-execute")
+            if args.cmd == "guard-tool":
+                result=guard_tool(root,tid,session,args.tool,_json_arg(args.args,"args"),args.reason_code,args.justification,args.target)
+            else:
+                result=complete_tool(root,args.execution_token,_json_arg(args.input,"input"),args.success,args.output,session)
         elif args.cmd=="record-tool": result=record_tool_execution(root,tid,args.tool,_json_arg(args.input,"input"),args.success,args.output,args.classification)
         elif args.cmd=="proxy-execute":
             result=proxy_execute(root,tid,session,args.tool,_json_arg(args.args,"args"),args.reason_code,args.justification,args.target)
             if result.get("success"): complete_automated_step(root,tid,"execute_guarded","proxy-execute",result,evidence_type="tool_call",evidence_id=str(result["tool_call_id"]))
         elif args.cmd=="audit-verify": result=verify_external_log(root)
+        elif args.cmd=="rotate-audit-key":
+            result=rotate_signing_key(root,args.identity,args.reason)
+            with __import__("sqlite3").connect(root/".agents/state/agentos.db") as c:
+                c.execute("INSERT INTO audit_key_rotations(old_key_id,new_key_id,identity,reason,event_hash) VALUES(?,?,?,?,?)",(result["old_key_id"],result["new_key_id"],args.identity,args.reason,result["event"]["event_hash"]))
+        elif args.cmd=="doctor": result=_doctor(root,args.scope)
         elif args.cmd=="mcp-serve":
             from .mcp_server import serve
             serve(root,tid,session); return 0

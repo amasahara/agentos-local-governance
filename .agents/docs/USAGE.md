@@ -172,3 +172,15 @@ CLI smoke call:
 ```
 
 Set `AGENTOS_AUDIT_HOME` to a directory outside the repository and outside the coding agent's write scope.
+
+
+## Concurrent work coordination
+
+```bash
+agentos --session-id A claim-task --task-id T1
+agentos --session-id A acquire-resource --task-id T1 --type file --resource src/a.py --mode exclusive_write
+agentos --session-id A list-resources --task-id T1
+agentos --session-id A handoff-task --task-id T1 --from-session A --to-session B --note "Reviewed"
+```
+
+Existing-file proxy writes must include the latest `expected_hash` returned by `agentos.read_file`.

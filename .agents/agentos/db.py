@@ -16,7 +16,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 11
 
 
 def _db_path(root: Path) -> Path:
@@ -34,19 +34,25 @@ def _db_path(root: Path) -> Path:
 
 
 @contextmanager
-def connect(root: Path) -> Iterator[sqlite3.Connection]:
+def connect(root: Path, immediate: bool = False) -> Iterator[sqlite3.Connection]:
     """Open a migrated SQLite connection with foreign keys enabled.
 
     Args:
         root: Project root.
+        immediate: Whether to begin an immediate write transaction after migration.
 
     Yields:
         Configured SQLite connection.
     """
-    connection = sqlite3.connect(_db_path(root))
+    connection = sqlite3.connect(_db_path(root), timeout=5.0)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
+    connection.execute("PRAGMA journal_mode = WAL")
+    connection.execute("PRAGMA synchronous = FULL")
+    connection.execute("PRAGMA busy_timeout = 5000")
     migrate(connection)
+    if immediate:
+        connection.execute("BEGIN IMMEDIATE")
     try:
         yield connection
         connection.commit()
@@ -68,7 +74,7 @@ def migrate(connection: sqlite3.Connection) -> None:
     """
     connection.execute("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY)")
     current = connection.execute("SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations").fetchone()["v"]
-    migrations = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9]
+    migrations = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9, _m10, _m11]
     for version, fn in enumerate(migrations, start=1):
         if version > current:
             fn(connection)
@@ -363,5 +369,92 @@ def _m9(c: sqlite3.Connection) -> None:
         last_event_hash TEXT NOT NULL,
         key_id TEXT NOT NULL,
         verified_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+
+def _m10(c: sqlite3.Connection) -> None:
+    """Add process execution audit and signing-key rotation state.
+
+    Args:
+        c: Open SQLite connection.
+
+    Returns:
+        None.
+    """
+    c.executescript("""
+    CREATE TABLE process_exec_events(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        command_json TEXT NOT NULL,
+        cwd TEXT NOT NULL,
+        command_profile TEXT NOT NULL,
+        decision TEXT NOT NULL,
+        success INTEGER,
+        exit_code INTEGER,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(task_id) REFERENCES tasks(id)
+    );
+    CREATE INDEX idx_process_exec_events_task ON process_exec_events(task_id);
+    CREATE TABLE audit_key_rotations(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        old_key_id TEXT NOT NULL,
+        new_key_id TEXT NOT NULL,
+        identity TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        event_hash TEXT NOT NULL,
+        rotated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+
+def _m11(c: sqlite3.Connection) -> None:
+    """Add multi-process coordination, task ownership, and file version state."""
+    c.executescript("""
+    ALTER TABLE tasks ADD COLUMN owner_session_id TEXT;
+    ALTER TABLE tasks ADD COLUMN task_state TEXT NOT NULL DEFAULT 'ready';
+    ALTER TABLE tasks ADD COLUMN last_heartbeat TEXT;
+    CREATE TABLE resource_leases(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        resource_type TEXT NOT NULL,
+        resource_key TEXT NOT NULL,
+        task_id TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        lease_mode TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',
+        acquired_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        heartbeat_at TEXT NOT NULL,
+        released_at TEXT,
+        base_hash TEXT,
+        metadata_json TEXT NOT NULL DEFAULT '{}',
+        FOREIGN KEY(task_id) REFERENCES tasks(id)
+    );
+    CREATE INDEX idx_resource_leases_resource ON resource_leases(resource_type,resource_key,status);
+    CREATE INDEX idx_resource_leases_task ON resource_leases(task_id,status);
+    CREATE TABLE file_versions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        path TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        content_hash TEXT NOT NULL,
+        previous_hash TEXT,
+        task_id TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        lease_id INTEGER,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(task_id) REFERENCES tasks(id),
+        FOREIGN KEY(lease_id) REFERENCES resource_leases(id),
+        UNIQUE(path,version)
+    );
+    CREATE INDEX idx_file_versions_path ON file_versions(path,version);
+    CREATE TABLE task_handoffs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT NOT NULL,
+        from_session_id TEXT NOT NULL,
+        to_session_id TEXT NOT NULL,
+        note TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(task_id) REFERENCES tasks(id)
     );
     """)

@@ -101,10 +101,28 @@ Installers must preserve existing root files. Conflicting files are written with
 - Do not report completion while baseline, drift, provenance, or override gates are blocked.
 
 
-## v0.10.1 MCP enforcement boundary
+## v0.11.0 proxy-only enforcement boundary
+
+For filesystem, process, and network capabilities, the MCP gateway or `proxy-execute` is the only permitted production execution path. Legacy `guard-tool` and `complete-tool` commands are disabled while `tool_policy.proxy_only_mode` is true.
+
+`process.exec` is not a general shell. It must use an allowlisted executable and a recognized test, build, lint, or inspection profile. Shell interpreters, network clients, inline code, URL-bearing commands, out-of-root working directories, and secret-bearing environment variables are forbidden. Source mutation must use `agentos.write_file`.
+
+`network.http` is default-deny and must validate the approved HTTPS domain, DNS-resolved address, and every redirect destination.
+
+External audit keys must remain outside the repository. Historical public keys must be retained. Key rotation must be recorded with `rotate-audit-key`, and the external chain must pass `audit-verify` before final reporting.
+
+## Historical v0.10.1 MCP enforcement boundary
 
 When the AgentOS MCP proxy is available, all filesystem, process, network, Git, database, deployment, and secret-access operations must pass through the proxy. Do not call or expose a backend tool directly. A proxy deployment is not an enforcement boundary while the agent retains any bypass path.
 
 The proxy must derive capability and classification, bind the request to the active task and session, evaluate approval, workflow, scope, drift, overrides, and egress policy, invoke the backend itself, and create canonical evidence from the actual result.
 
 Signed external audit records must be stored outside the repository. The coding agent must not receive the signing private key or write/delete access to the audit home. A failed audit write blocks filesystem writes, process execution, and network calls.
+
+## v0.12.0 concurrent work coordination
+
+Every concurrent CLI or agent process must use a unique session identifier. A task has one writer-owner session unless an explicit audited handoff occurs.
+
+Filesystem writes must go through the AgentOS proxy. Existing-file writes require the content hash returned by the most recent proxy read. The proxy must acquire an exclusive file lease, compare the expected hash, perform an atomic replacement, record the new file version, and release the lease. Never retry a `stale_write_conflict` by dropping the expected hash; reread, reconcile, and submit a new change.
+
+Do not share one session ID between concurrent processes. Do not modify another task's leased resource. Use the audit daemon when multiple proxy processes are active.

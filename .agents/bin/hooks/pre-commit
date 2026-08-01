@@ -4,4 +4,5 @@ set -eu
 .agents/bin/agentos docs-check >/dev/null
 .agents/bin/agentos docs-scan --scope "${AGENTOS_SOURCE_ROOT:-src}" >/dev/null
 .agents/bin/agentos drift-check >/dev/null
-PYTHONPATH=.agents python3 -m pytest .agents/tests -q
+PYTHONPATH=.agents .agents/bin/agentos audit-verify >/dev/null || exit 1
+python3 -m pytest .agents/tests -q

@@ -1,5 +1,5 @@
 {
-  "version": "0.10.1",
+  "version": "0.12.0",
   "language_policy": {
     "understand_user_language_directly": true,
     "preserve_original_request": true,
@@ -108,7 +108,24 @@
     "recursive_tracking": true,
     "report_blocks_uninitialized_baseline": true,
     "report_blocks_drift": true,
-    "interactive_human_ack_default": true
+    "interactive_human_ack_default": true,
+    "tracked_paths": [
+      "AGENTS.md",
+      "README.md",
+      "huong_dan.md",
+      "VERSION",
+      ".agents/config/**/*.json",
+      ".agents/agentos/**/*.py",
+      ".agents/bin/**",
+      ".agents/docs/**/*.md"
+    ],
+    "excluded_paths": [
+      ".agents/runtime/**",
+      ".agents/state/**",
+      ".agents/cache/**",
+      "**/__pycache__/**",
+      "**/*.pyc"
+    ]
   },
   "installation_policy": {
     "never_overwrite_existing_root_files": true,
@@ -123,7 +140,9 @@
     "unknown_tools_fail_closed": true,
     "execution_token_ttl_seconds": 900,
     "direct_record_tool_forbidden": true,
-    "redact_audit_content": true
+    "redact_audit_content": true,
+    "proxy_only_mode": true,
+    "legacy_guarded_execution_enabled": false
   },
   "local_override_policy": {
     "safe_keys": [
@@ -156,7 +175,62 @@
       "network.http"
     ],
     "shell_mode": "argv_only_no_shell",
-    "http_max_response_bytes": 1048576
+    "http_max_response_bytes": 1048576,
+    "process_exec": {
+      "enabled": true,
+      "allowed_executables": [
+        "python",
+        "python3",
+        "pytest",
+        "ruff",
+        "mypy",
+        "node",
+        "npm"
+      ],
+      "denied_executables": [
+        "curl",
+        "wget",
+        "nc",
+        "netcat",
+        "ssh",
+        "scp",
+        "sftp",
+        "ftp",
+        "bash",
+        "sh",
+        "zsh",
+        "powershell",
+        "pwsh",
+        "cmd"
+      ],
+      "deny_inline_code": true,
+      "allowed_python_modules": [
+        "pytest",
+        "unittest",
+        "compileall"
+      ],
+      "allowed_npm_commands": [
+        "test",
+        "run"
+      ],
+      "require_known_command_profile": true,
+      "cwd_must_be_inside_project": true,
+      "filtered_environment": true,
+      "max_timeout_seconds": 600,
+      "max_output_bytes": 65536
+    },
+    "network_http": {
+      "default": "deny",
+      "allowed_domains": [],
+      "allowed_schemes": [
+        "https"
+      ],
+      "allow_subdomains": false,
+      "blocked_private_networks": true,
+      "blocked_loopback": true,
+      "blocked_link_local": true,
+      "max_redirects": 3
+    }
   },
   "external_audit_policy": {
     "enabled": true,
@@ -170,6 +244,43 @@
       "network.http"
     ],
     "verify_before_report": true,
-    "private_key_outside_repository": true
+    "private_key_outside_repository": true,
+    "key_registry": true,
+    "key_rotation": true,
+    "sink_modes": [
+      "jsonl",
+      "daemon",
+      "remote_http"
+    ],
+    "default_sink_mode": "jsonl",
+    "multi_process_mode": true,
+    "required_sink_for_multi_process": "daemon",
+    "direct_jsonl_append_recommended": false
+  },
+  "documentation_policy": {
+    "current_version_files": [
+      "README.md",
+      "huong_dan.md",
+      "AGENTS.md"
+    ],
+    "current_schema": 11,
+    "history_begin": "AGENTOS_VERSION_HISTORY_BEGIN",
+    "history_end": "AGENTOS_VERSION_HISTORY_END"
+  },
+  "concurrency_policy": {
+    "enabled": true,
+    "session_isolation": true,
+    "task_single_writer": true,
+    "default_write_lease_seconds": 300,
+    "max_lease_seconds": 3600,
+    "heartbeat_interval_seconds": 30,
+    "expired_lease_grace_seconds": 60,
+    "file_write_requires_lease": true,
+    "file_write_requires_expected_hash": true,
+    "atomic_replace": true,
+    "exact_file_scope_conflict": "block",
+    "directory_scope_conflict": "warn",
+    "symbol_leases": false,
+    "audit_sink_for_multi_process": "daemon"
   }
 }

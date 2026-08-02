@@ -47,7 +47,7 @@ def guarded_local_call(root: Path, task_id: str = "T1", session: str = "S1", sum
 
 def test_schema_v11_legacy_and_hardening_tables(tmp_path: Path) -> None:
     root = project(tmp_path)
-    assert db_status(root) == {"current": 27, "required": 27, "is_current": True}
+    assert db_status(root) == {"current": 31, "required": 31, "is_current": True}
     with connect(root) as c:
         tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"guarded_executions", "policy_override_approvals", "audit_events"} <= tables
@@ -220,7 +220,7 @@ def test_instruction_check_detects_modern_rule_files(tmp_path: Path) -> None:
 def test_release_docs_and_version_are_synchronized() -> None:
     assert docs_check(ROOT)["ok"] is True
     assert instruction_check(ROOT)["ok"] is True
-    assert load_policy(ROOT)["version"] == "0.19.1"
+    assert load_policy(ROOT)["version"] == "0.19.5"
 
 
 def test_prepare_change_still_enforces_write_scope(tmp_path: Path) -> None:
@@ -232,7 +232,7 @@ def test_prepare_change_still_enforces_write_scope(tmp_path: Path) -> None:
 
 def test_schema_v11_proxy_and_concurrency_tables(tmp_path: Path) -> None:
     root = project(tmp_path)
-    assert db_status(root) == {"current": 27, "required": 27, "is_current": True}
+    assert db_status(root) == {"current": 31, "required": 31, "is_current": True}
     with connect(root) as c:
         tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"proxy_executions", "external_audit_checkpoints", "resource_leases", "file_versions", "task_handoffs"} <= tables
@@ -369,7 +369,7 @@ def test_audit_verify_accepts_empty_log(tmp_path: Path, monkeypatch: pytest.Monk
 def test_docs_check_current_release_is_consistent() -> None:
     report = docs_check(ROOT)
     assert report["content_consistency"]["ok"] is True
-    assert report["version"]["VERSION"] == "0.19.1"
+    assert report["version"]["VERSION"] == "0.19.5"
 
 
 
@@ -584,7 +584,7 @@ def test_evaluation_harness_and_export(tmp_path: Path) -> None:
     from agentos.evaluation import aggregate_metrics, export_metrics
     report=aggregate_metrics(root,agent="agent-a",model="model-x")
     assert report["metrics_schema_version"]==1
-    assert report["dimensions"]["repository_version"]=="0.19.1"
+    assert report["dimensions"]["repository_version"]=="0.19.5"
     exported=export_metrics(root,".agents/runtime/evaluation/report.json","json",agent="agent-a",model="model-x")
     assert exported["ok"] is True
     assert Path(exported["path"]).exists()
@@ -698,7 +698,7 @@ def test_skill_graduation_rejects_agent_identity(tmp_path, monkeypatch):
 def test_db_schema_legacy_25_updated(tmp_path):
     root=project(tmp_path)
     from agentos.core import db_status
-    assert db_status(root)["required"]==27
+    assert db_status(root)["required"]==31
 
 
 def test_optional_local_embeddings_and_rag(tmp_path):
@@ -734,7 +734,25 @@ def test_use_case_driven_knowledge_graph(tmp_path, monkeypatch):
 def test_db_schema_27(tmp_path):
     root=project(tmp_path)
     from agentos.core import db_status
-    assert db_status(root)["required"]==27
+    assert db_status(root)["required"]==31
     with connect(root) as c:
         tables={r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"knowledge_embeddings","rag_retrieval_events","knowledge_nodes","knowledge_edges"} <= tables
+
+
+def test_v0192_v0195_capabilities(tmp_path):
+    root=project(tmp_path)
+    from agentos.core import start_task, approve_task
+    start_task(root,"T-NEW","use approved workflow skill and memory"); approve_task(root,"T-NEW",["src"])
+    from agentos.memory import remember, query_memory, forget_identity
+    remember(root,"semantic","private preference",task_id="T-NEW",owner_scope="user:alice",consent_source="explicit-test")
+    assert query_memory(root,"private",identity="alice")
+    assert not query_memory(root,"private")
+    assert forget_identity(root,"alice")["revoked_count"]==1
+    from agentos.evaluation import record_outcome, compare_outcomes
+    record_outcome(root,"T-NEW","success","human",task_category="unit")
+    cmp=compare_outcomes(root,{"task_category":"unit"},{"task_category":"unit"})
+    assert cmp["warning"]=="insufficient_sample_size"
+    from agentos.storage import backup_create, backup_verify
+    b=backup_create(root,".agents/runtime/test-backup.zip")
+    assert backup_verify(root,b["path"])["ok"]

@@ -16,7 +16,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-SCHEMA_VERSION = 27
+SCHEMA_VERSION = 31
 
 
 def _db_path(root: Path) -> Path:
@@ -74,7 +74,7 @@ def migrate(connection: sqlite3.Connection) -> None:
     """
     connection.execute("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY)")
     current = connection.execute("SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations").fetchone()["v"]
-    migrations = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9, _m10, _m11, _m12, _m13, _m14, _m15, _m16, _m17, _m18, _m19, _m20, _m21, _m22, _m23, _m24, _m25, _m26, _m27]
+    migrations = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9, _m10, _m11, _m12, _m13, _m14, _m15, _m16, _m17, _m18, _m19, _m20, _m21, _m22, _m23, _m24, _m25, _m26, _m27, _m28, _m29, _m30, _m31]
     for version, fn in enumerate(migrations, start=1):
         if version > current:
             fn(connection)
@@ -746,4 +746,56 @@ def _m27(c: sqlite3.Connection) -> None:
         FOREIGN KEY(to_node_id) REFERENCES knowledge_nodes(node_id));
     CREATE INDEX idx_knowledge_edges_from ON knowledge_edges(from_node_id,relation,status);
     CREATE INDEX idx_knowledge_edges_to ON knowledge_edges(to_node_id,relation,status);
+    """)
+
+
+def _m28(c: sqlite3.Connection) -> None:
+    """Add unified context-knowledge observability for v0.19.2."""
+    c.executescript("""
+    CREATE TABLE context_knowledge_events(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, context_revision INTEGER,
+        candidate_count INTEGER NOT NULL, included_count INTEGER NOT NULL, omitted_count INTEGER NOT NULL,
+        fallback_used INTEGER NOT NULL DEFAULT 0, manifest_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE INDEX idx_context_knowledge_task ON context_knowledge_events(task_id,created_at);
+    """)
+
+def _m29(c: sqlite3.Connection) -> None:
+    """Add task outcomes and comparison cohorts for v0.19.3."""
+    c.executescript("""
+    CREATE TABLE task_outcomes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, outcome TEXT NOT NULL, rated_by TEXT NOT NULL,
+        test_pass_rate REAL, rework_count INTEGER NOT NULL DEFAULT 0, note TEXT, benchmark_key TEXT, task_category TEXT,
+        agent_id TEXT, model_id TEXT, policy_revision TEXT, context_revision TEXT, retrieval_backend TEXT, repository_revision TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(task_id) REFERENCES tasks(id));
+    CREATE INDEX idx_task_outcomes_cohort ON task_outcomes(task_category,agent_id,model_id,policy_revision,created_at);
+    """)
+
+def _m30(c: sqlite3.Connection) -> None:
+    """Add scoped and privacy-aware memory metadata for v0.19.4."""
+    c.execute("ALTER TABLE project_memory ADD COLUMN owner_scope TEXT NOT NULL DEFAULT 'project'")
+    c.execute("ALTER TABLE project_memory ADD COLUMN sensitivity TEXT NOT NULL DEFAULT 'normal'")
+    c.execute("ALTER TABLE project_memory ADD COLUMN consent_source TEXT")
+    c.execute("ALTER TABLE project_memory ADD COLUMN expires_at TEXT")
+    c.execute("ALTER TABLE project_memory ADD COLUMN revoked_at TEXT")
+    c.execute("CREATE INDEX idx_project_memory_scope ON project_memory(owner_scope,status,created_at)")
+
+def _m31(c: sqlite3.Connection) -> None:
+    """Add storage retention, signed archive, and embedding BLOB support for v0.19.5."""
+    c.executescript("""
+    ALTER TABLE knowledge_embeddings ADD COLUMN vector_blob BLOB;
+    ALTER TABLE knowledge_embeddings ADD COLUMN vector_dtype TEXT NOT NULL DEFAULT 'float32';
+    ALTER TABLE knowledge_embeddings ADD COLUMN vector_version INTEGER NOT NULL DEFAULT 1;
+    CREATE TABLE audit_segments(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, first_event_id INTEGER NOT NULL, last_event_id INTEGER NOT NULL,
+        event_count INTEGER NOT NULL, first_event_hash TEXT, last_event_hash TEXT, segment_hash TEXT NOT NULL,
+        archive_path TEXT NOT NULL, signature TEXT, status TEXT NOT NULL DEFAULT 'verified',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE retention_runs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT NOT NULL, deleted_count INTEGER NOT NULL,
+        retained_count INTEGER NOT NULL, parameters_json TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE backup_manifests(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, backup_path TEXT NOT NULL, manifest_hash TEXT NOT NULL,
+        authoritative_json TEXT NOT NULL, rebuildable_json TEXT NOT NULL, status TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
     """)

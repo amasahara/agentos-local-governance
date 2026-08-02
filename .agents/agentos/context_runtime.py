@@ -20,6 +20,7 @@ from typing import Any
 
 from .db import connect
 from .policy import load_policy
+from .retrieval import search_knowledge
 
 MANDATORY = {"AGENTS.md", ".agents/config/governance.json", "huong_dan.md"}
 
@@ -117,6 +118,26 @@ def _symbol_window_excerpt(path: Path, symbols: list[dict[str, Any]], request_te
     return {"path":path.as_posix(),"line_count":len(selected),"source_line_count":len(lines),"approx_tokens":max(1,len(excerpt)//4),"excerpt":excerpt,"included_symbols":included,"omitted_symbols":omitted,"compaction":"symbol_window"}
 
 
+def _knowledge_candidates(root: Path, request: str, cfg: dict[str, Any]) -> tuple[list[dict[str, Any]], bool, str | None]:
+    """Return trusted knowledge candidates using lexical-first semantic fallback."""
+    try:
+        lexical=search_knowledge(root,request,["skill","memory","finding"],12,"lexical_structured")
+        results=lexical["results"]; fallback=False
+        threshold=float(cfg.get("semantic_fallback_threshold",10.0))
+        if not results or float(results[0].get("score",0)) < threshold:
+            semantic=search_knowledge(root,request,["skill","memory","finding"],12,"local_feature_hash_v1")
+            if semantic["results"]:
+                results=semantic["results"]; fallback=True
+        trusted=[]
+        for item in results:
+            prov=item.get("provenance") or {}
+            if item["kind"]=="skill" and not prov.get("external_event_hash"):
+                continue
+            trusted.append(item)
+        return trusted,fallback,None
+    except Exception as exc:
+        return [],False,f"{type(exc).__name__}: {exc}"
+
 def build_context_pack(root: Path, task_id: str, max_lines: int = 500, mode: str | None = None) -> dict[str, Any]:
     """Build and persist a deterministic transparent context package."""
     root=root.resolve(); task=_task(root,task_id); cfg=load_policy(root).get("knowledge_runtime",{}).get("context_runtime",{})
@@ -145,12 +166,25 @@ def build_context_pack(root: Path, task_id: str, max_lines: int = 500, mode: str
         sources.append(data); used_lines+=data["line_count"]; used_tokens+=data["approx_tokens"]
     with connect(root) as c:
         findings=[dict(r) for r in c.execute("SELECT kind,path,symbol,message,occurrences,last_seen_at FROM project_findings WHERE status='active' ORDER BY occurrences DESC,last_seen_at DESC LIMIT 50").fetchall()]
-    manifest={"task_id":task_id,"request":task["request"],"approved_scope":task["approved_scope"],"compaction_mode":mode,"max_lines":global_lines,"max_approx_tokens":token_budget,"line_count":used_lines,"approx_tokens":used_tokens,"sources":sources,"omitted_files":omitted_files,"omitted_symbols":omitted_symbols,"total_candidate_files":len(ranked),"included_files":len(sources),"project_findings":findings}
+    knowledge=[]; omitted_knowledge=[]; fallback_used=False; merge_error=None
+    if bool(cfg.get("include_knowledge",True)):
+        candidates,fallback_used,merge_error=_knowledge_candidates(root,task["request"],cfg)
+        reserve=int(cfg.get("knowledge_reserved_tokens",1000)); available=max(0,token_budget-used_tokens); knowledge_budget=min(max(reserve,available),available)
+        for item in candidates:
+            text=str(item.get("text") or item.get("title") or "")
+            cost=max(1,len(text)//4)
+            if cost<=knowledge_budget:
+                knowledge.append({**item,"approx_tokens":cost,"selection_reasons":["knowledge_relevance","trusted_provenance"]})
+                knowledge_budget-=cost; used_tokens+=cost
+            else:
+                omitted_knowledge.append({"kind":item["kind"],"id":item["id"],"reason":"global_budget_exceeded","relevance_score":item.get("score")})
+    manifest={"task_id":task_id,"request":task["request"],"approved_scope":task["approved_scope"],"compaction_mode":mode,"max_lines":global_lines,"max_approx_tokens":token_budget,"line_count":used_lines,"approx_tokens":used_tokens,"sources":sources,"knowledge_sources":knowledge,"omitted_knowledge":omitted_knowledge,"knowledge_candidates":len(knowledge)+len(omitted_knowledge),"included_knowledge":len(knowledge),"knowledge_fallback_used":fallback_used,"knowledge_merge_error":merge_error,"omitted_files":omitted_files,"omitted_symbols":omitted_symbols,"total_candidate_files":len(ranked),"included_files":len(sources),"project_findings":findings}
     digest=hashlib.sha256(json.dumps(manifest,sort_keys=True,separators=(",",":")).encode()).hexdigest(); manifest["content_hash"]=digest
     with connect(root) as c:
         rev=c.execute("SELECT COALESCE(MAX(revision),0)+1 AS n FROM context_packs WHERE task_id=?",(task_id,)).fetchone()["n"]
         c.execute("UPDATE context_packs SET status='superseded' WHERE task_id=? AND status='active'",(task_id,))
         c.execute("INSERT INTO context_packs(task_id,revision,content_hash,manifest_json,status) VALUES(?,?,?,?, 'active')",(task_id,rev,digest,json.dumps(manifest,sort_keys=True)))
+        c.execute("INSERT INTO context_knowledge_events(task_id,context_revision,candidate_count,included_count,omitted_count,fallback_used,manifest_hash) VALUES(?,?,?,?,?,?,?)",(task_id,rev,manifest["knowledge_candidates"],manifest["included_knowledge"],len(manifest["omitted_knowledge"]),int(fallback_used),digest))
     return {**manifest,"revision":rev,"status":"active"}
 
 

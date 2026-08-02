@@ -239,7 +239,7 @@ Migrations are additive. Existing synchronous proxy execution remains available.
 - Added candidate/graduated lifecycle, human-only graduation, signed audit, matching, and revocation.
 - Added `.agents/skills/**` to governance drift tracking.
 
-## 2026-08-02 — v0.19.1 — Local Semantic Retrieval Abstraction
+## 2026-08-02 — v0.18.2 — Local Semantic Retrieval Abstraction
 
 - Added schema 25 retrieval observability.
 - Added backend-neutral `KnowledgeRetriever` contract and deterministic `lexical_structured` backend.
@@ -258,3 +258,10 @@ Migrations are additive. Existing synchronous proxy execution remains available.
 - Added graph build, neighbor, and bounded path commands.
 - Graph edges require evidence from existing indexes/tables; no general-purpose speculative knowledge graph is created.
 - Added schema migration 27.
+
+
+## v0.19.2–v0.19.5
+- Unified Context Knowledge with trusted knowledge merge and transparent omissions.
+- Context/Outcome Evaluation with cohort-aware statistics.
+- Memory Scope and Privacy with explicit consent, decay, and forget.
+- Storage and Recovery Hardening with versioned BLOB embeddings, retention, audit segment archives, and backup verification.

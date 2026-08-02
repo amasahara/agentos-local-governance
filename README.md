@@ -1,11 +1,11 @@
-# AgentOS Local Governance v0.19.1
+# AgentOS Local Governance v0.19.5
 
 **Quản trị local-first, MCP proxy-only và điều phối nhiều agent cho dự án phần mềm.**  
 **Local-first governance, proxy-only MCP enforcement, and concurrent-agent coordination.**
 
-> Phiên bản hiện tại: `v0.19.1`  
-> Current version: `v0.19.1`  
-> Database schema: `27`
+> Phiên bản hiện tại: `v0.19.5`  
+> Current version: `v0.19.5`  
+> Database schema: `31`
 > Trạng thái: active development; cần review trước khi dùng cho production hoặc môi trường bảo mật cao.
 
 ---
@@ -14,7 +14,7 @@
 
 ## 1. AgentOS là gì?
 
-AgentOS Local Governance là nền tảng quản trị và thực thi cục bộ cho coding agent. Phiên bản v0.19.1 hợp nhất Security Foundation, Knowledge Runtime, Execution Platform, Controlled Evolution, Multi-Agent Protocol, Transparent Context Compaction, Skill Promotion, Local Semantic Retrieval, Optional Local RAG và Evidence-Backed Relationship Graph trong cùng một enforcement boundary có audit ký ngoài.
+AgentOS Local Governance là nền tảng quản trị và thực thi cục bộ cho coding agent. Phiên bản v0.19.5 hợp nhất Security Foundation, Knowledge Runtime, Execution Platform, Controlled Evolution, Multi-Agent Protocol, Transparent Context Compaction, Skill Promotion, Local Semantic Retrieval, Optional Local RAG và Evidence-Backed Relationship Graph trong cùng một enforcement boundary có audit ký ngoài.
 
 AgentOS không phải LLM hay IDE. Hệ thống cung cấp gateway, capability session, isolated execution, context/memory có provenance, async jobs, planning/Git gates, evaluation harness, phối hợp nhiều agent theo role/context isolation, skill có human approval, truy hồi local thống nhất và graph quan hệ chỉ dựa trên evidence. Mức bảo đảm thực tế phụ thuộc security profile và quyền hệ điều hành được cấu hình.
 
@@ -32,9 +32,9 @@ AgentOS không phải LLM hay IDE. Hệ thống cung cấp gateway, capability s
 - Ghi file hiện hữu phải gửi `expected_hash` để phát hiện stale write.
 - File phải được thay thế atomically để tránh trạng thái ghi dở.
 
-## 3. Năng lực chính của v0.19.1
+## 3. Năng lực chính của v0.19.5
 
-### v0.17.2–v0.19.1 — Knowledge Runtime fixes và Transparent Context Compaction
+### v0.17.2–v0.19.5 — Knowledge Runtime fixes và Transparent Context Compaction
 
 - `filesystem.read` dùng cache theo task/path/range và tự invalidation khi file thay đổi.
 - Multi-agent disclosure thực sự lọc payload theo `metadata-only`, `summary`, `selected-artifacts`, `full-task-context`.
@@ -83,7 +83,7 @@ AgentOS không phải LLM hay IDE. Hệ thống cung cấp gateway, capability s
 - collaboration readiness gate yêu cầu capability, role và context pack còn mới.
 
 
-### v0.18.1–v0.19.1 — Skill Promotion và Local Semantic Retrieval
+### v0.18.1–v0.19.5 — Skill Promotion và Local Semantic Retrieval
 
 - Procedural memory có provenance có thể được promote thành skill candidate.
 - Candidate không được tự động kích hoạt; graduation bắt buộc human approval và signed audit.
@@ -441,7 +441,7 @@ PYTHONPATH=.agents python3 -m pytest .agents/tests -q
 
 ## 21. Giới hạn bảo mật
 
-v0.19.1 có isolated execution, capability sessions, bounded RAG và evidence-backed graph nhưng không thay thế hardening cấp hệ điều hành. Agent có raw shell, quyền sửa SQLite, truy cập gateway socket hoặc signing key vẫn có thể làm suy yếu enforcement. Để enforcement có ý nghĩa:
+v0.19.5 có isolated execution, capability sessions, bounded RAG và evidence-backed graph nhưng không thay thế hardening cấp hệ điều hành. Agent có raw shell, quyền sửa SQLite, truy cập gateway socket hoặc signing key vẫn có thể làm suy yếu enforcement. Để enforcement có ý nghĩa:
 
 - agent chỉ được dùng MCP proxy;
 - backend credential thuộc proxy/daemon;
@@ -449,7 +449,7 @@ v0.19.1 có isolated execution, capability sessions, bounded RAG và evidence-ba
 - signing key nằm ngoài repository;
 - production nên dùng container, read-only mount hoặc OS sandbox bổ sung.
 
-## 22. Nâng cấp lên v0.19.1
+## 22. Nâng cấp lên v0.19.5
 
 1. Sao lưu `.agents/state`, audit store và public-key registry.
 2. Thay hoặc merge `.agents/`, `AGENTS.md`, `README.md`, `huong_dan.md` và `VERSION`.
@@ -482,7 +482,7 @@ v0.19.1 có isolated execution, capability sessions, bounded RAG và evidence-ba
 
 ## 1. Overview
 
-AgentOS Local Governance v0.19.1 is a repository-local governance and execution platform for coding agents. It combines a hardened gateway, capability sessions, isolated execution, verifiable state, context and project memory, asynchronous jobs, planning/Git gates, evaluation-driven controlled evolution, and role-authorized multi-agent collaboration with context isolation.
+AgentOS Local Governance v0.19.5 is a repository-local governance and execution platform for coding agents. It combines a hardened gateway, capability sessions, isolated execution, verifiable state, context and project memory, asynchronous jobs, planning/Git gates, evaluation-driven controlled evolution, and role-authorized multi-agent collaboration with context isolation.
 
 ## 2. Concurrent coordination model
 
@@ -581,7 +581,7 @@ Deterministic context packs, stale-source detection, provenance-aware project me
 - **v0.17.0–v0.17.1 — Controlled Evolution & Multi-Agent Protocol:** evolution dựa trên evaluation baseline; collaboration bị ràng buộc bởi capability, role và context isolation.
 - **v0.17.2–v0.18.0 — Knowledge Runtime Fixes & Transparent Context:** read cache, disclosure filtering, symbol-window compaction, budgets và omission reporting.
 - **v0.18.1–v0.18.2 — Skill Promotion & Local Retrieval:** skill graduation có human approval và retrieval abstraction thống nhất.
-- **v0.19.0–v0.19.1 — Optional Local RAG & Relationship Graph:** semantic retrieval/RAG cục bộ tùy chọn và graph quan hệ có bằng chứng cho use case cụ thể.
+- **v0.19.0–v0.19.5 — Optional Local RAG & Relationship Graph:** semantic retrieval/RAG cục bộ tùy chọn và graph quan hệ có bằng chứng cho use case cụ thể.
 
 ### v0.16.0 — Async Tool Runtime
 
@@ -641,16 +641,16 @@ agentos message-send --task-id T1 --to-session EXECUTOR --kind review_request --
 - v0.17.0–v0.17.1: Controlled Evolution and Multi-Agent Protocol.
 - v0.17.2–v0.18.0: Knowledge Runtime fixes and Transparent Context Compaction.
 - v0.18.1–v0.18.2: Skill Promotion Runtime and Local Semantic Retrieval Abstraction.
-- v0.19.0–v0.19.1: Optional Local Embeddings/RAG and Evidence-Backed Relationship Graph.
+- v0.19.0–v0.19.5: Optional Local Embeddings/RAG and Evidence-Backed Relationship Graph.
 
-Current database schema: `27`.
+Current database schema: `31`.
 
 
 ## v0.17.2–v0.18.0 — Knowledge Runtime fixes and Transparent Context Compaction
 
-v0.17.2–v0.18.0 added validated file-read caching, enforced collaboration disclosure filtering, deterministic symbol-window context compaction, global/per-file budgets, omission reasons, approximate token reporting, and context mode comparison. v0.18.1–v0.18.2 added skill promotion and unified local retrieval. v0.19.0–v0.19.1 adds optional local RAG and an evidence-backed relationship graph. Database schema is now 27.
+v0.17.2–v0.18.0 added validated file-read caching, enforced collaboration disclosure filtering, deterministic symbol-window context compaction, global/per-file budgets, omission reasons, approximate token reporting, and context mode comparison. v0.18.1–v0.18.2 added skill promotion and unified local retrieval. v0.19.0–v0.19.5 adds optional local RAG and an evidence-backed relationship graph. Database schema is now 27.
 
-## v0.19.0–v0.19.1 — Optional Local RAG and Relationship Graph
+## v0.19.0–v0.19.5 — Optional Local RAG and Relationship Graph
 
 ### Tiếng Việt
 
@@ -662,7 +662,7 @@ agentos knowledge-search "excel date conversion" --backend local_feature_hash_v1
 agentos rag-query "how to validate release" --top-k 8
 ```
 
-`v0.19.1` chỉ xây relationship graph cho các use case đã xác định: impact analysis, finding-to-symbol và skill provenance. Hệ thống không cố tạo knowledge graph tổng quát hoặc suy diễn quan hệ không có bằng chứng.
+`v0.19.5` chỉ xây relationship graph cho các use case đã xác định: impact analysis, finding-to-symbol và skill provenance. Hệ thống không cố tạo knowledge graph tổng quát hoặc suy diễn quan hệ không có bằng chứng.
 
 ```bash
 agentos graph-build
@@ -670,10 +670,24 @@ agentos graph-neighbors --node-id "skill:1"
 agentos graph-path --from-node "skill:1" --to-node "memory:42"
 ```
 
-Schema hiện hành: `27`.
+Schema hiện hành: `31`.
 
 ### English
 
 `v0.19.0` adds optional local embeddings and RAG. `lexical_structured` remains the default; `local_feature_hash_v1` is deterministic and dependency-free, with no model download, network call, LLM call, or API key.
 
-`v0.19.1` materializes only evidence-backed relationships for concrete use cases: impact analysis, finding-to-symbol navigation, and skill provenance. It intentionally does not create a speculative general-purpose knowledge graph.
+`v0.19.5` materializes only evidence-backed relationships for concrete use cases: impact analysis, finding-to-symbol navigation, and skill provenance. It intentionally does not create a speculative general-purpose knowledge graph.
+
+## v0.19.2–v0.19.5 — Unified Context, Evaluation, Privacy, Storage
+
+- **v0.19.2 Unified Context Knowledge:** context pack hợp nhất graduated skills, verified project memory và findings vào cùng ngân sách; lexical-first, semantic fallback theo ngưỡng; báo cáo `omitted_knowledge`, fallback và merge errors.
+- **v0.19.3 Context/Outcome Evaluation:** ghi outcome nhẹ theo task, cohort metadata, Wilson confidence interval và two-proportion comparison có cảnh báo mẫu nhỏ.
+- **v0.19.4 Memory Scope and Privacy:** project/user scope, explicit consent, sensitivity, TTL/decay và right-to-forget xóa derived embeddings.
+- **v0.19.5 Storage and Recovery Hardening:** embedding BLOB versioned, retention cho observability, verified audit segment archive không phá hash chain, backup manifest và verification.
+
+### English
+
+- **v0.19.2 Unified Context Knowledge:** merges graduated skills, verified memory, and findings into the bounded transparent context budget.
+- **v0.19.3 Context/Outcome Evaluation:** adds lightweight outcomes, cohort metadata, confidence intervals, and small-sample warnings.
+- **v0.19.4 Memory Scope and Privacy:** adds scoped memory, explicit consent, decay, and right-to-forget with derived embedding invalidation.
+- **v0.19.5 Storage and Recovery Hardening:** adds versioned BLOB embeddings, retention, verified audit segment archives, and backup verification.

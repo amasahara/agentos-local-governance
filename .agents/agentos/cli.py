@@ -20,14 +20,14 @@ from typing import Any
 
 from .cache import cache_lookup, cache_store
 from .context_runtime import build_context_pack, context_compare, context_explain, context_status
-from .memory import query_memory, record_finding, remember, validate_memory
+from .memory import decay_user_memory, forget_identity, query_memory, record_finding, remember, validate_memory
 from .skills import graduate_skill, list_skills, match_skills, promote_skill_candidate, revoke_skill
 from .retrieval import search_knowledge
 from .embeddings import build_embedding_index, rag_query
 from .knowledge_graph import build_graph, graph_neighbors, graph_path
 from .jobs import cancel_job, discover_tools, job_status, recover_jobs, submit_job
 from .planning import active_plan, approve_plan, precommit_check, submit_plan
-from .evaluation import aggregate_metrics, export_metrics
+from .evaluation import aggregate_metrics, compare_outcomes, export_metrics, record_outcome
 from .evolution import create_proposal, proposal_status, simulate_proposal, transition_proposal
 from .collaboration import assign_role, collaboration_readiness, list_messages, send_message
 from .concurrency import acquire_resource, claim_task, handoff_task, heartbeat_resource, list_resources, release_resource
@@ -39,6 +39,7 @@ from .policy import approve_local_override, local_override_status, load_policy
 from .proxy import proxy_execute
 from .external_audit import rotate_signing_key, verify_external_log
 from .tooling import complete_tool, egress_report, guard_tool
+from .storage import archive_audit_segment, backup_create, backup_verify, prune_observability
 from .workflow import complete_automated_step, current_task_id, mark_step, next_step, normalize_session_id, resolve_task_id, seed_workflow, set_current_task, workflow_status
 
 
@@ -141,6 +142,14 @@ def parser() -> argparse.ArgumentParser:
     a=s.add_parser("plan-show"); _task_arg(a)
     a=s.add_parser("precommit-check"); _task_arg(a); a.add_argument("--changed-files",default=None)
     a=s.add_parser("evaluation-report"); a.add_argument("--since"); a.add_argument("--agent"); a.add_argument("--model"); a.add_argument("--output"); a.add_argument("--format",choices=["json","csv"],default="json")
+    a=s.add_parser("outcome-record"); a.add_argument("--task-id",required=True); a.add_argument("--outcome",required=True,choices=["success","partial","failed"]); a.add_argument("--rated-by",required=True); a.add_argument("--test-pass-rate",type=float); a.add_argument("--rework-count",type=int,default=0); a.add_argument("--note"); a.add_argument("--task-category"); a.add_argument("--agent-id"); a.add_argument("--model-id"); a.add_argument("--retrieval-backend")
+    a=s.add_parser("outcome-compare"); a.add_argument("--filter-a",required=True); a.add_argument("--filter-b",required=True)
+    a=s.add_parser("memory-decay"); a.add_argument("--ttl-days",type=int,default=180)
+    a=s.add_parser("memory-forget"); a.add_argument("--identity",required=True)
+    a=s.add_parser("observability-prune"); a.add_argument("--older-than-days",type=int,default=30)
+    a=s.add_parser("audit-segment-archive"); a.add_argument("--max-events",type=int,default=10000)
+    a=s.add_parser("backup-create"); a.add_argument("--output",required=True)
+    a=s.add_parser("backup-verify"); a.add_argument("--path",required=True)
     a=s.add_parser("evolution-propose"); a.add_argument("--title",required=True); a.add_argument("--findings",default="[]"); a.add_argument("--patch",required=True); a.add_argument("--benefit",required=True); a.add_argument("--risks",default="[]"); a.add_argument("--rollback",required=True); a.add_argument("--created-by",required=True)
     a=s.add_parser("evolution-simulate"); a.add_argument("--proposal-id",type=int,required=True)
     a=s.add_parser("evolution-transition"); a.add_argument("--proposal-id",type=int,required=True); a.add_argument("--status",required=True,choices=["reviewed","shadow","canary","active","rolled_back"]); a.add_argument("--actor",required=True); a.add_argument("--note",required=True)
@@ -283,6 +292,14 @@ def main() -> int:
             files=_json_arg(args.changed_files,"changed-files") if args.changed_files else None
             result=precommit_check(root,tid,files)
             with __import__("sqlite3").connect(root/".agents/state/agentos.db") as c: c.execute("INSERT INTO precommit_checks(task_id,ok,changed_files_json,blockers_json) VALUES(?,?,?,?)",(tid,int(result["ok"]),json.dumps(result["changed_files"]),json.dumps(result["blockers"])))
+        elif args.cmd=="outcome-record": result=record_outcome(root,args.task_id,args.outcome,args.rated_by,args.test_pass_rate,args.rework_count,args.note,task_category=args.task_category,agent_id=args.agent_id,model_id=args.model_id,retrieval_backend=args.retrieval_backend,policy_revision=load_policy(root)["version"],repository_revision=(root/"VERSION").read_text().strip())
+        elif args.cmd=="outcome-compare": result=compare_outcomes(root,_json_arg(args.filter_a,"filter-a"),_json_arg(args.filter_b,"filter-b"))
+        elif args.cmd=="memory-decay": result=decay_user_memory(root,args.ttl_days)
+        elif args.cmd=="memory-forget": result=forget_identity(root,args.identity)
+        elif args.cmd=="observability-prune": result=prune_observability(root,args.older_than_days)
+        elif args.cmd=="audit-segment-archive": result=archive_audit_segment(root,args.max_events)
+        elif args.cmd=="backup-create": result=backup_create(root,args.output)
+        elif args.cmd=="backup-verify": result=backup_verify(root,args.path)
         elif args.cmd=="evaluation-report":
             result=export_metrics(root,args.output,args.format,since=args.since,agent=args.agent,model=args.model) if args.output else aggregate_metrics(root,args.since,args.agent,args.model)
         elif args.cmd=="evolution-propose": result=create_proposal(root,args.title,_json_arg(args.findings,"findings"),_json_arg(args.patch,"patch"),args.benefit,_json_arg(args.risks,"risks"),_json_arg(args.rollback,"rollback"),args.created_by)

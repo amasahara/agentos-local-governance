@@ -10,7 +10,7 @@ Responsibilities:
     - Produce explainable local RAG results with provenance.
 """
 from __future__ import annotations
-import hashlib, json, math, re
+import hashlib, json, math, re, struct
 from pathlib import Path
 from typing import Any
 from .db import connect
@@ -57,7 +57,8 @@ def build_embedding_index(root:Path,kinds:list[str]|None=None)->dict[str,Any]:
     with connect(root,immediate=True) as c:
         for kind,sid,text,meta in _sources(root,selected):
             h=hashlib.sha256(text.encode()).hexdigest(); vec=embed_text(text)
-            c.execute("INSERT INTO knowledge_embeddings(source_kind,source_id,content_hash,backend,dimensions,vector_json,text_snapshot,metadata_json) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(source_kind,source_id,backend) DO UPDATE SET content_hash=excluded.content_hash,dimensions=excluded.dimensions,vector_json=excluded.vector_json,text_snapshot=excluded.text_snapshot,metadata_json=excluded.metadata_json,updated_at=CURRENT_TIMESTAMP",(kind,sid,h,BACKEND,DIMENSIONS,json.dumps(vec),text,json.dumps(meta,ensure_ascii=False)))
+            blob=struct.pack(f"<{len(vec)}f",*vec)
+            c.execute("INSERT INTO knowledge_embeddings(source_kind,source_id,content_hash,backend,dimensions,vector_json,text_snapshot,metadata_json,vector_blob,vector_dtype,vector_version) VALUES(?,?,?,?,?,?,?,?,?,'float32',1) ON CONFLICT(source_kind,source_id,backend) DO UPDATE SET content_hash=excluded.content_hash,dimensions=excluded.dimensions,vector_json=excluded.vector_json,text_snapshot=excluded.text_snapshot,metadata_json=excluded.metadata_json,vector_blob=excluded.vector_blob,vector_dtype='float32',vector_version=1,updated_at=CURRENT_TIMESTAMP",(kind,sid,h,BACKEND,DIMENSIONS,'[]',text,json.dumps(meta,ensure_ascii=False),blob))
             count+=1
     return {"ok":True,"backend":BACKEND,"indexed":count,"dimensions":DIMENSIONS,"network_used":False,"llm_used":False}
 
@@ -67,7 +68,7 @@ def semantic_search(root:Path,query:str,kinds:list[str]|None=None,limit:int=20)-
     with connect(root) as c:
         placeholders=','.join('?' for _ in selected)
         for r in c.execute(f"SELECT * FROM knowledge_embeddings WHERE backend=? AND source_kind IN ({placeholders})",(BACKEND,*sorted(selected))):
-            score=_cosine(q,json.loads(r["vector_json"]))
+            vec=list(struct.unpack(f"<{r['dimensions']}f",r["vector_blob"])) if r["vector_blob"] else json.loads(r["vector_json"]); score=_cosine(q,vec)
             if score>0: rows.append({"kind":r["source_kind"],"id":r["source_id"],"text":r["text_snapshot"],"score":round(score,6),"matched_terms":[],"provenance":json.loads(r["metadata_json"]),"backend":BACKEND})
     return sorted(rows,key=lambda x:(-x["score"],x["kind"],x["id"]))[:limit]
 

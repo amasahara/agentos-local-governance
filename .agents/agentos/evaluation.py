@@ -12,6 +12,7 @@ Responsibilities:
 from __future__ import annotations
 
 import csv
+import math
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -74,3 +75,29 @@ def export_metrics(root: Path, output: str, fmt: str = "json", **filters: Any) -
     else:
         raise RuntimeError("format must be json or csv")
     return {"ok": True, "path": str(path), "format": fmt, "report": report}
+
+
+def record_outcome(root: Path, task_id: str, outcome: str, rated_by: str, test_pass_rate: float | None=None, rework_count: int=0, note: str | None=None, **cohort: Any) -> dict[str, Any]:
+    """Record a lightweight task outcome without duplicating trajectories."""
+    if outcome not in {"success","partial","failed"}: raise ValueError("invalid outcome")
+    with connect(root) as c:
+        if not c.execute("SELECT 1 FROM tasks WHERE id=?",(task_id,)).fetchone(): raise RuntimeError("task not found")
+        cur=c.execute("INSERT INTO task_outcomes(task_id,outcome,rated_by,test_pass_rate,rework_count,note,benchmark_key,task_category,agent_id,model_id,policy_revision,context_revision,retrieval_backend,repository_revision) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(task_id,outcome,rated_by,test_pass_rate,rework_count,note,cohort.get("benchmark_key"),cohort.get("task_category"),cohort.get("agent_id"),cohort.get("model_id"),cohort.get("policy_revision"),cohort.get("context_revision"),cohort.get("retrieval_backend"),cohort.get("repository_revision")))
+    return {"outcome_id":cur.lastrowid,"task_id":task_id,"outcome":outcome}
+
+def _wilson(successes: int, n: int, z: float=1.95996398454) -> tuple[float,float]:
+    if not n: return (0.0,0.0)
+    p=successes/n; d=1+z*z/n; center=(p+z*z/(2*n))/d; margin=z*math.sqrt((p*(1-p)+z*z/(4*n))/n)/d
+    return max(0.0,center-margin),min(1.0,center+margin)
+
+def compare_outcomes(root: Path, filter_a: dict[str,Any], filter_b: dict[str,Any]) -> dict[str,Any]:
+    """Compare outcome cohorts with Wilson intervals and a two-proportion z-test."""
+    def load(f):
+        clauses=["1=1"]; params=[]
+        for k,v in f.items(): clauses.append(f"{k}=?"); params.append(v)
+        with connect(root) as c: rows=c.execute("SELECT outcome FROM task_outcomes WHERE "+" AND ".join(clauses),params).fetchall()
+        return len(rows),sum(1 for r in rows if r["outcome"]=="success")
+    na,sa=load(filter_a); nb,sb=load(filter_b); pa=sa/na if na else 0; pb=sb/nb if nb else 0
+    pooled=(sa+sb)/(na+nb) if na+nb else 0; se=math.sqrt(pooled*(1-pooled)*(1/na+1/nb)) if na and nb else 0
+    z=(pb-pa)/se if se else 0; pval=math.erfc(abs(z)/math.sqrt(2)) if se else 1.0
+    return {"sample_size_a":na,"sample_size_b":nb,"success_rate_a":pa,"success_rate_b":pb,"confidence_interval_a":_wilson(sa,na),"confidence_interval_b":_wilson(sb,nb),"effect_size":pb-pa,"p_value":pval,"significant":bool(pval<0.05 and na>=30 and nb>=30),"warning":"insufficient_sample_size" if min(na,nb)<30 else None}

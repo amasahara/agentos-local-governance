@@ -1,7 +1,7 @@
-# AgentOS Local Governance v0.13.0
+# AgentOS Local Governance v0.17.1
 
-**Phiên bản hiện hành:** 0.13.0  
-Database schema: `12`  
+**Phiên bản hiện hành:** 0.17.1  
+Database schema: `23`
 **Ưu tiên tài liệu:** Tiếng Việt trước, English sau.
 
 ## Tiếng Việt — Coordination Enforcement Boundary
@@ -43,14 +43,14 @@ Chạy lệnh AgentOS bất kỳ để migration schema 12 được áp dụng. 
 
 v0.13.0 places all multi-agent coordination actions inside the same MCP/tool-proxy enforcement and signed-audit boundary used by filesystem, process, and network capabilities. Caller identity is transport-bound, write leases are scope-checked, expired leases are materialized, stale owners can only be reclaimed through an audited stale-task path, and every coordination mutation is linked to an external signed event.
 
-# AgentOS Local Governance v0.13.0
+# AgentOS Local Governance v0.17.1
 
 **Quản trị local-first, MCP proxy-only và điều phối nhiều agent cho dự án phần mềm.**  
 **Local-first governance, proxy-only MCP enforcement, and concurrent-agent coordination.**
 
-> Phiên bản hiện tại: `v0.13.0`  
-> Current version: `v0.13.0`  
-> Database schema: `12`  
+> Phiên bản hiện tại: `v0.17.1`  
+> Current version: `v0.17.1`  
+> Database schema: `23`
 > Trạng thái: active development; cần review trước khi dùng cho production hoặc môi trường bảo mật cao.
 
 ---
@@ -575,3 +575,80 @@ PYTHONPATH=.agents python3 -m pytest .agents/tests -q
 ## 9. Limitations
 
 AgentOS is not an operating-system sandbox or a distributed lock service. Network filesystems and agents with unrestricted shell/database access remain outside the guaranteed trust boundary.
+
+## Knowledge Runtime v0.15.0–v0.15.1
+
+- `context-build`, `context-status`, `context-explain`: tạo context pack xác định, giới hạn dòng, có content hash và phát hiện stale source.
+- `memory-record`, `memory-query`, `memory-validate`: quản lý semantic/episodic/procedural/evidence memory có provenance.
+- `finding-record`: gom finding lặp lại bằng khóa ổn định và tăng `occurrences`.
+- Schema at that milestone: `18`.
+
+## Knowledge Runtime v0.15.0–v0.15.1 (English)
+
+Deterministic context packs, stale-source detection, provenance-aware project memory, and recurring-finding deduplication are now available. Schema at that milestone: `18`.
+
+## Lộ trình phát hành / Release programs
+
+- **v0.13.1 — Immediate Security Fixes:** bản vá nhỏ, nhanh và tương thích.
+- **v0.14.0–v0.14.3 — Security Foundation Program:** gateway boundary, capability sessions, isolated execution, verifiable state và recovery.
+- **v0.15.0–v0.15.1 — Knowledge Runtime:** deterministic context packs và project memory có provenance.
+- **v0.16.0–v0.16.2 — Execution Platform:** async jobs, workflow-aware tool discovery, versioned planning, Git pre-commit gate và evaluation harness.
+
+### v0.16.0 — Async Tool Runtime
+
+- Job specification bất biến, trạng thái `queued/running/succeeded/failed/cancelled/orphaned`.
+- `job-submit`, `job-status`, `job-cancel`, `job-recover`.
+- `tools-discover` phân nhóm tool đang dùng được, tool cần bước tiếp theo và human-only tool.
+- MCP bổ sung `agentos.run_command_async`.
+
+### v0.16.1 — Planning and Git Integration
+
+- Task plan có revision và lifecycle `submitted → active → superseded`.
+- `plan-submit`, `plan-approve`, `plan-show`.
+- `precommit-check` đối chiếu Git diff với approved scope, active plan và workflow provenance.
+
+### v0.16.2 — Evaluation Harness
+
+- Metrics versioned cho task, workflow, write blocks, evidence và async jobs.
+- Xuất JSON/CSV bằng `evaluation-report`.
+- Dimension so sánh gồm agent, model, policy version và repository version.
+
+**Database schema: `23`.**
+
+### English summary
+
+v0.16.0–v0.16.2 delivers the Execution Platform: governed asynchronous jobs, workflow-aware tool discovery, revisioned task plans, Git-aware pre-commit enforcement, and a versioned evaluation harness with JSON/CSV export.
+
+## v0.17.0–v0.17.1 — Adaptive Multi-Agent Platform
+
+### Tiếng Việt
+
+**v0.17.0 — Controlled Evolution** chỉ hoạt động khi đã có kết quả từ Evaluation Harness. Mọi đề xuất policy phải đi qua chuỗi `draft → simulated → reviewed → shadow → canary → active`; hệ thống không tự kích hoạt và luôn lưu rollback plan cùng signed audit.
+
+**v0.17.1 — Multi-Agent Protocol** chỉ bật khi capability session, task role và context isolation đều ổn định. Message có schema, correlation/causation ID, quyền theo role và mức disclosure `metadata-only`, `summary`, `selected-artifacts`, hoặc `full-task-context`.
+
+```bash
+agentos evaluation-report
+agentos evolution-propose --title "..." --patch '{}' --benefit "..." --rollback '{}' --created-by operator
+agentos evolution-simulate --proposal-id 1
+agentos evolution-transition --proposal-id 1 --status reviewed --actor operator --note "Reviewed"
+agentos role-assign --task-id T1 --target-session REVIEWER --role reviewer --assigned-by operator
+agentos collaboration-readiness --task-id T1
+agentos message-send --task-id T1 --to-session EXECUTOR --kind review_request --payload '{}'
+```
+
+### English
+
+**v0.17.0 — Controlled Evolution** requires an Evaluation Harness baseline. Every policy proposal follows `draft → simulated → reviewed → shadow → canary → active`; automatic activation is forbidden, and rollback plus signed audit provenance are mandatory.
+
+**v0.17.1 — Multi-Agent Protocol** is enabled only after capability sessions, task roles, and context isolation are stable. Messages are schema-versioned, correlated, role-authorized, and disclosure-bounded.
+
+### Release program history
+
+- v0.13.1: small, fast, backward-compatible security patch.
+- v0.14.0–v0.14.3: unified Security Foundation program.
+- v0.15.0–v0.15.1: Knowledge Runtime.
+- v0.16.0–v0.16.2: Execution Platform.
+- v0.17.0–v0.17.1: Adaptive Multi-Agent Platform.
+
+Database schema: `23`.

@@ -198,3 +198,12 @@ def verify_external_log(root: Path) -> dict[str, Any]:
         with connect(root) as c:
             c.execute("INSERT INTO external_audit_checkpoints(project_id,last_sequence,last_event_hash,key_id) VALUES(?,?,?,?) ON CONFLICT(project_id) DO UPDATE SET last_sequence=excluded.last_sequence,last_event_hash=excluded.last_event_hash,key_id=excluded.key_id,verified_at=CURRENT_TIMESTAMP", (project_id(root), count, previous, last["key_id"]))
     return {"ok": True, "state": "verified", "events": count, "last_hash": previous, "log_path": str(path)}
+
+
+def validate_audit_home(root: Path) -> dict[str, Any]:
+    """Validate that the external audit home is isolated from the repository."""
+    home = audit_home()
+    project = root.resolve()
+    user_home = Path.home().resolve()
+    isolated = home != user_home and home != project and project not in home.parents and home not in project.parents
+    return {"ok": isolated, "audit_home": str(home), "reason": None if isolated else "audit_home_not_isolated"}

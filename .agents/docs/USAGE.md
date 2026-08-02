@@ -184,3 +184,29 @@ agentos --session-id A handoff-task --task-id T1 --from-session A --to-session B
 ```
 
 Existing-file proxy writes must include the latest `expected_hash` returned by `agentos.read_file`.
+
+## Knowledge runtime
+
+```bash
+agentos context-build --task-id TASK-001 --max-lines 500
+agentos context-status --task-id TASK-001
+agentos context-explain --task-id TASK-001
+agentos finding-record --task-id TASK-001 --kind duplicate --message "Repeated implementation"
+agentos memory-record --task-id TASK-001 --kind semantic --statement "Stable project convention"
+agentos memory-query "project convention"
+agentos memory-validate
+```
+
+## Controlled evolution and multi-agent commands (v0.17.1)
+
+```bash
+agentos evaluation-report
+agentos evolution-propose --title "Policy proposal" --findings '[]' --patch '{}' --benefit "Expected benefit" --risks '[]' --rollback '{}' --created-by operator
+agentos evolution-simulate --proposal-id 1
+agentos evolution-transition --proposal-id 1 --status reviewed --actor operator --note "Reviewed"
+agentos evolution-status --proposal-id 1
+agentos role-assign --task-id T1 --target-session REVIEWER --role reviewer --assigned-by operator
+agentos collaboration-readiness --task-id T1
+agentos message-send --task-id T1 --to-session EXECUTOR --kind review_request --payload '{}' --disclosure metadata-only
+agentos message-list --task-id T1
+```

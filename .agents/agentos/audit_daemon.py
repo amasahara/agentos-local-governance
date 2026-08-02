@@ -56,7 +56,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404); return
         expected = os.environ.get("AGENTOS_AUDIT_DAEMON_TOKEN", "")
         supplied = self.headers.get("Authorization", "").removeprefix("Bearer ")
-        if expected and not hmac.compare_digest(expected, supplied):
+        if not expected or not hmac.compare_digest(expected, supplied):
             self.send_error(401); return
         try:
             length = min(int(self.headers.get("Content-Length", "0")), 2_000_000)
@@ -75,6 +75,8 @@ class Handler(BaseHTTPRequestHandler):
 
 def main() -> None:
     """Run the append-only audit daemon."""
+    if not os.environ.get("AGENTOS_AUDIT_DAEMON_TOKEN"):
+        raise SystemExit("AGENTOS_AUDIT_DAEMON_TOKEN is required")
     parser = argparse.ArgumentParser(); parser.add_argument("--host", default="127.0.0.1"); parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args(); ThreadingHTTPServer((args.host, args.port), Handler).serve_forever()
 

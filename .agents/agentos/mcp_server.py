@@ -13,16 +13,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import secrets
 import sys
 from pathlib import Path
 from typing import Any
 
-from .proxy import proxy_execute
+from .gateway_client import request as gateway_request
 
 TOOLS = [
     {"name":"agentos.read_file","description":"Đọc file qua AgentOS.","inputSchema":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}},
     {"name":"agentos.write_file","description":"Ghi file có scope, lease và expected hash.","inputSchema":{"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"},"expected_hash":{"type":["string","null"]}},"required":["path","content"]}},
     {"name":"agentos.run_command","description":"Chạy process bị giới hạn.","inputSchema":{"type":"object","properties":{"command":{"type":"array","items":{"type":"string"}}},"required":["command"]}},
+    {"name":"agentos.run_command_async","description":"Khởi chạy job bất đồng bộ có sandbox và audit.","inputSchema":{"type":"object","properties":{"command":{"type":"array","items":{"type":"string"}},"cwd":{"type":"string"},"timeout_seconds":{"type":"integer"}},"required":["command"]}},
     {"name":"agentos.http_request","description":"HTTP có egress policy.","inputSchema":{"type":"object","properties":{"url":{"type":"string"},"reason_code":{"type":"string"},"justification":{"type":"string"}},"required":["url","reason_code","justification"]}},
     {"name":"agentos.acquire_resource","description":"Lấy lease tài nguyên.","inputSchema":{"type":"object","properties":{"resource_type":{"type":"string"},"resource":{"type":"string"},"lease_mode":{"type":"string"},"ttl_seconds":{"type":"integer"}},"required":["resource_type","resource"]}},
     {"name":"agentos.heartbeat_resource","description":"Gia hạn lease.","inputSchema":{"type":"object","properties":{"lease_id":{"type":"integer"},"ttl_seconds":{"type":"integer"}},"required":["lease_id"]}},
@@ -54,18 +57,28 @@ def serve(root: Path, task_id: str, session_id: str) -> None:
     Returns:
         None.
     """
+    session_token = os.environ.get("AGENTOS_SESSION_TOKEN")
+    if not session_token:
+        raise RuntimeError("AGENTOS_SESSION_TOKEN is required for MCP gateway access")
+    sequence = 0
     for line in sys.stdin:
         try:
+            sequence += 1
             request = json.loads(line); method = request.get("method"); identifier = request.get("id")
             if method == "initialize":
-                _reply(identifier, {"protocolVersion": "2025-03-26", "capabilities": {"tools": {}}, "serverInfo": {"name": "agentos-mcp-proxy", "version": "0.13.0"}})
+                _reply(identifier, {"protocolVersion": "2025-03-26", "capabilities": {"tools": {}}, "serverInfo": {"name": "agentos-mcp-proxy", "version": "0.16.2"}})
             elif method == "tools/list":
                 _reply(identifier, {"tools": TOOLS})
             elif method == "tools/call":
                 params = request.get("params", {}); name = params.get("name"); arguments = params.get("arguments", {})
                 reason = arguments.pop("reason_code", None); justification = arguments.pop("justification", None)
                 target = arguments.get("url") if name == "agentos.http_request" else arguments.get("path")
-                result = proxy_execute(root, task_id, session_id, name, arguments, reason, justification, target)
+                result = gateway_request(root, {
+                    "action": "execute", "task_id": task_id, "session_token": session_token,
+                    "tool_name": name, "args": arguments, "reason_code": reason,
+                    "justification": justification, "target": target,
+                    "request_id": secrets.token_hex(16), "sequence": sequence
+                })
                 _reply(identifier, {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}], "isError": not result.get("success", result.get("allowed", True))})
             elif method == "notifications/initialized":
                 continue

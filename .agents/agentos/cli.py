@@ -19,6 +19,13 @@ from pathlib import Path
 from typing import Any
 
 from .cache import cache_lookup, cache_store
+from .context_runtime import build_context_pack, context_explain, context_status
+from .memory import query_memory, record_finding, remember, validate_memory
+from .jobs import cancel_job, discover_tools, job_status, recover_jobs, submit_job
+from .planning import active_plan, approve_plan, precommit_check, submit_plan
+from .evaluation import aggregate_metrics, export_metrics
+from .evolution import create_proposal, proposal_status, simulate_proposal, transition_proposal
+from .collaboration import assign_role, collaboration_readiness, list_messages, send_message
 from .concurrency import acquire_resource, claim_task, handoff_task, heartbeat_resource, list_resources, release_resource
 from .core import approve_task, db_status, docs_check, instruction_check, list_claims, prepare_change, project_status, record_claim, record_tool_execution, show_claim, start_task
 from .documentation import documentation_scan
@@ -87,6 +94,13 @@ def parser() -> argparse.ArgumentParser:
     a=s.add_parser("egress-report"); _task_arg(a)
     a=s.add_parser("cache-store"); _task_arg(a); a.add_argument("--path",required=True); a.add_argument("--range-key",required=True); a.add_argument("--summary",required=True)
     a=s.add_parser("cache-lookup"); _task_arg(a); a.add_argument("--path",required=True); a.add_argument("--range-key",required=True)
+    a=s.add_parser("context-build"); _task_arg(a); a.add_argument("--max-lines",type=int,default=500)
+    a=s.add_parser("context-status"); _task_arg(a)
+    a=s.add_parser("context-explain"); _task_arg(a)
+    a=s.add_parser("memory-record"); a.add_argument("--kind",required=True,choices=["semantic","episodic","procedural","evidence"]); a.add_argument("--statement",required=True); a.add_argument("--source-path"); _task_arg(a); a.add_argument("--confidence",type=float,default=1.0); a.add_argument("--evidence-hash")
+    a=s.add_parser("memory-query"); a.add_argument("query"); a.add_argument("--kind",choices=["semantic","episodic","procedural","evidence"]); a.add_argument("--limit",type=int,default=20); a.add_argument("--include-stale",action="store_true")
+    a=s.add_parser("memory-validate")
+    a=s.add_parser("finding-record"); a.add_argument("--kind",required=True); a.add_argument("--message",required=True); a.add_argument("--path"); a.add_argument("--symbol"); _task_arg(a)
     a=s.add_parser("docs-scan"); a.add_argument("--scope",default="src"); _task_arg(a)
     a=s.add_parser("run-tests"); _task_arg(a); a.add_argument("--path",default=".agents/tests")
     a=s.add_parser("sync-check"); _task_arg(a)
@@ -101,6 +115,24 @@ def parser() -> argparse.ArgumentParser:
     s.add_parser("audit-verify")
     a=s.add_parser("rotate-audit-key"); a.add_argument("--identity",required=True); a.add_argument("--reason",required=True)
     a=s.add_parser("doctor"); a.add_argument("--scope",default=".agents/agentos")
+    a=s.add_parser("job-submit"); _task_arg(a); a.add_argument("--command",required=True); a.add_argument("--cwd",default="."); a.add_argument("--timeout",type=int,default=900); a.add_argument("--env",default="{}"); a.add_argument("--no-start",action="store_true")
+    a=s.add_parser("job-status"); a.add_argument("--job-id",required=True)
+    a=s.add_parser("job-cancel"); a.add_argument("--job-id",required=True); a.add_argument("--reason",required=True)
+    s.add_parser("job-recover")
+    a=s.add_parser("tools-discover"); _task_arg(a)
+    a=s.add_parser("plan-submit"); _task_arg(a); a.add_argument("--plan",required=True)
+    a=s.add_parser("plan-approve"); a.add_argument("--plan-id",required=True,type=int); a.add_argument("--approved-by",required=True); a.add_argument("--note",required=True)
+    a=s.add_parser("plan-show"); _task_arg(a)
+    a=s.add_parser("precommit-check"); _task_arg(a); a.add_argument("--changed-files",default=None)
+    a=s.add_parser("evaluation-report"); a.add_argument("--since"); a.add_argument("--agent"); a.add_argument("--model"); a.add_argument("--output"); a.add_argument("--format",choices=["json","csv"],default="json")
+    a=s.add_parser("evolution-propose"); a.add_argument("--title",required=True); a.add_argument("--findings",default="[]"); a.add_argument("--patch",required=True); a.add_argument("--benefit",required=True); a.add_argument("--risks",default="[]"); a.add_argument("--rollback",required=True); a.add_argument("--created-by",required=True)
+    a=s.add_parser("evolution-simulate"); a.add_argument("--proposal-id",type=int,required=True)
+    a=s.add_parser("evolution-transition"); a.add_argument("--proposal-id",type=int,required=True); a.add_argument("--status",required=True,choices=["reviewed","shadow","canary","active","rolled_back"]); a.add_argument("--actor",required=True); a.add_argument("--note",required=True)
+    a=s.add_parser("evolution-status"); a.add_argument("--proposal-id",type=int,required=True)
+    a=s.add_parser("role-assign"); _task_arg(a); a.add_argument("--target-session",required=True); a.add_argument("--role",required=True); a.add_argument("--assigned-by",required=True)
+    a=s.add_parser("collaboration-readiness"); _task_arg(a)
+    a=s.add_parser("message-send"); _task_arg(a); a.add_argument("--to-session",required=True); a.add_argument("--kind",required=True); a.add_argument("--payload",required=True); a.add_argument("--disclosure",default="metadata-only"); a.add_argument("--artifacts",default="[]"); a.add_argument("--correlation-id"); a.add_argument("--causation-id")
+    a=s.add_parser("message-list"); _task_arg(a)
     a=s.add_parser("mcp-serve"); _task_arg(a)
     a=s.add_parser("status"); _task_arg(a)
     return p
@@ -154,7 +186,7 @@ def main() -> int:
     args=parser().parse_args(); root=Path(args.root).resolve(); session=normalize_session_id(args.session_id)
     try:
         tid=getattr(args,"task_id",None)
-        task_commands={"approve-task","acquire-resource","heartbeat-resource","release-resource","list-resources","claim-task","handoff-task","mark-step","workflow-status","index-build","guard-tool","prepare-change","record-claim","list-claims","egress-report","cache-store","cache-lookup","report","proxy-execute","mcp-serve"}
+        task_commands={"role-assign","collaboration-readiness","message-send","message-list","job-submit","tools-discover","plan-submit","plan-show","precommit-check","context-build","context-status","context-explain","memory-record","finding-record","approve-task","acquire-resource","heartbeat-resource","release-resource","list-resources","claim-task","handoff-task","mark-step","workflow-status","index-build","guard-tool","prepare-change","record-claim","list-claims","egress-report","cache-store","cache-lookup","report","proxy-execute","mcp-serve"}
         if args.cmd in task_commands:
             tid=resolve_task_id(root,tid,session)
         if args.cmd=="start-task":
@@ -204,6 +236,35 @@ def main() -> int:
         elif args.cmd=="egress-report": result=egress_report(root,tid)
         elif args.cmd=="cache-store": result=cache_store(root,tid,args.path,args.range_key,args.summary)
         elif args.cmd=="cache-lookup": result=cache_lookup(root,tid,args.path,args.range_key)
+        elif args.cmd=="context-build": result=build_context_pack(root,tid,args.max_lines)
+        elif args.cmd=="context-status": result=context_status(root,tid)
+        elif args.cmd=="context-explain": result=context_explain(root,tid)
+        elif args.cmd=="memory-record": result=remember(root,args.kind,args.statement,args.source_path,tid,args.confidence,args.evidence_hash)
+        elif args.cmd=="memory-query": result=query_memory(root,args.query,args.kind,args.limit,args.include_stale)
+        elif args.cmd=="memory-validate": result=validate_memory(root)
+        elif args.cmd=="finding-record": result=record_finding(root,args.kind,args.message,args.path,args.symbol,tid)
+        elif args.cmd=="job-submit": result=submit_job(root,tid,session,_json_arg(args.command,"command"),args.cwd,args.timeout,_json_arg(args.env,"env"),not args.no_start)
+        elif args.cmd=="job-status": result=job_status(root,args.job_id)
+        elif args.cmd=="job-cancel": result=cancel_job(root,args.job_id,session,args.reason)
+        elif args.cmd=="job-recover": result=recover_jobs(root)
+        elif args.cmd=="tools-discover": result=discover_tools(root,tid)
+        elif args.cmd=="plan-submit": result=submit_plan(root,tid,session,_json_arg(args.plan,"plan"))
+        elif args.cmd=="plan-approve": result=approve_plan(root,args.plan_id,args.approved_by,args.note)
+        elif args.cmd=="plan-show": result=active_plan(root,tid) or {"ok":False,"task_id":tid,"status":"missing"}
+        elif args.cmd=="precommit-check":
+            files=_json_arg(args.changed_files,"changed-files") if args.changed_files else None
+            result=precommit_check(root,tid,files)
+            with __import__("sqlite3").connect(root/".agents/state/agentos.db") as c: c.execute("INSERT INTO precommit_checks(task_id,ok,changed_files_json,blockers_json) VALUES(?,?,?,?)",(tid,int(result["ok"]),json.dumps(result["changed_files"]),json.dumps(result["blockers"])))
+        elif args.cmd=="evaluation-report":
+            result=export_metrics(root,args.output,args.format,since=args.since,agent=args.agent,model=args.model) if args.output else aggregate_metrics(root,args.since,args.agent,args.model)
+        elif args.cmd=="evolution-propose": result=create_proposal(root,args.title,_json_arg(args.findings,"findings"),_json_arg(args.patch,"patch"),args.benefit,_json_arg(args.risks,"risks"),_json_arg(args.rollback,"rollback"),args.created_by)
+        elif args.cmd=="evolution-simulate": result=simulate_proposal(root,args.proposal_id)
+        elif args.cmd=="evolution-transition": result=transition_proposal(root,args.proposal_id,args.status,args.actor,args.note)
+        elif args.cmd=="evolution-status": result=proposal_status(root,args.proposal_id)
+        elif args.cmd=="role-assign": result=assign_role(root,tid,args.target_session,args.role,args.assigned_by)
+        elif args.cmd=="collaboration-readiness": result=collaboration_readiness(root,tid)
+        elif args.cmd=="message-send": result=send_message(root,tid,session,args.to_session,args.kind,_json_arg(args.payload,"payload"),args.disclosure,_json_arg(args.artifacts,"artifacts"),args.correlation_id,args.causation_id)
+        elif args.cmd=="message-list": result=list_messages(root,tid,session)
         elif args.cmd=="docs-scan":
             result=documentation_scan(root,args.scope)
             if tid and result.get("ok"): complete_automated_step(root,tid,"documentation_check","docs-scan",result)

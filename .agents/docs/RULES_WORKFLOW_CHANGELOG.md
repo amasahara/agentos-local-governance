@@ -170,3 +170,56 @@ Existing v0.11.0 state migrates automatically. Clients writing existing files mu
 
 - Moved coordination into the MCP/tool-proxy boundary.
 - Added signed audit, caller-bound handoff, scope enforcement, expiry/stale reclaim, and schema 12.
+
+
+## 2026-08-02 — v0.13.1–v0.14.3 — Security Foundation Program
+
+### Quyết định / Decision
+
+- v0.13.1: vá audit daemon fail-closed, audit-home isolation và session revocation.
+- v0.14.0: thêm `agentos-gatewayd` và thin IPC client.
+- v0.14.1: thêm capability session, token hash, expiry, revoke và replay protection.
+- v0.14.2: thêm isolated workspace, environment filtering và static AgentOS-import denial.
+- v0.14.3: thêm signed-state index, workflow verification và state reconciliation/recovery history.
+
+### Enforcement
+
+Schema 13–16, `gatewayd.py`, `gateway_client.py`, `security.py`, hardened proxy, signed workflow state, adversarial tests và tài liệu song ngữ.
+
+### Compatibility
+
+Migrations are additive. Agent-facing writes should move to the gateway protocol; direct local APIs remain for operator/testing compatibility during this security program.
+
+## 2026-08-02 — v0.15.0–v0.15.1 — Knowledge Runtime
+
+- v0.15.0: thêm deterministic context pack, source hash, revision, line budget, stale detection và `context-explain`.
+- v0.15.1: thêm project findings deduplication và semantic/episodic/procedural/evidence memory có provenance.
+- Schema nâng từ 16 lên 18 qua hai migration additive.
+- Runtime: `context_runtime.py`, `memory.py`; CLI và tài liệu song ngữ được đồng bộ.
+- Tests: context budget/stale/revision, finding deduplication, memory provenance/stale và schema.
+
+
+## 2026-08-02 — v0.16.0–v0.16.2 — Execution Platform
+
+### Quyết định / Decision
+
+- v0.16.0: asynchronous governed jobs, immutable specs, recovery, and workflow-aware tool discovery.
+- v0.16.1: revisioned task plans, human approval, and Git-aware pre-commit enforcement.
+- v0.16.2: versioned aggregate evaluation metrics and JSON/CSV export.
+
+### Enforcement
+
+Schema 19–21; runtime modules `jobs.py`, `planning.py`, and `evaluation.py`; CLI/MCP integration; regression tests; bilingual README and developer guide synchronization.
+
+### Compatibility
+
+Migrations are additive. Existing synchronous proxy execution remains available. The async job API adds a non-blocking path without removing prior commands.
+
+## 2026-08-02 — v0.17.0–v0.17.1 — Adaptive Multi-Agent Platform
+
+- v0.17.0 adds evaluation-baseline-gated governance proposals, deterministic simulation, human review, shadow, canary, activation, and rollback stages.
+- Automatic policy activation is forbidden.
+- v0.17.1 adds authenticated task-role assignments and structured task messages.
+- Multi-agent messaging is fail-closed unless capability sessions, roles, and a fresh context pack are all present.
+- Context disclosure is explicitly bounded and every role/message transition is externally signed.
+- Database schema upgraded from 21 to 23.

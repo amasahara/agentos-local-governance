@@ -97,7 +97,7 @@ changelog
 
 ## Current v0.11.0 runtime additions
 
-Database schema: `12`
+Schema at that milestone: `18`
 
 - `proxy.py`: proxy-only filesystem/process/network enforcement, command profiles, environment filtering, domain/IP/redirect validation.
 - `external_audit.py`: Ed25519 key registry, signed JSONL/daemon/remote sinks, key rotation, historical verification.
@@ -112,3 +112,32 @@ Database schema: `12`
 - `resource_leases`: expiring read/write ownership.
 - `file_versions`: version and hash history for committed file mutations.
 - `task_handoffs`: audited writer ownership transfers.
+
+### Knowledge Runtime v0.15.1
+
+```text
+.agents/agentos/context_runtime.py  → deterministic context manifests and stale detection
+.agents/agentos/memory.py           → findings and provenance-aware project memory
+context_packs                       → revisioned task context packages
+project_findings                    → deduplicated recurring findings
+project_memory                      → semantic/episodic/procedural/evidence knowledge
+```
+
+Schema at that milestone: `18`.
+
+
+### Execution Platform v0.17.1
+
+- `.agents/agentos/jobs.py`: asynchronous job lifecycle, recovery, and tool discovery.
+- `.agents/agentos/planning.py`: task-plan revisions and Git-aware pre-commit checks.
+- `.agents/agentos/evaluation.py`: aggregate metrics and JSON/CSV export.
+- Migrations 19–21: async jobs, task plans/precommit records, and evaluation runs.
+
+Database schema: `23`.
+
+### Adaptive Multi-Agent Platform v0.17.1
+
+- `.agents/agentos/evolution.py`: evaluation-driven policy proposal lifecycle, simulation, staged activation, and rollback.
+- `.agents/agentos/collaboration.py`: capability/role/context readiness, structured messages, and disclosure enforcement.
+- Schema 22: `evolution_proposals`, `evolution_stage_events`.
+- Schema 23: `task_role_assignments`, `task_messages`.

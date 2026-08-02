@@ -1,5 +1,5 @@
 {
-  "version": "0.13.0",
+  "version": "0.17.1",
   "language_policy": {
     "understand_user_language_directly": true,
     "preserve_original_request": true,
@@ -263,7 +263,7 @@
       "huong_dan.md",
       "AGENTS.md"
     ],
-    "current_schema": 12,
+    "current_schema": 23,
     "history_begin": "AGENTOS_VERSION_HISTORY_BEGIN",
     "history_end": "AGENTOS_VERSION_HISTORY_END"
   },
@@ -287,5 +287,77 @@
     "task_stale_after_seconds": 120,
     "write_lease_requires_approved_scope": true,
     "force_reclaim_requires_stale": true
+  },
+  "security_program": {
+    "releases": [
+      "0.13.1",
+      "0.14.0",
+      "0.14.1",
+      "0.14.2",
+      "0.14.3"
+    ],
+    "gateway_required": true,
+    "authenticated_capability_sessions": true,
+    "isolated_execution": true,
+    "verifiable_state_recovery": true,
+    "security_profile": "advisory"
+  },
+  "knowledge_runtime": {
+    "context_runtime": {
+      "enabled": true,
+      "deterministic": true,
+      "default_max_lines": 500,
+      "stale_source_detection": true,
+      "llm_summarization": "forbidden"
+    },
+    "project_memory": {
+      "enabled": true,
+      "kinds": [
+        "semantic",
+        "episodic",
+        "procedural",
+        "evidence"
+      ],
+      "provenance_required": true,
+      "stale_source_invalidation": true,
+      "finding_deduplication": true
+    }
+  },
+  "execution_platform": {
+    "async_jobs": true,
+    "workflow_aware_tool_discovery": true,
+    "immutable_job_specs": true,
+    "versioned_task_plans": true,
+    "git_precommit_gate": true,
+    "evaluation_harness": true,
+    "metrics_schema_version": 1
+  },
+  "evolution_policy": {
+    "enabled": true,
+    "evaluation_baseline_required": true,
+    "human_activation_required": true,
+    "stages": [
+      "draft",
+      "simulated",
+      "reviewed",
+      "shadow",
+      "canary",
+      "active",
+      "rolled_back"
+    ],
+    "automatic_activation": false
+  },
+  "multi_agent_policy": {
+    "enabled": true,
+    "require_capability_sessions": true,
+    "require_active_roles": true,
+    "require_fresh_context_pack": true,
+    "disclosure_levels": [
+      "metadata-only",
+      "summary",
+      "selected-artifacts",
+      "full-task-context"
+    ],
+    "signed_messages": true
   }
 }

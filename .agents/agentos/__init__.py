@@ -8,4 +8,4 @@ Responsibilities:
     - Publish the runtime version.
 """
 
-__version__ = "0.13.0"
+__version__ = "0.17.1"

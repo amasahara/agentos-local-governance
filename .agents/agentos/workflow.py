@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import Any
 
 from .db import connect
+from .external_audit import append_signed_event
+from .security import link_signed_state
 from .policy import load_policy
 
 AUTOMATED_ONLY_STEPS = {
@@ -185,7 +187,13 @@ def complete_automated_step(
         )
         if cur.rowcount != 1:
             raise RuntimeError(f"workflow step not found: {step}")
-    return {"task_id": task_id, "step_name": step, "status": "done", "completion_source": "auto", "command_name": command_name, "result_hash": digest}
+    payload = {"task_id": task_id, "workflow_name": workflow_name, "step_name": step, "status": "done", "completion_source": "auto", "command_name": command_name, "result_hash": digest}
+    event = append_signed_event(root, "governance.workflow_step_completed", payload, task_id, None)
+    row_key = f"{task_id}:{workflow_name}:{step}"
+    with connect(root) as c:
+        c.execute("UPDATE workflow_steps SET external_event_hash=?,verification_status='verified' WHERE task_id=? AND workflow_name=? AND step_name=?", (event["event_hash"], task_id, workflow_name, step))
+    link_signed_state(root, "workflow_steps", row_key, event["event_hash"])
+    return {**payload, "external_event_hash": event["event_hash"], "verification_status": "verified"}
 
 
 def mark_step(root: Path, task_id: str, step: str, status: str, note: str | None = None, workflow_name: str = "default") -> dict[str, Any]:
@@ -239,7 +247,7 @@ def workflow_status(root: Path, task_id: str, workflow_name: str = "default") ->
     with connect(root) as c:
         rows = c.execute(
             """SELECT step_name,status,skip_reason,note,recorded_at,completion_source,
-                      evidence_type,evidence_id,result_hash,command_name,exit_code
+                      evidence_type,evidence_id,result_hash,command_name,exit_code,verification_status,external_event_hash
                FROM workflow_steps WHERE task_id=? AND workflow_name=?""",
             (task_id, workflow_name),
         ).fetchall()

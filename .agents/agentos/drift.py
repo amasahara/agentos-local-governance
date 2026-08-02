@@ -22,6 +22,8 @@ from typing import Any
 
 from .db import connect
 from .policy import load_policy
+from .external_audit import append_signed_event
+from .security import link_signed_state
 
 
 def tracked_files(root: Path) -> list[str]:
@@ -80,7 +82,10 @@ def ack_baseline(root: Path, identity: str | None = None, method: str = "interac
             if path.exists():
                 c.execute("INSERT INTO governance_baseline(file_path,content_hash,acknowledged_by,git_commit,acknowledgement_method,session_id) VALUES(?,?,?,?,?,?)", (rel, _hash(path), actor, commit, method, session_id))
         c.execute("UPDATE governance_change_log SET acknowledged=1 WHERE acknowledged=0")
-    return {"ok": True, "acknowledged_files": files, "acknowledged_by": actor, "acknowledgement_method": method, "git_commit": commit}
+    payload = {"acknowledged_files": files, "acknowledged_by": actor, "acknowledgement_method": method, "git_commit": commit}
+    event = append_signed_event(root, "governance.baseline_acknowledged", payload, None, session_id)
+    link_signed_state(root, "governance_baseline", event["event_hash"], event["event_hash"])
+    return {"ok": True, **payload, "external_event_hash": event["event_hash"]}
 
 
 def drift_check(root: Path, detected_by: str = "agentos_cli", task_id: str | None = None) -> dict[str, Any]:

@@ -1,8 +1,8 @@
-# Hướng dẫn AgentOS v0.13.0 / AgentOS v0.13.0 Developer Guide
+# Hướng dẫn AgentOS v0.17.1 / AgentOS v0.17.1 Developer Guide
 
-> Phiên bản hiện tại: `v0.13.0`  
-> Current version: `v0.13.0`  
-> Database schema: `12`
+> Phiên bản hiện tại: `v0.17.1`  
+> Current version: `v0.17.1`  
+> Database schema: `23`
 
 ## Tiếng Việt — Điều phối nhiều CLI/agent
 
@@ -1090,3 +1090,87 @@ Các bước sau nâng cấp:
 In v0.11.0, the coding agent must see only the AgentOS MCP gateway. Do not expose raw filesystem, shell, or HTTP tools alongside it. `process.exec` is limited to allowlisted test/build/inspection profiles and must not be used for source mutation or network access.
 
 After upgrading, verify schema `10`, configure command and domain allowlists, remove direct backend tools, run `doctor`, review drift, acknowledge the new baseline, reinstall the Git hook, and place `AGENTOS_AUDIT_HOME` under a user-owned or service-owned directory.
+## Knowledge Runtime v0.15.1 — Tiếng Việt
+
+```bash
+.agents/bin/agentos context-build --task-id TASK-001
+.agents/bin/agentos context-status --task-id TASK-001
+.agents/bin/agentos context-explain --task-id TASK-001
+.agents/bin/agentos memory-record --task-id TASK-001 --kind semantic --statement "Quy ước kiến trúc"
+.agents/bin/agentos memory-query "kiến trúc"
+.agents/bin/agentos memory-validate
+```
+
+Context pack không gọi LLM bên ngoài, có revision, content hash và tự báo stale khi nguồn thay đổi. Memory có provenance và nguồn thay đổi sẽ chuyển sang `stale`.
+
+## Knowledge Runtime v0.15.1 — English
+
+Context packs are deterministic, revisioned, bounded, and stale-aware. Project memory supports semantic, episodic, procedural, and evidence records with source provenance.
+
+Schema at that milestone: `18`.
+
+## Execution Platform v0.16.0–v0.16.2 — Tiếng Việt
+
+### Thứ tự phát hành
+
+1. v0.13.1: bản vá nhỏ, nhanh và tương thích.
+2. v0.14.0–v0.14.3: Security Foundation Program.
+3. v0.15.0–v0.15.1: Knowledge Runtime.
+4. v0.16.0–v0.16.2: Execution Platform.
+
+### Quy trình sử dụng
+
+```bash
+agentos job-submit --task-id T1 --command '["python3","-m","pytest","tests","-q"]'
+agentos job-status --job-id JOB_ID
+agentos tools-discover --task-id T1
+agentos plan-submit --task-id T1 --plan '{"goal":"...","files":["src/a.py"],"tests":["tests/test_a.py"]}'
+agentos plan-approve --plan-id 1 --approved-by HUMAN --note "Reviewed"
+agentos precommit-check --task-id T1
+agentos evaluation-report --output .agents/runtime/evaluation/report.json
+```
+
+Job chạy trong isolated workspace, dùng environment đã lọc, không có network mặc định và giữ immutable spec hash. Plan sau khi duyệt được dùng để đối chiếu file thay đổi trước commit. Evaluation report pin repository/policy version để so sánh có ý nghĩa.
+
+## Execution Platform v0.16.0–v0.16.2 — English
+
+Use asynchronous governed jobs for long-running commands, submit and approve revisioned task plans, validate Git changes with `precommit-check`, and export versioned evaluation metrics in JSON or CSV.
+
+Database schema: `23`.
+
+## Adaptive Multi-Agent Platform v0.17.0–v0.17.1 — Tiếng Việt
+
+### Controlled Evolution v0.17.0
+
+1. Chạy `evaluation-report` để tạo baseline.
+2. Tạo proposal bằng `evolution-propose`.
+3. Chạy `evolution-simulate` trên metrics hiện tại.
+4. Con người review proposal.
+5. Chạy tuần tự `shadow`, `canary`, rồi mới `active`.
+6. Dùng `rolled_back` khi kết quả không đạt.
+
+Không có đường tắt từ draft/simulated tới active và không có auto-activation.
+
+### Multi-Agent Protocol v0.17.1
+
+Trước khi gửi message, `collaboration-readiness` phải xác nhận:
+
+- capability session còn hiệu lực;
+- mỗi session có role đang active;
+- context pack tồn tại và không stale.
+
+Role mặc định gồm `executor`, `reviewer`, `planner`, `observer`. Context chỉ được chia sẻ theo mức disclosure đã chọn; `selected-artifacts` bắt buộc có artifact references.
+
+## Adaptive Multi-Agent Platform v0.17.0–v0.17.1 — English
+
+Controlled Evolution depends on a persisted Evaluation Harness baseline and enforces review, shadow, canary, activation, and rollback stages. Multi-Agent Protocol requires stable capability sessions, active task roles, and a fresh context pack before any structured message is accepted.
+
+### Version program history
+
+1. v0.13.1: small compatible security patch.
+2. v0.14.0–v0.14.3: Security Foundation.
+3. v0.15.0–v0.15.1: Knowledge Runtime.
+4. v0.16.0–v0.16.2: Execution Platform.
+5. v0.17.0–v0.17.1: Adaptive Multi-Agent Platform.
+
+Database schema: `23`.

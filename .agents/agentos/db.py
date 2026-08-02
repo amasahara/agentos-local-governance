@@ -16,7 +16,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-SCHEMA_VERSION = 12
+SCHEMA_VERSION = 23
 
 
 def _db_path(root: Path) -> Path:
@@ -74,7 +74,7 @@ def migrate(connection: sqlite3.Connection) -> None:
     """
     connection.execute("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY)")
     current = connection.execute("SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations").fetchone()["v"]
-    migrations = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9, _m10, _m11, _m12]
+    migrations = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9, _m10, _m11, _m12, _m13, _m14, _m15, _m16, _m17, _m18, _m19, _m20, _m21, _m22, _m23]
     for version, fn in enumerate(migrations, start=1):
         if version > current:
             fn(connection)
@@ -482,4 +482,199 @@ def _m12(c: sqlite3.Connection) -> None:
         external_event_hash TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(task_id) REFERENCES tasks(id), FOREIGN KEY(lease_id) REFERENCES resource_leases(id));
     CREATE INDEX idx_coordination_events_task ON coordination_events(task_id,created_at);
+    """)
+
+
+
+def _m13(c: sqlite3.Connection) -> None:
+    """Add gateway ownership and external signed-state linkage."""
+    c.executescript("""
+    CREATE TABLE session_tokens(
+        token_hash TEXT PRIMARY KEY, token_id TEXT NOT NULL UNIQUE,
+        session_id TEXT NOT NULL, task_id TEXT NOT NULL,
+        capability_set_json TEXT NOT NULL DEFAULT '[]',
+        issued_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at TEXT NOT NULL, revoked_at TEXT,
+        last_sequence INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY(task_id) REFERENCES tasks(id));
+    CREATE TABLE signed_state_index(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, table_name TEXT NOT NULL,
+        row_key TEXT NOT NULL, external_event_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(table_name,row_key,external_event_hash));
+    CREATE INDEX idx_signed_state_lookup ON signed_state_index(table_name,row_key);
+    CREATE TABLE gateway_state(
+        singleton INTEGER PRIMARY KEY CHECK(singleton=1), instance_id TEXT NOT NULL,
+        security_profile TEXT NOT NULL, started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        heartbeat_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    """)
+
+
+def _m14(c: sqlite3.Connection) -> None:
+    """Add authenticated request replay protection and credential history."""
+    c.executescript("""
+    CREATE TABLE authenticated_requests(
+        request_id TEXT PRIMARY KEY, token_id TEXT NOT NULL, task_id TEXT NOT NULL,
+        session_id TEXT NOT NULL, sequence INTEGER NOT NULL, body_hash TEXT NOT NULL,
+        decision TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE INDEX idx_authenticated_requests_token ON authenticated_requests(token_id,sequence);
+    CREATE TABLE session_revocations(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, token_id TEXT NOT NULL,
+        revoked_by TEXT NOT NULL, reason TEXT NOT NULL,
+        external_event_hash TEXT, revoked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    """)
+
+
+def _m15(c: sqlite3.Connection) -> None:
+    """Add isolated execution manifests and denial evidence."""
+    c.executescript("""
+    CREATE TABLE execution_manifests(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL,
+        session_id TEXT NOT NULL, command_hash TEXT NOT NULL, cwd TEXT NOT NULL,
+        sandbox_profile TEXT NOT NULL, workspace_path TEXT,
+        environment_hash TEXT NOT NULL, network_allowed INTEGER NOT NULL DEFAULT 0,
+        decision TEXT NOT NULL, reason TEXT, external_event_hash TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE INDEX idx_execution_manifests_task ON execution_manifests(task_id,created_at);
+    """)
+
+
+def _m16(c: sqlite3.Connection) -> None:
+    """Add reconciliation checkpoints and recovery history."""
+    c.executescript("""
+    ALTER TABLE workflow_steps ADD COLUMN verification_status TEXT NOT NULL DEFAULT 'unverified';
+    ALTER TABLE workflow_steps ADD COLUMN external_event_hash TEXT;
+    CREATE TABLE state_reconciliation_runs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, ok INTEGER NOT NULL,
+        checked_rows INTEGER NOT NULL, unverifiable_rows INTEGER NOT NULL,
+        details_json TEXT NOT NULL, latest_external_hash TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE recovery_events(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, event_type TEXT NOT NULL,
+        status TEXT NOT NULL, details_json TEXT NOT NULL,
+        external_event_hash TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    """)
+
+
+def _m17(c: sqlite3.Connection) -> None:
+    """Add deterministic context packages for v0.15.0."""
+    c.executescript("""
+    CREATE TABLE context_packs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL,
+        revision INTEGER NOT NULL, content_hash TEXT NOT NULL,
+        manifest_json TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(task_id) REFERENCES tasks(id), UNIQUE(task_id,revision));
+    CREATE INDEX idx_context_packs_task ON context_packs(task_id,status,revision);
+    """)
+
+
+def _m18(c: sqlite3.Connection) -> None:
+    """Add project findings and provenance-aware memory for v0.15.1."""
+    c.executescript("""
+    CREATE TABLE project_findings(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, finding_key TEXT NOT NULL UNIQUE,
+        kind TEXT NOT NULL, path TEXT, symbol TEXT, message TEXT NOT NULL,
+        first_seen_task_id TEXT, occurrences INTEGER NOT NULL DEFAULT 1,
+        status TEXT NOT NULL DEFAULT 'active',
+        first_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE INDEX idx_project_findings_lookup ON project_findings(kind,status,occurrences);
+    CREATE TABLE project_memory(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, statement TEXT NOT NULL,
+        source_path TEXT, source_hash TEXT, first_seen_task_id TEXT,
+        last_confirmed_task_id TEXT, confidence REAL NOT NULL DEFAULT 1.0,
+        evidence_hash TEXT, status TEXT NOT NULL DEFAULT 'active', supersedes_id INTEGER,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(supersedes_id) REFERENCES project_memory(id));
+    CREATE INDEX idx_project_memory_query ON project_memory(kind,status,confidence);
+    """)
+
+
+def _m19(c: sqlite3.Connection) -> None:
+    """Add asynchronous execution jobs for v0.16.0."""
+    c.executescript("""
+    CREATE TABLE async_jobs(
+        job_id TEXT PRIMARY KEY, task_id TEXT NOT NULL, session_id TEXT NOT NULL,
+        spec_json TEXT NOT NULL, spec_hash TEXT NOT NULL, state TEXT NOT NULL,
+        pid INTEGER, exit_code INTEGER, timeout_seconds INTEGER NOT NULL,
+        stdout_path TEXT NOT NULL, stderr_path TEXT NOT NULL, cancel_reason TEXT,
+        external_event_hash TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        started_at TEXT, finished_at TEXT, FOREIGN KEY(task_id) REFERENCES tasks(id));
+    CREATE INDEX idx_async_jobs_task_state ON async_jobs(task_id,state,created_at);
+    CREATE TABLE job_events(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, job_id TEXT NOT NULL,
+        event_type TEXT NOT NULL, details_json TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(job_id) REFERENCES async_jobs(job_id));
+    CREATE INDEX idx_job_events_job ON job_events(job_id,created_at);
+    """)
+
+
+def _m20(c: sqlite3.Connection) -> None:
+    """Add versioned task plans and pre-commit records for v0.16.1."""
+    c.executescript("""
+    CREATE TABLE task_plans(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, revision INTEGER NOT NULL,
+        status TEXT NOT NULL, plan_json TEXT NOT NULL, plan_hash TEXT NOT NULL,
+        submitted_by TEXT NOT NULL, approved_by TEXT, approval_note TEXT,
+        submitted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, approved_at TEXT,
+        FOREIGN KEY(task_id) REFERENCES tasks(id), UNIQUE(task_id,revision));
+    CREATE INDEX idx_task_plans_active ON task_plans(task_id,status,revision);
+    CREATE TABLE precommit_checks(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, ok INTEGER NOT NULL,
+        changed_files_json TEXT NOT NULL, blockers_json TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(task_id) REFERENCES tasks(id));
+    """)
+
+
+def _m21(c: sqlite3.Connection) -> None:
+    """Add evaluation runs and benchmark metadata for v0.16.2."""
+    c.executescript("""
+    CREATE TABLE evaluation_runs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, metrics_schema_version INTEGER NOT NULL,
+        agent_name TEXT, model_name TEXT, policy_version TEXT NOT NULL,
+        repository_version TEXT NOT NULL, filters_json TEXT NOT NULL, metrics_json TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE INDEX idx_evaluation_runs_dimensions ON evaluation_runs(agent_name,model_name,policy_version,created_at);
+    """)
+
+
+def _m22(c: sqlite3.Connection) -> None:
+    """Add evaluation-driven controlled evolution for v0.17.0."""
+    c.executescript("""
+    CREATE TABLE evolution_proposals(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, status TEXT NOT NULL,
+        trigger_findings_json TEXT NOT NULL, policy_patch_json TEXT NOT NULL,
+        expected_benefit TEXT NOT NULL, risks_json TEXT NOT NULL, rollback_plan_json TEXT NOT NULL,
+        baseline_evaluation_run_id INTEGER NOT NULL, simulation_json TEXT, proposal_hash TEXT NOT NULL UNIQUE,
+        created_by TEXT NOT NULL, reviewed_by TEXT, review_note TEXT, external_event_hash TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(baseline_evaluation_run_id) REFERENCES evaluation_runs(id));
+    CREATE INDEX idx_evolution_proposals_status ON evolution_proposals(status,created_at);
+    CREATE TABLE evolution_stage_events(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, proposal_id INTEGER NOT NULL, from_status TEXT NOT NULL,
+        to_status TEXT NOT NULL, actor TEXT NOT NULL, note TEXT NOT NULL, external_event_hash TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(proposal_id) REFERENCES evolution_proposals(id));
+    """)
+
+
+def _m23(c: sqlite3.Connection) -> None:
+    """Add role- and context-isolated multi-agent protocol for v0.17.1."""
+    c.executescript("""
+    CREATE TABLE task_role_assignments(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, session_id TEXT NOT NULL, token_id TEXT NOT NULL,
+        role TEXT NOT NULL, permissions_json TEXT NOT NULL, assigned_by TEXT NOT NULL, status TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(task_id) REFERENCES tasks(id));
+    CREATE INDEX idx_task_roles_active ON task_role_assignments(task_id,session_id,status);
+    CREATE TABLE task_messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, message_id TEXT NOT NULL UNIQUE, correlation_id TEXT NOT NULL,
+        causation_id TEXT, task_id TEXT NOT NULL, from_session TEXT NOT NULL, to_session TEXT NOT NULL,
+        kind TEXT NOT NULL, payload_json TEXT NOT NULL, payload_schema_version INTEGER NOT NULL,
+        disclosure_level TEXT NOT NULL, artifact_refs_json TEXT NOT NULL, status TEXT NOT NULL,
+        external_event_hash TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(task_id) REFERENCES tasks(id));
+    CREATE INDEX idx_task_messages_route ON task_messages(task_id,to_session,created_at);
     """)

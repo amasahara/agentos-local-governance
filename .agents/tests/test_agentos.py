@@ -1,4 +1,4 @@
-"""AgentOS v0.12.0 adversarial, concurrency, and regression tests."""
+"""AgentOS v0.16.2 security, knowledge, execution-platform, and regression tests."""
 from __future__ import annotations
 
 import json
@@ -47,7 +47,7 @@ def guarded_local_call(root: Path, task_id: str = "T1", session: str = "S1", sum
 
 def test_schema_v11_legacy_and_hardening_tables(tmp_path: Path) -> None:
     root = project(tmp_path)
-    assert db_status(root) == {"current": 12, "required": 12, "is_current": True}
+    assert db_status(root) == {"current": 23, "required": 23, "is_current": True}
     with connect(root) as c:
         tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"guarded_executions", "policy_override_approvals", "audit_events"} <= tables
@@ -220,7 +220,7 @@ def test_instruction_check_detects_modern_rule_files(tmp_path: Path) -> None:
 def test_release_docs_and_version_are_synchronized() -> None:
     assert docs_check(ROOT)["ok"] is True
     assert instruction_check(ROOT)["ok"] is True
-    assert load_policy(ROOT)["version"] == "0.13.0"
+    assert load_policy(ROOT)["version"] == "0.17.1"
 
 
 def test_prepare_change_still_enforces_write_scope(tmp_path: Path) -> None:
@@ -232,7 +232,7 @@ def test_prepare_change_still_enforces_write_scope(tmp_path: Path) -> None:
 
 def test_schema_v11_proxy_and_concurrency_tables(tmp_path: Path) -> None:
     root = project(tmp_path)
-    assert db_status(root) == {"current": 12, "required": 12, "is_current": True}
+    assert db_status(root) == {"current": 23, "required": 23, "is_current": True}
     with connect(root) as c:
         tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"proxy_executions", "external_audit_checkpoints", "resource_leases", "file_versions", "task_handoffs"} <= tables
@@ -369,7 +369,7 @@ def test_audit_verify_accepts_empty_log(tmp_path: Path, monkeypatch: pytest.Monk
 def test_docs_check_current_release_is_consistent() -> None:
     report = docs_check(ROOT)
     assert report["content_consistency"]["ok"] is True
-    assert report["version"]["VERSION"] == "0.13.0"
+    assert report["version"]["VERSION"] == "0.17.1"
 
 
 
@@ -459,3 +459,186 @@ def test_write_lease_rejects_out_of_scope(tmp_path: Path) -> None:
     root=project(tmp_path); ready(root)
     result=acquire_resource(root,'T1','S1','file','README.md')
     assert result['acquired'] is False
+
+
+
+def test_security_schema_tables(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    with connect(root) as c:
+        tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert {"session_tokens", "signed_state_index", "authenticated_requests", "execution_manifests", "state_reconciliation_runs"} <= tables
+
+
+def test_capability_session_replay_and_revoke(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root = project(tmp_path); ready(root)
+    monkeypatch.setenv("AGENTOS_AUDIT_HOME", str(tmp_path / "audit-home"))
+    from agentos.security import authenticate_request, issue_session_token, revoke_session
+    issued = issue_session_token(root, "T1", "S1", ["filesystem.read"], 300)
+    auth = authenticate_request(root, issued["session_token"], "T1", "filesystem.read", {"path": "src/a.py"}, "R1", 1)
+    assert auth["session_id"] == "S1"
+    with pytest.raises(RuntimeError, match="replayed_request"):
+        authenticate_request(root, issued["session_token"], "T1", "filesystem.read", {"path": "src/a.py"}, "R1", 1)
+    revoke_session(root, issued["token_id"], "operator", "test")
+    with pytest.raises(RuntimeError, match="revoked_session_token"):
+        authenticate_request(root, issued["session_token"], "T1", "filesystem.read", {"path": "src/a.py"}, "R2", 2)
+
+
+def test_static_agentos_import_is_denied(tmp_path: Path) -> None:
+    root = project(tmp_path); ready(root)
+    from agentos.proxy import _scan_agentos_imports
+    path = root / "src" / "bad_test.py"; path.write_text("import agentos.workflow\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="agentos_internal_import_denied"):
+        _scan_agentos_imports(root, ["pytest", "src/bad_test.py"], root)
+
+
+def test_workflow_state_is_signed_and_reconcilable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root = project(tmp_path); monkeypatch.setenv("AGENTOS_AUDIT_HOME", str(tmp_path / "audit-home")); ready(root)
+    from agentos.security import reconcile_state
+    status = workflow_status(root, "T1")
+    approved = next(x for x in status["steps"] if x["step_name"] == "approve_task")
+    assert approved["external_event_hash"]
+    result = reconcile_state(root)
+    assert result["ok"] is True
+
+
+def test_audit_daemon_requires_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("AGENTOS_AUDIT_DAEMON_TOKEN", raising=False)
+    from agentos.audit_daemon import main
+    with pytest.raises(SystemExit, match="AGENTOS_AUDIT_DAEMON_TOKEN is required"):
+        main()
+
+
+def test_context_pack_is_bounded_and_stale_aware(tmp_path: Path) -> None:
+    root=project(tmp_path); ready(root)
+    from agentos.context_runtime import build_context_pack, context_status
+    result=build_context_pack(root,'T1',max_lines=80)
+    assert result['revision']==1
+    assert sum(len(x['excerpt'].splitlines()) for x in result['sources']) <= 80
+    assert context_status(root,'T1')['stale'] is False
+    (root/'AGENTS.md').write_text((root/'AGENTS.md').read_text(encoding='utf-8')+'\nchanged\n',encoding='utf-8')
+    assert 'AGENTS.md' in context_status(root,'T1')['stale_sources']
+
+
+def test_context_pack_revisions_supersede_previous(tmp_path: Path) -> None:
+    root=project(tmp_path); ready(root)
+    from agentos.context_runtime import build_context_pack
+    assert build_context_pack(root,'T1')['revision']==1
+    assert build_context_pack(root,'T1')['revision']==2
+    with connect(root) as c:
+        rows=c.execute("SELECT revision,status FROM context_packs WHERE task_id='T1' ORDER BY revision").fetchall()
+    assert [(r['revision'],r['status']) for r in rows]==[(1,'superseded'),(2,'active')]
+
+
+def test_project_finding_is_deduplicated(tmp_path: Path) -> None:
+    root=project(tmp_path); ready(root)
+    from agentos.memory import record_finding
+    first=record_finding(root,'duplicate','Repeated date converter','src/a.py','convert','T1')
+    second=record_finding(root,'duplicate','Repeated date converter','src/a.py','convert','T1')
+    assert first['finding_id']==second['finding_id']
+    assert second['occurrences']==2
+
+
+def test_project_memory_provenance_becomes_stale(tmp_path: Path) -> None:
+    root=project(tmp_path); ready(root)
+    from agentos.memory import query_memory, remember, validate_memory
+    source=root/'src'/'a.py'; source.parent.mkdir(parents=True,exist_ok=True); source.write_text('def a():\n    return 1\n',encoding='utf-8')
+    result=remember(root,'semantic','Function a is the canonical implementation','src/a.py','T1',0.9)
+    assert query_memory(root,'canonical')[0]['id']==result['memory_id']
+    source.write_text('def a():\n    return 2\n',encoding='utf-8')
+    validation=validate_memory(root)
+    assert result['memory_id'] in validation['stale_memory_ids']
+    assert query_memory(root,'canonical')==[]
+
+
+def test_knowledge_runtime_schema(tmp_path: Path) -> None:
+    root=project(tmp_path)
+    with connect(root) as c:
+        tables={r['name'] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert {'context_packs','project_findings','project_memory'} <= tables
+
+
+def test_async_job_manifest_and_discovery(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root=project(tmp_path); monkeypatch.setenv("AGENTOS_AUDIT_HOME",str(tmp_path/"audit")); ready(root)
+    complete_automated_step(root,"T1","prepare_change","prepare-change",{"ready":True})
+    from agentos.jobs import discover_tools, submit_job
+    result=submit_job(root,"T1","S1",["python3","-m","pytest","--version"],auto_start=False)
+    assert result["state"]=="queued"
+    assert result["spec"]["network_policy"]=="none"
+    assert "agentos.run_command_async" in discover_tools(root,"T1")["available_now"]
+
+
+def test_task_plan_revision_and_precommit_gate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root=project(tmp_path); monkeypatch.setenv("AGENTOS_AUDIT_HOME",str(tmp_path/"audit")); ready(root)
+    from agentos.planning import approve_plan, precommit_check, submit_plan
+    submitted=submit_plan(root,"T1","S1",{"goal":"change a","files":["src/a.py"],"tests":["tests/test_a.py"]})
+    approved=approve_plan(root,submitted["plan_id"],"human","reviewed")
+    assert approved["status"]=="active"
+    assert precommit_check(root,"T1",["src/a.py"])["ok"] is True
+    denied=precommit_check(root,"T1",["README.md"])
+    assert denied["ok"] is False
+    assert denied["blockers"]["outside_scope"]==["README.md"]
+
+
+def test_evaluation_harness_and_export(tmp_path: Path) -> None:
+    root=project(tmp_path); ready(root)
+    from agentos.evaluation import aggregate_metrics, export_metrics
+    report=aggregate_metrics(root,agent="agent-a",model="model-x")
+    assert report["metrics_schema_version"]==1
+    assert report["dimensions"]["repository_version"]=="0.17.1"
+    exported=export_metrics(root,".agents/runtime/evaluation/report.json","json",agent="agent-a",model="model-x")
+    assert exported["ok"] is True
+    assert Path(exported["path"]).exists()
+
+
+def test_execution_platform_schema(tmp_path: Path) -> None:
+    root=project(tmp_path)
+    with connect(root) as c:
+        tables={r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert {"async_jobs","job_events","task_plans","precommit_checks","evaluation_runs"} <= tables
+
+
+
+def test_controlled_evolution_requires_evaluation_and_staged_activation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root=project(tmp_path); monkeypatch.setenv("AGENTOS_AUDIT_HOME",str(tmp_path/"audit")); ready(root)
+    from agentos.evolution import create_proposal, simulate_proposal, transition_proposal
+    with pytest.raises(RuntimeError,match="evaluation_baseline_required"):
+        create_proposal(root,"Tighten writes",[],{"filesystem_policy":{"strict":True}},"Reduce unsafe writes",["false blocks"],{"action":"restore previous policy"},"operator")
+    from agentos.evaluation import aggregate_metrics
+    aggregate_metrics(root,agent="agent-a",model="model-x")
+    proposal=create_proposal(root,"Tighten writes",[],{"filesystem_policy":{"strict":True}},"Reduce unsafe writes",["false blocks"],{"action":"restore previous policy"},"operator")
+    assert proposal["status"]=="draft"
+    assert simulate_proposal(root,proposal["proposal_id"])["status"]=="simulated"
+    with pytest.raises(RuntimeError,match="invalid_evolution_transition"):
+        transition_proposal(root,proposal["proposal_id"],"active","operator","skip gates")
+    for status in ("reviewed","shadow","canary","active","rolled_back"):
+        result=transition_proposal(root,proposal["proposal_id"],status,"operator",f"move to {status}")
+        assert result["status"]==status
+
+
+def test_multi_agent_requires_capability_role_and_fresh_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root=project(tmp_path); monkeypatch.setenv("AGENTOS_AUDIT_HOME",str(tmp_path/"audit")); ready(root)
+    from agentos.collaboration import assign_role, collaboration_readiness, send_message
+    from agentos.context_runtime import build_context_pack
+    from agentos.security import issue_session_token
+    assert collaboration_readiness(root,"T1")["ok"] is False
+    issue_session_token(root,"T1","EXEC")
+    issue_session_token(root,"T1","REVIEW")
+    assign_role(root,"T1","EXEC","executor","operator")
+    assign_role(root,"T1","REVIEW","reviewer","operator")
+    assert collaboration_readiness(root,"T1")["ok"] is False
+    build_context_pack(root,"T1")
+    assert collaboration_readiness(root,"T1")["ok"] is True
+    message=send_message(root,"T1","REVIEW","EXEC","review_request",{"path":"src/a.py"},"selected-artifacts",["src/a.py"])
+    assert message["status"]=="sent"
+    with pytest.raises(RuntimeError,match="role_message_permission_denied"):
+        send_message(root,"T1","EXEC","REVIEW","scope_request",{},"metadata-only")
+    (root/"AGENTS.md").write_text((root/"AGENTS.md").read_text(encoding="utf-8")+"\nstale\n",encoding="utf-8")
+    with pytest.raises(RuntimeError,match="collaboration_prerequisites_not_stable"):
+        send_message(root,"T1","REVIEW","EXEC","review_request",{},"metadata-only")
+
+
+def test_adaptive_multi_agent_schema(tmp_path: Path) -> None:
+    root=project(tmp_path)
+    with connect(root) as c:
+        tables={r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert {"evolution_proposals","evolution_stage_events","task_role_assignments","task_messages"} <= tables

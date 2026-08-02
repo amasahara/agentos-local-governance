@@ -12,12 +12,15 @@ Responsibilities:
 """
 from __future__ import annotations
 
+import ast
 import hashlib
 import ipaddress
 import json
 import os
 import socket
 import subprocess
+import tempfile
+import shutil
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -37,6 +40,7 @@ CAPABILITIES = {
     "agentos.read_file": "filesystem.read",
     "agentos.write_file": "filesystem.write",
     "agentos.run_command": "process.exec",
+    "agentos.run_command_async": "process.exec",
     "agentos.http_request": "network.http",
     "agentos.acquire_resource": "coordination.resource.acquire",
     "agentos.heartbeat_resource": "coordination.resource.heartbeat",
@@ -125,7 +129,7 @@ def _command_profile(command: list[str], policy: dict[str, Any]) -> str:
 
 
 def _filtered_env(extra: dict[str, Any] | None = None) -> dict[str, str]:
-    allowed_names = {"PATH", "PYTHONPATH", "LANG", "LC_ALL", "TMP", "TEMP", "TMPDIR", "SYSTEMROOT", "WINDIR"}
+    allowed_names = {"PATH", "LANG", "LC_ALL", "TMP", "TEMP", "TMPDIR", "SYSTEMROOT", "WINDIR"}
     env = {k: v for k, v in os.environ.items() if k in allowed_names and not any(marker in k.upper() for marker in SECRET_ENV_MARKERS)}
     for key, value in (extra or {}).items():
         key = str(key)
@@ -183,6 +187,36 @@ class _SafeRedirect(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+def _scan_agentos_imports(root: Path, command: list[str], cwd: Path) -> None:
+    """Reject test sources that attempt to import AgentOS enforcement internals."""
+    candidates: list[Path] = []
+    for item in command[1:]:
+        candidate = (cwd / item).resolve()
+        if candidate.is_file() and candidate.suffix == ".py": candidates.append(candidate)
+        elif candidate.is_dir(): candidates.extend(candidate.rglob("*.py"))
+    for path in candidates:
+        try: tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError, UnicodeError): continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import) and any(x.name == "agentos" or x.name.startswith("agentos.") for x in node.names):
+                raise RuntimeError("agentos_internal_import_denied")
+            if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("agentos"):
+                raise RuntimeError("agentos_internal_import_denied")
+
+
+def _isolated_workspace(root: Path, task_id: str, cwd: Path) -> Path:
+    """Create a temporary project view without .agents internals."""
+    base = root / ".agents" / "runtime" / "isolated" / task_id
+    base.mkdir(parents=True, exist_ok=True)
+    workspace = Path(tempfile.mkdtemp(prefix="exec-", dir=base))
+    for child in cwd.iterdir():
+        if child.name in {".agents", ".git", "__pycache__"}: continue
+        target = workspace / child.name
+        if child.is_dir(): shutil.copytree(child, target, symlinks=False, ignore=shutil.ignore_patterns(".agents", ".git", "__pycache__"))
+        elif child.is_file(): shutil.copy2(child, target)
+    return workspace
+
+
 def _preflight(root: Path, task_id: str, capability: str, args: dict[str, Any]) -> dict[str, Any]:
     drift = drift_check(root, task_id=task_id)
     override = local_override_status(root)
@@ -207,7 +241,10 @@ def _preflight(root: Path, task_id: str, capability: str, args: dict[str, Any]) 
         if steps.get("prepare_change") != "done":
             raise RuntimeError("proxy blocked: prepare_change is incomplete")
         metadata["command_profile"] = _command_profile(args.get("command"), policy)
-        metadata["cwd"] = _inside(root, str(args.get("cwd", "."))).relative_to(root.resolve()).as_posix() or "."
+        resolved_cwd = _inside(root, str(args.get("cwd", ".")))
+        _scan_agentos_imports(root, args.get("command", []), resolved_cwd)
+        metadata["cwd"] = resolved_cwd.relative_to(root.resolve()).as_posix() or "."
+        metadata["sandbox_profile"] = "isolated-workspace"
     if capability == "network.http":
         _validate_url(str(args.get("url", "")), policy)
     return metadata
@@ -231,8 +268,15 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
     if capability == "process.exec":
         cfg = policy["proxy_policy"]["process_exec"]
         timeout = min(int(args.get("timeout", 120)), int(cfg.get("max_timeout_seconds", 600)))
-        cwd = _inside(root, str(args.get("cwd", ".")))
-        proc = subprocess.run(args["command"], cwd=cwd, text=True, capture_output=True, timeout=timeout, shell=False, env=_filtered_env(args.get("env")))
+        source_cwd = _inside(root, str(args.get("cwd", ".")))
+        cwd = _isolated_workspace(root, task_id, source_cwd)
+        command = list(args["command"])
+        env = _filtered_env(args.get("env")); env.pop("PYTHONPATH", None)
+        proc = subprocess.run(command, cwd=cwd, text=True, capture_output=True, timeout=timeout, shell=False, env=env)
+        command_hash = hashlib.sha256(json.dumps(command, sort_keys=True).encode()).hexdigest()
+        environment_hash = hashlib.sha256(json.dumps(env, sort_keys=True).encode()).hexdigest()
+        with connect(root) as c:
+            c.execute("INSERT INTO execution_manifests(task_id,session_id,command_hash,cwd,sandbox_profile,workspace_path,environment_hash,decision) VALUES(?,?,?,?,?,?,?,?)", (task_id,session_id,command_hash,metadata["cwd"],"isolated-workspace",str(cwd),environment_hash,"allowed"))
         limit = int(cfg.get("max_output_bytes", 65536))
         return proc.returncode == 0, {"exit_code": proc.returncode, "profile": metadata["command_profile"], "cwd": metadata["cwd"], "stdout": proc.stdout[:limit], "stderr": proc.stderr[:limit]}
     if capability == "network.http":

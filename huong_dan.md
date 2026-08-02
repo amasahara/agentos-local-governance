@@ -4,8 +4,27 @@
 > Current version: `v0.19.1`  
 > Database schema: `27`
 
-## Tiếng Việt
-## Skill Promotion và Local Retrieval v0.18.1–v0.19.1
+## Tiếng Việt — Nền tảng hiện hành v0.19.1
+
+AgentOS v0.19.1 gồm **chín chương trình/mốc năng lực** đã hoàn tất:
+
+1. **Immediate Security Fixes v0.13.1:** bản vá nhỏ, nhanh và tương thích.
+2. **Security Foundation v0.14.0–v0.14.3:** gateway boundary, capability session, isolated execution, verifiable state và recovery.
+3. **Knowledge Runtime v0.15.0–v0.15.1:** context pack xác định, stale detection và project memory có provenance.
+4. **Execution Platform v0.16.0–v0.16.2:** async jobs, task plans, Git gate và evaluation harness.
+5. **Controlled Evolution v0.17.0:** proposal chỉ được phát triển từ evaluation baseline và phải qua review, shadow, canary.
+6. **Multi-Agent Protocol v0.17.1:** chỉ hoạt động khi capability, role và context isolation đều sẵn sàng.
+7. **Knowledge Runtime Fixes & Transparent Context v0.17.2–v0.18.0:** validated read cache, enforced disclosure filtering, symbol-window compaction, global/per-file budgets và báo cáo omission minh bạch.
+8. **Skill Promotion & Retrieval Abstraction v0.18.1–v0.18.2:** procedural memory → candidate → human-approved graduated skill; truy hồi thống nhất memory, findings, symbols và skills.
+9. **Optional Local RAG & Relationship Graph v0.19.0–v0.19.1:** embeddings/RAG cục bộ tùy chọn với backend mặc định vẫn lexical; graph chỉ materialize quan hệ có bằng chứng cho impact analysis, finding-to-symbol và skill provenance.
+
+Luồng khuyến nghị hiện tại:
+
+```text
+claim task → build transparent context → retrieve memory/skills
+→ approve plan → execute isolated job → validate/evaluate
+→ review evidence → coordinate by role → report
+```
 
 Luồng skill an toàn:
 
@@ -18,27 +37,13 @@ active procedural memory + provenance
 → revoke hoặc supersede khi không còn hợp lệ
 ```
 
-`knowledge-search` dùng backend `lexical_structured` mặc định, tìm đồng thời trong memory, findings, symbol index và graduated skills. Backend không gọi mạng hoặc LLM và giữ API ổn định để có thể bổ sung local embedding sau này.
- — Nền tảng hiện hành v0.19.1
-
-AgentOS v0.19.1 gồm năm chương trình đã hoàn tất:
-
-1. **Security Foundation v0.13.1–v0.14.3:** gateway boundary, capability session, isolated execution, verifiable state và recovery.
-2. **Knowledge Runtime v0.15.0–v0.15.1:** context pack xác định, stale detection và project memory có provenance.
-3. **Execution Platform v0.16.0–v0.16.2:** async jobs, task plans, Git gate và evaluation harness.
-4. **Controlled Evolution v0.17.0:** proposal chỉ được phát triển từ evaluation baseline và phải qua review, shadow, canary.
-5. **Multi-Agent Protocol v0.17.1:** chỉ hoạt động khi capability, role và context isolation đều sẵn sàng.
-
-Luồng khuyến nghị hiện tại:
-
-```text
-claim task → build context → approve plan → execute isolated job
-→ validate/evaluate → review evidence → coordinate by role → report
-```
+`knowledge-search` dùng `lexical_structured` mặc định và có thể chọn `local_feature_hash_v1` khi cần semantic retrieval cục bộ. Cả hai backend đều không gọi mạng hoặc LLM; RAG luôn có giới hạn, provenance và content hash.
 
 ## English — Current v0.19.1 platform
 
-AgentOS v0.19.1 combines the Security Foundation, Knowledge Runtime, Execution Platform, Controlled Evolution, and the role- and context-isolated Multi-Agent Protocol. Controlled policy evolution requires persisted evaluation evidence; multi-agent messaging requires valid capabilities, active roles, and a fresh context pack.
+AgentOS v0.19.1 now spans nine completed capability milestones: the v0.13.1 security patch; the v0.14.x Security Foundation; the v0.15.x Knowledge Runtime; the v0.16.x Execution Platform; Controlled Evolution and the Multi-Agent Protocol in v0.17.0–v0.17.1; knowledge/runtime and disclosure fixes plus transparent symbol-window context in v0.17.2–v0.18.0; skill promotion and a unified retrieval abstraction in v0.18.1–v0.18.2; and optional local RAG plus an evidence-backed relationship graph in v0.19.0–v0.19.1.
+
+Controlled policy evolution requires persisted evaluation evidence; multi-agent messaging requires valid capabilities, active roles, and a fresh context pack. `lexical_structured` remains the default retrieval backend, while `local_feature_hash_v1` is optional, deterministic, local-only, and dependency-free.
 
 ---
 
@@ -1095,7 +1100,7 @@ Install `.agents/requirements.txt`, bind the MCP gateway to an approved task and
 
 Các bước sau nâng cấp:
 
-1. Khi di trú từ v0.11.0, xác nhận schema milestone `10`; sau khi nâng cấp đầy đủ lên v0.17.1, chạy migration tới schema `23`.
+1. Khi di trú từ v0.11.0, xác nhận schema milestone `10`; sau khi nâng cấp đầy đủ lên v0.19.1, chạy migration tới schema `27`.
 2. Cấu hình `proxy_policy.process_exec` và `proxy_policy.network_http.allowed_domains`.
 3. Loại bỏ tool backend trực tiếp khỏi cấu hình IDE/agent.
 4. Chạy `doctor`, sau đó review drift và tạo baseline mới.
@@ -1189,9 +1194,12 @@ Controlled Evolution depends on a persisted Evaluation Harness baseline and enfo
 2. v0.14.0–v0.14.3: Security Foundation.
 3. v0.15.0–v0.15.1: Knowledge Runtime.
 4. v0.16.0–v0.16.2: Execution Platform.
-5. v0.17.0–v0.17.1: Adaptive Multi-Agent Platform.
+5. v0.17.0–v0.17.1: Controlled Evolution and Multi-Agent Protocol.
+6. v0.17.2–v0.18.0: Knowledge Runtime fixes and Transparent Context Compaction.
+7. v0.18.1–v0.18.2: Skill Promotion Runtime and Local Semantic Retrieval Abstraction.
+8. v0.19.0–v0.19.1: Optional Local Embeddings/RAG and Evidence-Backed Relationship Graph.
 
-Database schema: `27`.
+Current database schema: `27`.
 
 
 ## Knowledge Runtime fixes v0.17.2 và Transparent Context Compaction v0.18.0 — Tiếng Việt
@@ -1201,7 +1209,7 @@ Database schema: `27`.
 3. `context-build` mặc định dùng `symbol_window`, giữ module-level statements, xếp hạng symbol/file và áp dụng ngân sách toàn cục/từng file.
 4. `context-explain` báo tổng candidate, file đã chọn, file/symbol bị loại và lý do.
 5. `context-compare` so sánh hai chế độ compaction.
-6. Riêng v0.18.0 không có migration mới; v0.18.1–v0.19.1 nâng schema hiện hành lên 25.
+6. Riêng v0.18.0 không có migration mới; v0.18.1–v0.19.1 nâng schema hiện hành lên `27`.
 
 ## Knowledge Runtime fixes v0.17.2 and Transparent Context Compaction v0.18.0 — English
 

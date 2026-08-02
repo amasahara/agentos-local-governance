@@ -14,9 +14,9 @@
 
 ## 1. AgentOS là gì?
 
-AgentOS Local Governance là nền tảng quản trị và thực thi cục bộ cho coding agent. Phiên bản v0.19.1 mở rộng Security Foundation, Knowledge Runtime, Execution Platform, Controlled Evolution và Multi-Agent Protocol trong cùng một enforcement boundary có audit ký ngoài.
+AgentOS Local Governance là nền tảng quản trị và thực thi cục bộ cho coding agent. Phiên bản v0.19.1 hợp nhất Security Foundation, Knowledge Runtime, Execution Platform, Controlled Evolution, Multi-Agent Protocol, Transparent Context Compaction, Skill Promotion, Local Semantic Retrieval, Optional Local RAG và Evidence-Backed Relationship Graph trong cùng một enforcement boundary có audit ký ngoài.
 
-AgentOS không phải LLM hay IDE. Hệ thống cung cấp gateway, capability session, isolated execution, context/memory có provenance, async jobs, planning/Git gates, evaluation harness và phối hợp nhiều agent có role cùng context isolation. Mức bảo đảm thực tế phụ thuộc security profile và quyền hệ điều hành được cấu hình.
+AgentOS không phải LLM hay IDE. Hệ thống cung cấp gateway, capability session, isolated execution, context/memory có provenance, async jobs, planning/Git gates, evaluation harness, phối hợp nhiều agent theo role/context isolation, skill có human approval, truy hồi local thống nhất và graph quan hệ chỉ dựa trên evidence. Mức bảo đảm thực tế phụ thuộc security profile và quyền hệ điều hành được cấu hình.
 
 ## 2. Các mục tiêu cốt lõi
 
@@ -441,7 +441,7 @@ PYTHONPATH=.agents python3 -m pytest .agents/tests -q
 
 ## 21. Giới hạn bảo mật
 
-v0.17.1 có isolated execution nhưng không thay thế hardening cấp hệ điều hành. Agent có raw shell, quyền sửa SQLite, truy cập gateway socket hoặc signing key vẫn có thể làm suy yếu enforcement. Để enforcement có ý nghĩa:
+v0.19.1 có isolated execution, capability sessions, bounded RAG và evidence-backed graph nhưng không thay thế hardening cấp hệ điều hành. Agent có raw shell, quyền sửa SQLite, truy cập gateway socket hoặc signing key vẫn có thể làm suy yếu enforcement. Để enforcement có ý nghĩa:
 
 - agent chỉ được dùng MCP proxy;
 - backend credential thuộc proxy/daemon;
@@ -449,7 +449,7 @@ v0.17.1 có isolated execution nhưng không thay thế hardening cấp hệ đi
 - signing key nằm ngoài repository;
 - production nên dùng container, read-only mount hoặc OS sandbox bổ sung.
 
-## 22. Nâng cấp lên v0.17.1
+## 22. Nâng cấp lên v0.19.1
 
 1. Sao lưu `.agents/state`, audit store và public-key registry.
 2. Thay hoặc merge `.agents/`, `AGENTS.md`, `README.md`, `huong_dan.md` và `VERSION`.
@@ -578,6 +578,10 @@ Deterministic context packs, stale-source detection, provenance-aware project me
 - **v0.14.0–v0.14.3 — Security Foundation Program:** gateway boundary, capability sessions, isolated execution, verifiable state và recovery.
 - **v0.15.0–v0.15.1 — Knowledge Runtime:** deterministic context packs và project memory có provenance.
 - **v0.16.0–v0.16.2 — Execution Platform:** async jobs, workflow-aware tool discovery, versioned planning, Git pre-commit gate và evaluation harness.
+- **v0.17.0–v0.17.1 — Controlled Evolution & Multi-Agent Protocol:** evolution dựa trên evaluation baseline; collaboration bị ràng buộc bởi capability, role và context isolation.
+- **v0.17.2–v0.18.0 — Knowledge Runtime Fixes & Transparent Context:** read cache, disclosure filtering, symbol-window compaction, budgets và omission reporting.
+- **v0.18.1–v0.18.2 — Skill Promotion & Local Retrieval:** skill graduation có human approval và retrieval abstraction thống nhất.
+- **v0.19.0–v0.19.1 — Optional Local RAG & Relationship Graph:** semantic retrieval/RAG cục bộ tùy chọn và graph quan hệ có bằng chứng cho use case cụ thể.
 
 ### v0.16.0 — Async Tool Runtime
 
@@ -634,9 +638,12 @@ agentos message-send --task-id T1 --to-session EXECUTOR --kind review_request --
 - v0.14.0–v0.14.3: unified Security Foundation program.
 - v0.15.0–v0.15.1: Knowledge Runtime.
 - v0.16.0–v0.16.2: Execution Platform.
-- v0.17.0–v0.17.1: Adaptive Multi-Agent Platform.
+- v0.17.0–v0.17.1: Controlled Evolution and Multi-Agent Protocol.
+- v0.17.2–v0.18.0: Knowledge Runtime fixes and Transparent Context Compaction.
+- v0.18.1–v0.18.2: Skill Promotion Runtime and Local Semantic Retrieval Abstraction.
+- v0.19.0–v0.19.1: Optional Local Embeddings/RAG and Evidence-Backed Relationship Graph.
 
-Database schema: `27`.
+Current database schema: `27`.
 
 
 ## v0.17.2–v0.18.0 — Knowledge Runtime fixes and Transparent Context Compaction

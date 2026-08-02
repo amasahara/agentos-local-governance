@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from .core import check_write
-from .concurrency import atomic_write, file_hash
+from .concurrency import acquire_resource, atomic_write, claim_task, file_hash, force_reclaim_task, handoff_task, heartbeat_resource, list_resources, release_resource, task_heartbeat, task_status
 from .db import connect
 from .drift import drift_check
 from .external_audit import append_signed_event
@@ -38,12 +38,30 @@ CAPABILITIES = {
     "agentos.write_file": "filesystem.write",
     "agentos.run_command": "process.exec",
     "agentos.http_request": "network.http",
+    "agentos.acquire_resource": "coordination.resource.acquire",
+    "agentos.heartbeat_resource": "coordination.resource.heartbeat",
+    "agentos.release_resource": "coordination.resource.release",
+    "agentos.list_resources": "coordination.resource.list",
+    "agentos.claim_task": "coordination.task.claim",
+    "agentos.handoff_task": "coordination.task.handoff",
+    "agentos.task_heartbeat": "coordination.task.heartbeat",
+    "agentos.task_status": "coordination.task.status",
+    "agentos.force_reclaim_task": "coordination.task.reclaim",
 }
 TOOL_NAMES = {
     "filesystem.read": "filesystem_read",
     "filesystem.write": "filesystem_write",
     "process.exec": "shell_local",
     "network.http": "http",
+    "coordination.resource.acquire": "coordination",
+    "coordination.resource.heartbeat": "coordination",
+    "coordination.resource.release": "coordination",
+    "coordination.resource.list": "coordination",
+    "coordination.task.claim": "coordination",
+    "coordination.task.handoff": "coordination",
+    "coordination.task.heartbeat": "coordination",
+    "coordination.task.status": "coordination",
+    "coordination.task.reclaim": "coordination",
 }
 SECRET_ENV_MARKERS = ("TOKEN", "SECRET", "PASSWORD", "API_KEY", "AUTH", "COOKIE", "CREDENTIAL")
 NETWORK_EXECUTABLES = {"curl", "wget", "nc", "netcat", "ssh", "scp", "sftp", "ftp"}
@@ -176,7 +194,7 @@ def _preflight(root: Path, task_id: str, capability: str, args: dict[str, Any]) 
     if override.get("sensitive") and override.get("status") != "approved":
         raise RuntimeError("proxy blocked: sensitive local override is pending approval")
     steps = _steps(root, task_id)
-    if capability in {"filesystem.write", "process.exec", "network.http"} and steps.get("approve_task") != "done":
+    if (capability in {"filesystem.write", "process.exec", "network.http"} or capability.startswith("coordination.")) and steps.get("approve_task") != "done":
         raise RuntimeError("proxy blocked: task is not approved")
     if capability == "filesystem.write":
         if steps.get("prepare_change") != "done":
@@ -227,6 +245,18 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
             final_url = response.geturl(); _validate_url(final_url, policy)
             payload = response.read(min(int(args.get("max_bytes", 1048576)), int(policy["proxy_policy"].get("http_max_response_bytes", 1048576))))
             return True, {"status": response.status, "url": final_url, "headers": dict(response.headers.items()), "body": payload.decode("utf-8", errors="replace")}
+    if capability == "coordination.resource.acquire":
+        result = acquire_resource(root, task_id, session_id, str(args["resource_type"]), str(args["resource"]), str(args.get("lease_mode", "exclusive_write")), args.get("ttl_seconds"), args.get("base_hash"))
+        return bool(result.get("acquired")), result
+    if capability == "coordination.resource.heartbeat": return True, heartbeat_resource(root, int(args["lease_id"]), task_id, session_id, args.get("ttl_seconds"))
+    if capability == "coordination.resource.release": return True, release_resource(root, int(args["lease_id"]), task_id, session_id)
+    if capability == "coordination.resource.list": return True, {"resources": list_resources(root, task_id if args.get("task_only", True) else None, bool(args.get("active_only", True)))}
+    if capability == "coordination.task.claim":
+        result=claim_task(root,task_id,session_id); return bool(result.get("claimed")),result
+    if capability == "coordination.task.handoff": return True, handoff_task(root,task_id,session_id,str(args["to_session"]),str(args["note"]))
+    if capability == "coordination.task.heartbeat": return True, task_heartbeat(root,task_id,session_id)
+    if capability == "coordination.task.status": return True, task_status(root,task_id)
+    if capability == "coordination.task.reclaim": return True, force_reclaim_task(root,task_id,session_id,str(args["reason"]))
     raise RuntimeError(f"unsupported capability: {capability}")
 
 
@@ -238,6 +268,19 @@ def proxy_execute(root: Path, task_id: str, session_id: str, tool_name: str, arg
     requested = {"tool": tool_name, "capability": capability, "args": redact_value(args), "metadata": metadata}
     append_audit_event(root, "proxy.request", requested, task_id, session_id)
     append_signed_event(root, "proxy.request", requested, task_id, session_id)
+    if capability.startswith("coordination."):
+        try:
+            success, output = _execute_adapter(root, task_id, session_id, capability, args, metadata)
+        except Exception as exc:
+            success, output = False, {"error": type(exc).__name__, "message": str(exc)}
+        event = {"allowed": success, "success": success, "capability": capability, "output": redact_value(output), "metadata": metadata}
+        append_audit_event(root, "coordination.completed", event, task_id, session_id)
+        signed = append_signed_event(root, "coordination.completed", event, task_id, session_id)
+        resource_type=args.get("resource_type"); resource_key=args.get("resource"); lease_id=output.get("lease_id") if isinstance(output,dict) else None
+        payload_hash=hashlib.sha256(json.dumps(redact_value(args),sort_keys=True).encode()).hexdigest()
+        with connect(root) as c:
+            c.execute("INSERT INTO coordination_events(task_id,session_id,event_type,resource_type,resource_key,lease_id,decision,reason,payload_hash,external_event_hash) VALUES(?,?,?,?,?,?,?,?,?,?)",(task_id,session_id,capability,resource_type,resource_key,lease_id,"allowed" if success else "denied",output.get("reason") if isinstance(output,dict) else None,payload_hash,signed["event_hash"]))
+        return {**event, "external_audit": signed}
     guard = guard_tool(root, task_id, session_id, canonical_tool, args, reason_code, justification, target)
     if not guard["allowed"]:
         denied = {"allowed": False, "reason": guard["reason"], "capability": capability}

@@ -97,7 +97,7 @@ changelog
 
 ## Current v0.11.0 runtime additions
 
-Database schema: `11`
+Database schema: `12`
 
 - `proxy.py`: proxy-only filesystem/process/network enforcement, command profiles, environment filtering, domain/IP/redirect validation.
 - `external_audit.py`: Ed25519 key registry, signed JSONL/daemon/remote sinks, key rotation, historical verification.

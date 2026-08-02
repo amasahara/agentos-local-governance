@@ -119,7 +119,7 @@ The proxy must derive capability and classification, bind the request to the act
 
 Signed external audit records must be stored outside the repository. The coding agent must not receive the signing private key or write/delete access to the audit home. A failed audit write blocks filesystem writes, process execution, and network calls.
 
-## v0.12.0 concurrent work coordination
+## v0.13.0 concurrent work coordination
 
 Every concurrent CLI or agent process must use a unique session identifier. A task has one writer-owner session unless an explicit audited handoff occurs.
 

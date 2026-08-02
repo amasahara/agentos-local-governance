@@ -20,10 +20,19 @@ from typing import Any
 from .proxy import proxy_execute
 
 TOOLS = [
-    {"name": "agentos.read_file", "description": "Read a project file through AgentOS policy enforcement.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "start": {"type": "integer"}, "end": {"type": "integer"}}, "required": ["path"]}},
-    {"name": "agentos.write_file", "description": "Write a project file through approval, scope, workflow, and drift gates.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}},
-    {"name": "agentos.run_command", "description": "Run a bounded local process without a shell through AgentOS policy enforcement.", "inputSchema": {"type": "object", "properties": {"command": {"type": "array", "items": {"type": "string"}}, "timeout": {"type": "integer"}}, "required": ["command"]}},
-    {"name": "agentos.http_request", "description": "Make an audited HTTP request after network egress policy checks.", "inputSchema": {"type": "object", "properties": {"url": {"type": "string"}, "method": {"type": "string"}, "headers": {"type": "object"}, "body": {"type": "string"}, "reason_code": {"type": "string"}, "justification": {"type": "string"}}, "required": ["url", "reason_code", "justification"]}},
+    {"name":"agentos.read_file","description":"Đọc file qua AgentOS.","inputSchema":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}},
+    {"name":"agentos.write_file","description":"Ghi file có scope, lease và expected hash.","inputSchema":{"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"},"expected_hash":{"type":["string","null"]}},"required":["path","content"]}},
+    {"name":"agentos.run_command","description":"Chạy process bị giới hạn.","inputSchema":{"type":"object","properties":{"command":{"type":"array","items":{"type":"string"}}},"required":["command"]}},
+    {"name":"agentos.http_request","description":"HTTP có egress policy.","inputSchema":{"type":"object","properties":{"url":{"type":"string"},"reason_code":{"type":"string"},"justification":{"type":"string"}},"required":["url","reason_code","justification"]}},
+    {"name":"agentos.acquire_resource","description":"Lấy lease tài nguyên.","inputSchema":{"type":"object","properties":{"resource_type":{"type":"string"},"resource":{"type":"string"},"lease_mode":{"type":"string"},"ttl_seconds":{"type":"integer"}},"required":["resource_type","resource"]}},
+    {"name":"agentos.heartbeat_resource","description":"Gia hạn lease.","inputSchema":{"type":"object","properties":{"lease_id":{"type":"integer"},"ttl_seconds":{"type":"integer"}},"required":["lease_id"]}},
+    {"name":"agentos.release_resource","description":"Giải phóng lease.","inputSchema":{"type":"object","properties":{"lease_id":{"type":"integer"}},"required":["lease_id"]}},
+    {"name":"agentos.list_resources","description":"Liệt kê lease.","inputSchema":{"type":"object","properties":{"active_only":{"type":"boolean"},"task_only":{"type":"boolean"}}}},
+    {"name":"agentos.claim_task","description":"Nhận quyền sở hữu task.","inputSchema":{"type":"object","properties":{}}},
+    {"name":"agentos.handoff_task","description":"Chuyển task từ caller owner sang session khác.","inputSchema":{"type":"object","properties":{"to_session":{"type":"string"},"note":{"type":"string"}},"required":["to_session","note"]}},
+    {"name":"agentos.task_heartbeat","description":"Heartbeat task owner.","inputSchema":{"type":"object","properties":{}}},
+    {"name":"agentos.task_status","description":"Xem trạng thái task.","inputSchema":{"type":"object","properties":{}}},
+    {"name":"agentos.force_reclaim_task","description":"Reclaim task đã stale.","inputSchema":{"type":"object","properties":{"reason":{"type":"string"}},"required":["reason"]}},
 ]
 
 
@@ -49,7 +58,7 @@ def serve(root: Path, task_id: str, session_id: str) -> None:
         try:
             request = json.loads(line); method = request.get("method"); identifier = request.get("id")
             if method == "initialize":
-                _reply(identifier, {"protocolVersion": "2025-03-26", "capabilities": {"tools": {}}, "serverInfo": {"name": "agentos-mcp-proxy", "version": "0.10.1"}})
+                _reply(identifier, {"protocolVersion": "2025-03-26", "capabilities": {"tools": {}}, "serverInfo": {"name": "agentos-mcp-proxy", "version": "0.13.0"}})
             elif method == "tools/list":
                 _reply(identifier, {"tools": TOOLS})
             elif method == "tools/call":

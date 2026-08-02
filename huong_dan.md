@@ -1,12 +1,12 @@
-# Hướng dẫn AgentOS v0.12.0 / AgentOS v0.12.0 Developer Guide
+# Hướng dẫn AgentOS v0.13.0 / AgentOS v0.13.0 Developer Guide
 
-> Phiên bản hiện tại: `v0.12.0`  
-> Current version: `v0.12.0`  
-> Database schema: `11`
+> Phiên bản hiện tại: `v0.13.0`  
+> Current version: `v0.13.0`  
+> Database schema: `12`
 
 ## Tiếng Việt — Điều phối nhiều CLI/agent
 
-v0.12.0 yêu cầu mỗi tiến trình dùng `session-id` riêng. File write phải đi qua proxy, có exclusive lease và gửi `expected_hash` đối với file hiện hữu. Khi hash đã thay đổi, AgentOS trả `stale_write_conflict`; agent phải đọc lại và merge. Task có một writer owner và chỉ được chuyển bằng `handoff-task`. Với nhiều proxy, dùng audit daemon thay vì nhiều process append trực tiếp JSONL.
+v0.13.0 yêu cầu mỗi tiến trình dùng `session-id` riêng. File write phải đi qua proxy, có exclusive lease và gửi `expected_hash` đối với file hiện hữu. Khi hash đã thay đổi, AgentOS trả `stale_write_conflict`; agent phải đọc lại và merge. Task có một writer owner và chỉ được chuyển bằng `handoff-task`. Với nhiều proxy, dùng audit daemon thay vì nhiều process append trực tiếp JSONL.
 
 Các lệnh chính:
 
@@ -20,7 +20,7 @@ agentos handoff-task --task-id TASK-A --from-session A --to-session B --note "ha
 
 ## English — Concurrent CLI/agent coordination
 
-Version 0.12.0 requires a unique session ID per concurrent process. Existing-file writes must go through the proxy with an exclusive lease and an `expected_hash`. A changed hash produces `stale_write_conflict`, requiring reread and merge. Tasks use single-writer ownership and explicit handoff. Multi-process deployments should serialize signed audit writes through the audit daemon.
+Version 0.13.0 requires a unique session ID per concurrent process. Existing-file writes must go through the proxy with an exclusive lease and an `expected_hash`. A changed hash produces `stale_write_conflict`, requiring reread and merge. Tasks use single-writer ownership and explicit handoff. Multi-process deployments should serialize signed audit writes through the audit daemon.
 
 ---
 

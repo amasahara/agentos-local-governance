@@ -16,7 +16,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 
 
 def _db_path(root: Path) -> Path:
@@ -74,7 +74,7 @@ def migrate(connection: sqlite3.Connection) -> None:
     """
     connection.execute("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY)")
     current = connection.execute("SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations").fetchone()["v"]
-    migrations = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9, _m10, _m11]
+    migrations = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9, _m10, _m11, _m12]
     for version, fn in enumerate(migrations, start=1):
         if version > current:
             fn(connection)
@@ -457,4 +457,29 @@ def _m11(c: sqlite3.Connection) -> None:
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(task_id) REFERENCES tasks(id)
     );
+    """)
+
+
+def _m12(c: sqlite3.Connection) -> None:
+    """Add coordination enforcement, expiry, reclaim, and signed-audit linkage."""
+    c.executescript("""
+    ALTER TABLE resource_leases ADD COLUMN expired_at TEXT;
+    ALTER TABLE resource_leases ADD COLUMN release_reason TEXT;
+    ALTER TABLE resource_leases ADD COLUMN overlap_warning_json TEXT;
+    ALTER TABLE tasks ADD COLUMN stale_at TEXT;
+    ALTER TABLE tasks ADD COLUMN reclaim_status TEXT;
+    ALTER TABLE tasks ADD COLUMN reclaim_requested_by TEXT;
+    CREATE TABLE task_reclaims(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL,
+        old_owner_session_id TEXT, new_owner_session_id TEXT,
+        requested_by_session_id TEXT NOT NULL, reason TEXT NOT NULL,
+        status TEXT NOT NULL, requested_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        resolved_at TEXT, FOREIGN KEY(task_id) REFERENCES tasks(id));
+    CREATE TABLE coordination_events(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT, session_id TEXT NOT NULL,
+        event_type TEXT NOT NULL, resource_type TEXT, resource_key TEXT, lease_id INTEGER,
+        decision TEXT NOT NULL, reason TEXT, payload_hash TEXT NOT NULL,
+        external_event_hash TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(task_id) REFERENCES tasks(id), FOREIGN KEY(lease_id) REFERENCES resource_leases(id));
+    CREATE INDEX idx_coordination_events_task ON coordination_events(task_id,created_at);
     """)

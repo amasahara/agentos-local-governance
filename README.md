@@ -1,11 +1,56 @@
-# AgentOS Local Governance v0.12.0
+# AgentOS Local Governance v0.13.0
+
+**Phiên bản hiện hành:** 0.13.0  
+Database schema: `12`  
+**Ưu tiên tài liệu:** Tiếng Việt trước, English sau.
+
+## Tiếng Việt — Coordination Enforcement Boundary
+
+v0.13.0 đưa toàn bộ thao tác điều phối nhiều agent vào cùng MCP/tool-proxy boundary với filesystem, process và network. Agent không cần và không được dùng raw shell để acquire lease, claim task hoặc handoff. Mọi request coordination đều đi qua governance preflight, runtime transaction, internal hash-chain audit và external Ed25519 signed audit.
+
+### MCP tools điều phối
+
+`agentos.acquire_resource`, `agentos.heartbeat_resource`, `agentos.release_resource`, `agentos.list_resources`, `agentos.claim_task`, `agentos.handoff_task`, `agentos.task_heartbeat`, `agentos.task_status`, `agentos.force_reclaim_task`.
+
+### Bảo đảm chính
+
+- Handoff lấy danh tính caller từ session đã bind ở gateway; caller không thể tự khai `from_session`.
+- Write lease phải nằm trong approved scope.
+- Symbol lease bị từ chối khi policy tắt.
+- Lease hết TTL được chuyển sang `expired`, không còn hiện là active.
+- Directory/file overlap được phát hiện; exact/incompatible conflict bị block, overlap theo policy có warning có cấu trúc.
+- Task mất heartbeat chuyển sang `stale`; force reclaim chỉ được phép với task stale và có signed audit.
+- Mọi coordination action được liên kết trong bảng `coordination_events` với external event hash.
+
+### Quy trình nhiều agent
+
+1. Mỗi agent dùng session ID riêng.
+2. Agent claim task qua MCP.
+3. Đọc file và giữ `content_hash`.
+4. Acquire resource khi cần work unit dài; `write_file` vẫn tự lấy exclusive lease.
+5. Ghi file với `expected_hash`.
+6. Heartbeat task/lease khi xử lý dài.
+7. Release hoặc handoff qua MCP.
+8. Chạy `audit-verify`, `doctor`, test và report.
+
+### Migration từ v0.12.0
+
+Chạy lệnh AgentOS bất kỳ để migration schema 12 được áp dụng. Cập nhật MCP client để lấy lại `tools/list`; bỏ tham số `--from-session` khỏi `handoff-task`. Review governance rồi xác nhận baseline mới.
+
+---
+
+## English — Coordination Enforcement Boundary
+
+v0.13.0 places all multi-agent coordination actions inside the same MCP/tool-proxy enforcement and signed-audit boundary used by filesystem, process, and network capabilities. Caller identity is transport-bound, write leases are scope-checked, expired leases are materialized, stale owners can only be reclaimed through an audited stale-task path, and every coordination mutation is linked to an external signed event.
+
+# AgentOS Local Governance v0.13.0
 
 **Quản trị local-first, MCP proxy-only và điều phối nhiều agent cho dự án phần mềm.**  
 **Local-first governance, proxy-only MCP enforcement, and concurrent-agent coordination.**
 
-> Phiên bản hiện tại: `v0.12.0`  
-> Current version: `v0.12.0`  
-> Database schema: `11`  
+> Phiên bản hiện tại: `v0.13.0`  
+> Current version: `v0.13.0`  
+> Database schema: `12`  
 > Trạng thái: active development; cần review trước khi dùng cho production hoặc môi trường bảo mật cao.
 
 ---
@@ -18,7 +63,7 @@ AgentOS Local Governance là lớp quản trị nằm trực tiếp trong reposi
 
 AgentOS không phải LLM, không phải IDE và không phải sandbox hệ điều hành. Từ v0.10+, AgentOS có thể làm enforcement point thực sự khi agent chỉ được kết nối tới AgentOS MCP gateway và không còn quyền truy cập trực tiếp filesystem, shell hoặc network backend.
 
-v0.12.0 bổ sung lớp **Concurrent Work Coordination** để nhiều CLI hoặc agent có thể làm việc đồng thời mà không âm thầm ghi đè thay đổi của nhau.
+v0.13.0 bổ sung lớp **Concurrent Work Coordination** để nhiều CLI hoặc agent có thể làm việc đồng thời mà không âm thầm ghi đè thay đổi của nhau.
 
 ## 2. Các mục tiêu cốt lõi
 
@@ -34,7 +79,7 @@ v0.12.0 bổ sung lớp **Concurrent Work Coordination** để nhiều CLI hoặ
 - Ghi file hiện hữu phải gửi `expected_hash` để phát hiện stale write.
 - File phải được thay thế atomically để tránh trạng thái ghi dở.
 
-## 3. Năng lực chính của v0.12.0
+## 3. Năng lực chính của v0.13.0
 
 ### Governance và workflow
 
@@ -159,7 +204,7 @@ project-root/
 3. Merge thủ công các file `.agentos` nếu installer tạo ra.
 4. Loại bỏ instruction source cạnh tranh hoặc hợp nhất về `AGENTS.md`.
 5. Cấu hình `source_root`, test path và runtime path.
-6. Chạy migration lên schema 11.
+6. Chạy migration lên schema 12.
 7. Build symbol index.
 8. Rollout `docs-scan` theo module để tránh hàng nghìn finding cùng lúc.
 9. Cấu hình MCP proxy-only; gỡ raw filesystem/shell/network tool khỏi agent.
@@ -316,9 +361,9 @@ Policy mặc định:
 - file write: yêu cầu lease;
 - existing file write: yêu cầu expected hash;
 - task: single writer session;
-- symbol leases: tắt trong v0.12.0.
+- symbol leases: tắt trong v0.13.0.
 
-v0.12.0 ưu tiên file-level locking. Symbol/line-range parallel editing được để cho bản sau vì cần patch-range validation mạnh hơn.
+v0.13.0 ưu tiên file-level locking. Symbol/line-range parallel editing được để cho bản sau vì cần patch-range validation mạnh hơn.
 
 ## 14. SQLite multi-process hardening
 
@@ -343,7 +388,7 @@ Nhiều proxy không nên append trực tiếp cùng JSONL. Khuyến nghị:
 all proxy processes → one AgentOS audit daemon
 ```
 
-Policy v0.12.0 đánh dấu `daemon` là sink bắt buộc được khuyến nghị cho multi-process. Daemon cấp sequence, nối previous hash, ký và append tuần tự.
+Policy v0.13.0 đánh dấu `daemon` là sink bắt buộc được khuyến nghị cho multi-process. Daemon cấp sequence, nối previous hash, ký và append tuần tự.
 
 ## 16. MCP gateway
 
@@ -417,7 +462,7 @@ PYTHONPATH=.agents python3 -m pytest .agents/tests -q
 
 ## 21. Giới hạn bảo mật
 
-v0.12.0 không phải OS sandbox. Agent có raw shell hoặc quyền sửa trực tiếp SQLite vẫn có thể bypass governance. Để enforcement có ý nghĩa:
+v0.13.0 không phải OS sandbox. Agent có raw shell hoặc quyền sửa trực tiếp SQLite vẫn có thể bypass governance. Để enforcement có ý nghĩa:
 
 - agent chỉ được dùng MCP proxy;
 - backend credential thuộc proxy/daemon;
@@ -427,7 +472,7 @@ v0.12.0 không phải OS sandbox. Agent có raw shell hoặc quyền sửa trự
 
 ## 22. Nâng cấp từ v0.11.0
 
-1. Thay `.agents/` bằng bản v0.12.0 hoặc merge source.
+1. Thay `.agents/` bằng bản v0.13.0 hoặc merge source.
 2. Chạy `db-status`; migration 11 tự áp dụng.
 3. Cập nhật `governance.json` với `concurrency_policy`.
 4. Cấp session ID riêng cho mỗi CLI/agent.
@@ -452,7 +497,7 @@ v0.12.0 không phải OS sandbox. Agent có raw shell hoặc quyền sửa trự
 
 ## 1. Overview
 
-AgentOS Local Governance is a repository-local governance and enforcement layer for coding agents. Version 0.12.0 adds concurrent work coordination so multiple CLI processes and agents can operate at the same time without silently overwriting one another.
+AgentOS Local Governance is a repository-local governance and enforcement layer for coding agents. Version 0.13.0 adds concurrent work coordination so multiple CLI processes and agents can operate at the same time without silently overwriting one another.
 
 ## 2. Concurrent coordination model
 

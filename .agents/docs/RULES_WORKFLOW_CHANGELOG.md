@@ -161,3 +161,12 @@ Support multiple CLI processes and coding agents without lost updates or overlap
 ### Compatibility
 
 Existing v0.11.0 state migrates automatically. Clients writing existing files must add `expected_hash`.
+
+## 2026-08-01 — v0.13.0 — Coordination Enforcement Boundary
+
+- Đưa coordination vào MCP/tool proxy boundary.
+- Thêm signed audit, caller-bound handoff, scope enforcement, expiry/stale reclaim và schema 12.
+- Expose coordination MCP tools và bổ sung adversarial tests.
+
+- Moved coordination into the MCP/tool-proxy boundary.
+- Added signed audit, caller-bound handoff, scope enforcement, expiry/stale reclaim, and schema 12.

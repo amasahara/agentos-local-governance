@@ -1,5 +1,5 @@
 {
-  "version": "0.12.0",
+  "version": "0.13.0",
   "language_policy": {
     "understand_user_language_directly": true,
     "preserve_original_request": true,
@@ -263,7 +263,7 @@
       "huong_dan.md",
       "AGENTS.md"
     ],
-    "current_schema": 11,
+    "current_schema": 12,
     "history_begin": "AGENTOS_VERSION_HISTORY_BEGIN",
     "history_end": "AGENTOS_VERSION_HISTORY_END"
   },
@@ -281,6 +281,11 @@
     "exact_file_scope_conflict": "block",
     "directory_scope_conflict": "warn",
     "symbol_leases": false,
-    "audit_sink_for_multi_process": "daemon"
+    "audit_sink_for_multi_process": "daemon",
+    "coordination_via_proxy_only": true,
+    "signed_coordination_audit": true,
+    "task_stale_after_seconds": 120,
+    "write_lease_requires_approved_scope": true,
+    "force_reclaim_requires_stale": true
   }
 }

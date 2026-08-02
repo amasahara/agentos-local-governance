@@ -47,7 +47,7 @@ def guarded_local_call(root: Path, task_id: str = "T1", session: str = "S1", sum
 
 def test_schema_v11_legacy_and_hardening_tables(tmp_path: Path) -> None:
     root = project(tmp_path)
-    assert db_status(root) == {"current": 11, "required": 11, "is_current": True}
+    assert db_status(root) == {"current": 12, "required": 12, "is_current": True}
     with connect(root) as c:
         tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"guarded_executions", "policy_override_approvals", "audit_events"} <= tables
@@ -220,7 +220,7 @@ def test_instruction_check_detects_modern_rule_files(tmp_path: Path) -> None:
 def test_release_docs_and_version_are_synchronized() -> None:
     assert docs_check(ROOT)["ok"] is True
     assert instruction_check(ROOT)["ok"] is True
-    assert load_policy(ROOT)["version"] == "0.12.0"
+    assert load_policy(ROOT)["version"] == "0.13.0"
 
 
 def test_prepare_change_still_enforces_write_scope(tmp_path: Path) -> None:
@@ -232,7 +232,7 @@ def test_prepare_change_still_enforces_write_scope(tmp_path: Path) -> None:
 
 def test_schema_v11_proxy_and_concurrency_tables(tmp_path: Path) -> None:
     root = project(tmp_path)
-    assert db_status(root) == {"current": 11, "required": 11, "is_current": True}
+    assert db_status(root) == {"current": 12, "required": 12, "is_current": True}
     with connect(root) as c:
         tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"proxy_executions", "external_audit_checkpoints", "resource_leases", "file_versions", "task_handoffs"} <= tables
@@ -286,7 +286,7 @@ def test_proxy_rejects_unexposed_backend_tool(tmp_path: Path, monkeypatch: pytes
 def test_mcp_server_advertises_only_proxy_tools() -> None:
     from agentos.mcp_server import TOOLS
     names = {item["name"] for item in TOOLS}
-    assert names == {"agentos.read_file", "agentos.write_file", "agentos.run_command", "agentos.http_request"}
+    assert {"agentos.read_file", "agentos.write_file", "agentos.run_command", "agentos.http_request", "agentos.acquire_resource", "agentos.handoff_task"} <= names
 
 
 def test_external_audit_is_outside_repository_by_default(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -369,7 +369,7 @@ def test_audit_verify_accepts_empty_log(tmp_path: Path, monkeypatch: pytest.Monk
 def test_docs_check_current_release_is_consistent() -> None:
     report = docs_check(ROOT)
     assert report["content_consistency"]["ok"] is True
-    assert report["version"]["VERSION"] == "0.12.0"
+    assert report["version"]["VERSION"] == "0.13.0"
 
 
 
@@ -424,3 +424,38 @@ def test_lease_heartbeat_and_release(tmp_path: Path) -> None:
     assert heartbeat_resource(root, lease["lease_id"], "T1", "S1")["renewed"] is True
     assert release_resource(root, lease["lease_id"], "T1", "S1")["released"] is True
     assert list_resources(root, "T1") == []
+
+
+def test_mcp_lists_coordination_tools() -> None:
+    from agentos.mcp_server import TOOLS
+    names={x['name'] for x in TOOLS}
+    assert {'agentos.acquire_resource','agentos.handoff_task','agentos.force_reclaim_task'} <= names
+
+def test_coordination_proxy_creates_signed_audit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentos.proxy import proxy_execute
+    root=project(tmp_path); ready(root); monkeypatch.setenv('AGENTOS_AUDIT_HOME',str(tmp_path/'audit')); ack_baseline(root,'ci',force_noninteractive=True)
+    result=proxy_execute(root,'T1','S1','agentos.acquire_resource',{'resource_type':'file','resource':'src/a.py','lease_mode':'exclusive_write'})
+    assert result['external_audit']['signature']
+    with connect(root) as c: assert c.execute('SELECT COUNT(*) n FROM coordination_events').fetchone()['n']==1
+
+def test_handoff_rejects_non_owner_caller(tmp_path: Path) -> None:
+    from agentos.concurrency import claim_task, handoff_task
+    root=project(tmp_path); ready(root); claim_task(root,'T1','S1')
+    with pytest.raises(RuntimeError,match='current task owner'): handoff_task(root,'T1','S2','S3','steal')
+
+def test_symbol_lease_rejected_when_disabled(tmp_path: Path) -> None:
+    from agentos.concurrency import acquire_resource
+    root=project(tmp_path); ready(root)
+    with pytest.raises(RuntimeError,match='disabled'): acquire_resource(root,'T1','S1','symbol','src/a.py::a')
+
+def test_expired_lease_not_listed_active(tmp_path: Path) -> None:
+    from agentos.concurrency import acquire_resource, list_resources
+    root=project(tmp_path); ready(root); r=acquire_resource(root,'T1','S1','file','src/a.py',ttl_seconds=10)
+    with connect(root) as c: c.execute("UPDATE resource_leases SET expires_at='2000-01-01T00:00:00Z' WHERE id=?",(r['lease_id'],))
+    assert list_resources(root,'T1',True)==[]
+
+def test_write_lease_rejects_out_of_scope(tmp_path: Path) -> None:
+    from agentos.concurrency import acquire_resource
+    root=project(tmp_path); ready(root)
+    result=acquire_resource(root,'T1','S1','file','README.md')
+    assert result['acquired'] is False

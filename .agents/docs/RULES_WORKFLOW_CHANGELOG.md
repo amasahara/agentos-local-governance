@@ -223,3 +223,38 @@ Migrations are additive. Existing synchronous proxy execution remains available.
 - Multi-agent messaging is fail-closed unless capability sessions, roles, and a fresh context pack are all present.
 - Context disclosure is explicitly bounded and every role/message transition is externally signed.
 - Database schema upgraded from 21 to 23.
+
+
+## 2026-08-02 — v0.17.2–v0.18.0 — Knowledge Runtime fixes and transparent context compaction
+
+- v0.17.2 connects validated file-read caching to the proxy, enforces collaboration disclosure filtering, and exposes context completeness counts.
+- v0.18.0 adds deterministic relevance ranking, symbol-window compaction, global/per-file budgets, approximate token accounting, omitted file/symbol reasons, and `context-compare`.
+- No schema migration is required; `context_packs.manifest_json` remains additive.
+- README and `huong_dan.md` are synchronized with the current release.
+
+
+## 2026-08-02 — v0.18.1 — Skill Promotion Runtime
+
+- Added schema 24 and versioned `promoted_skills`.
+- Added candidate/graduated lifecycle, human-only graduation, signed audit, matching, and revocation.
+- Added `.agents/skills/**` to governance drift tracking.
+
+## 2026-08-02 — v0.19.1 — Local Semantic Retrieval Abstraction
+
+- Added schema 25 retrieval observability.
+- Added backend-neutral `KnowledgeRetriever` contract and deterministic `lexical_structured` backend.
+- Unified local search across active memory, findings, symbols, and graduated skills without LLM or network calls.
+
+## 2026-08-02 — v0.19.0 — Optional Local Embeddings and RAG
+
+- Added deterministic, dependency-free `local_feature_hash_v1` embeddings as an optional retrieval backend.
+- Added persisted embedding index, cosine search, bounded RAG context bundles, provenance, and retrieval audit events.
+- Kept `lexical_structured` as the default backend; no network, LLM, API key, or external model download is required.
+- Added schema migration 26.
+
+## 2026-08-02 — v0.19.1 — Use-case-driven Knowledge Relationship Graph
+
+- Added a compact SQLite relationship graph only for concrete use cases: impact analysis, finding-to-symbol links, and skill provenance.
+- Added graph build, neighbor, and bounded path commands.
+- Graph edges require evidence from existing indexes/tables; no general-purpose speculative knowledge graph is created.
+- Added schema migration 27.

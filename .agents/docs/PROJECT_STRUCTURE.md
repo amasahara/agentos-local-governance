@@ -126,18 +126,42 @@ project_memory                      → semantic/episodic/procedural/evidence kn
 Schema at that milestone: `18`.
 
 
-### Execution Platform v0.17.1
+### Execution Platform v0.16.0–v0.16.2
 
 - `.agents/agentos/jobs.py`: asynchronous job lifecycle, recovery, and tool discovery.
 - `.agents/agentos/planning.py`: task-plan revisions and Git-aware pre-commit checks.
 - `.agents/agentos/evaluation.py`: aggregate metrics and JSON/CSV export.
 - Migrations 19–21: async jobs, task plans/precommit records, and evaluation runs.
 
-Database schema: `23`.
+Database schema at that milestone: `21`.
 
-### Adaptive Multi-Agent Platform v0.17.1
+### Adaptive Multi-Agent Platform v0.17.0–v0.17.1
 
 - `.agents/agentos/evolution.py`: evaluation-driven policy proposal lifecycle, simulation, staged activation, and rollback.
 - `.agents/agentos/collaboration.py`: capability/role/context readiness, structured messages, and disclosure enforcement.
 - Schema 22: `evolution_proposals`, `evolution_stage_events`.
 - Schema 23: `task_role_assignments`, `task_messages`.
+
+
+### Transparent Context Runtime v0.17.2–v0.18.0
+
+- `.agents/agentos/context_runtime.py`: relevance ranking, symbol-window compaction, global/per-file budgets, omission reporting, stale detection, and mode comparison.
+- `.agents/agentos/cache.py` + `proxy.py`: validated task-scoped filesystem read cache.
+- `.agents/agentos/collaboration.py`: enforced disclosure payload filtering.
+- Database schema remained 23 because context manifests were additive JSON.
+
+
+### Knowledge promotion and retrieval (v0.18.1–v0.19.1)
+
+- `.agents/agentos/skills.py`: candidate/graduated skill lifecycle and audit.
+- `.agents/agentos/retrieval.py`: backend-neutral local knowledge retrieval.
+- `.agents/skills/`: human-approved, drift-tracked procedural skills.
+
+## v0.19 Knowledge Retrieval Components
+
+```text
+.agents/agentos/embeddings.py       → optional dependency-free local embeddings and bounded RAG bundles
+.agents/agentos/knowledge_graph.py  → evidence-backed relationship graph for concrete use cases
+```
+
+The lexical retriever remains the default. The graph is not a general-purpose inference engine; it materializes only relationships backed by AgentOS state or AST import evidence.

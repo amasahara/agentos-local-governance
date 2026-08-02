@@ -47,7 +47,7 @@ def guarded_local_call(root: Path, task_id: str = "T1", session: str = "S1", sum
 
 def test_schema_v11_legacy_and_hardening_tables(tmp_path: Path) -> None:
     root = project(tmp_path)
-    assert db_status(root) == {"current": 23, "required": 23, "is_current": True}
+    assert db_status(root) == {"current": 27, "required": 27, "is_current": True}
     with connect(root) as c:
         tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"guarded_executions", "policy_override_approvals", "audit_events"} <= tables
@@ -220,7 +220,7 @@ def test_instruction_check_detects_modern_rule_files(tmp_path: Path) -> None:
 def test_release_docs_and_version_are_synchronized() -> None:
     assert docs_check(ROOT)["ok"] is True
     assert instruction_check(ROOT)["ok"] is True
-    assert load_policy(ROOT)["version"] == "0.17.1"
+    assert load_policy(ROOT)["version"] == "0.19.1"
 
 
 def test_prepare_change_still_enforces_write_scope(tmp_path: Path) -> None:
@@ -232,7 +232,7 @@ def test_prepare_change_still_enforces_write_scope(tmp_path: Path) -> None:
 
 def test_schema_v11_proxy_and_concurrency_tables(tmp_path: Path) -> None:
     root = project(tmp_path)
-    assert db_status(root) == {"current": 23, "required": 23, "is_current": True}
+    assert db_status(root) == {"current": 27, "required": 27, "is_current": True}
     with connect(root) as c:
         tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"proxy_executions", "external_audit_checkpoints", "resource_leases", "file_versions", "task_handoffs"} <= tables
@@ -369,7 +369,7 @@ def test_audit_verify_accepts_empty_log(tmp_path: Path, monkeypatch: pytest.Monk
 def test_docs_check_current_release_is_consistent() -> None:
     report = docs_check(ROOT)
     assert report["content_consistency"]["ok"] is True
-    assert report["version"]["VERSION"] == "0.17.1"
+    assert report["version"]["VERSION"] == "0.19.1"
 
 
 
@@ -584,7 +584,7 @@ def test_evaluation_harness_and_export(tmp_path: Path) -> None:
     from agentos.evaluation import aggregate_metrics, export_metrics
     report=aggregate_metrics(root,agent="agent-a",model="model-x")
     assert report["metrics_schema_version"]==1
-    assert report["dimensions"]["repository_version"]=="0.17.1"
+    assert report["dimensions"]["repository_version"]=="0.19.1"
     exported=export_metrics(root,".agents/runtime/evaluation/report.json","json",agent="agent-a",model="model-x")
     assert exported["ok"] is True
     assert Path(exported["path"]).exists()
@@ -642,3 +642,99 @@ def test_adaptive_multi_agent_schema(tmp_path: Path) -> None:
     with connect(root) as c:
         tables={r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"evolution_proposals","evolution_stage_events","task_role_assignments","task_messages"} <= tables
+
+
+def test_context_symbol_window_reports_omissions(tmp_path: Path) -> None:
+    root=project(tmp_path); ready(root)
+    from agentos.context_runtime import build_context_pack, context_explain
+    for i in range(8):
+        (root/'src'/f'mod_{i}.py').write_text(f'def important_{i}():\n    return {i}\n')
+    from agentos.indexing import index_build
+    index_build(root,'src')
+    result=build_context_pack(root,'T1',max_lines=20,mode='symbol_window')
+    assert result['compaction_mode']=='symbol_window'
+    assert result['total_candidate_files'] >= result['included_files']
+    assert 'omitted_files' in context_explain(root,'T1')
+
+def test_collaboration_disclosure_filters_payload(tmp_path: Path) -> None:
+    from agentos.collaboration import _filter_payload
+    payload={'title':'x','summary':'safe','secret':'hidden'}
+    assert 'secret' not in _filter_payload('metadata-only',payload,[])
+    assert _filter_payload('summary',payload,[])=={'summary':'safe'}
+    assert _filter_payload('full-task-context',payload,[])==payload
+
+
+def test_skill_promotion_and_retrieval(tmp_path, monkeypatch):
+    root=project(tmp_path)
+    monkeypatch.setenv("AGENTOS_AUDIT_HOME",str(tmp_path/"audit"))
+    from agentos.memory import remember
+    from agentos.skills import promote_skill_candidate, graduate_skill, match_skills, revoke_skill
+    from agentos.retrieval import search_knowledge
+    item=remember(root,"procedural","Convert Excel serial dates by validating epoch and timezone.",task_id="T1",confidence=0.9,evidence_hash="abc123")
+    candidate=promote_skill_candidate(root,item["memory_id"],"AGENT-A")
+    assert candidate["status"]=="candidate"
+    assert match_skills(root,"excel date")==[]
+    graduated=graduate_skill(root,candidate["skill_id"],"human_reviewer","Reviewed procedure")
+    assert graduated["status"]=="graduated"
+    assert match_skills(root,"excel date")[0]["id"]==candidate["skill_id"]
+    result=search_knowledge(root,"excel date",["memory","skill"],10)
+    assert result["ok"] and not result["network_used"] and not result["llm_used"]
+    assert {x["kind"] for x in result["results"]} >= {"memory","skill"}
+    revoke_skill(root,candidate["skill_id"],"obsolete","human_reviewer")
+    assert match_skills(root,"excel date")==[]
+
+
+def test_skill_graduation_rejects_agent_identity(tmp_path, monkeypatch):
+    root=project(tmp_path)
+    monkeypatch.setenv("AGENTOS_AUDIT_HOME",str(tmp_path/"audit"))
+    from agentos.memory import remember
+    from agentos.skills import promote_skill_candidate, graduate_skill
+    item=remember(root,"procedural","Run deterministic validation before release.",task_id="T1",confidence=0.9,evidence_hash="evidence")
+    candidate=promote_skill_candidate(root,item["memory_id"],"AGENT-A")
+    import pytest
+    with pytest.raises(RuntimeError): graduate_skill(root,candidate["skill_id"],"agent","self approved")
+
+
+def test_db_schema_legacy_25_updated(tmp_path):
+    root=project(tmp_path)
+    from agentos.core import db_status
+    assert db_status(root)["required"]==27
+
+
+def test_optional_local_embeddings_and_rag(tmp_path):
+    root=project(tmp_path)
+    from agentos.memory import remember
+    from agentos.embeddings import build_embedding_index, rag_query
+    from agentos.retrieval import search_knowledge
+    remember(root,"semantic","Spreadsheet serial dates require explicit epoch validation.",task_id="T1",confidence=0.9,evidence_hash="e1")
+    indexed=build_embedding_index(root,["memory"])
+    assert indexed["indexed"] >= 1 and not indexed["network_used"] and not indexed["llm_used"]
+    result=search_knowledge(root,"validate spreadsheet date epoch",["memory"],10,"local_feature_hash_v1")
+    assert result["backend"]=="local_feature_hash_v1" and result["result_count"]>=1
+    rag=rag_query(root,"validate spreadsheet date epoch",["memory"],top_k=3)
+    assert rag["result_count"]>=1 and rag["context_hash"] and not rag["network_used"]
+
+
+def test_use_case_driven_knowledge_graph(tmp_path, monkeypatch):
+    root=project(tmp_path); monkeypatch.setenv("AGENTOS_AUDIT_HOME",str(tmp_path/"audit"))
+    from agentos.memory import remember
+    from agentos.skills import promote_skill_candidate, graduate_skill
+    from agentos.knowledge_graph import build_graph, graph_neighbors, graph_path
+    item=remember(root,"procedural","Validate deterministic release evidence.",task_id="T1",confidence=0.9,evidence_hash="evidence")
+    skill=promote_skill_candidate(root,item["memory_id"],"AGENT-A")
+    graduate_skill(root,skill["skill_id"],"human_reviewer","reviewed")
+    built=build_graph(root)
+    assert built["nodes"]>=2 and "skill_provenance" in built["use_cases"]
+    neighbors=graph_neighbors(root,f"skill:{skill['skill_id']}")
+    assert any(x["relation"]=="derived_from" for x in neighbors["neighbors"])
+    path=graph_path(root,f"skill:{skill['skill_id']}",f"memory:{item['memory_id']}")
+    assert path["ok"] is True
+
+
+def test_db_schema_27(tmp_path):
+    root=project(tmp_path)
+    from agentos.core import db_status
+    assert db_status(root)["required"]==27
+    with connect(root) as c:
+        tables={r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert {"knowledge_embeddings","rag_retrieval_events","knowledge_nodes","knowledge_edges"} <= tables

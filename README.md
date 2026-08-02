@@ -1,56 +1,11 @@
-# AgentOS Local Governance v0.17.1
-
-**Phiên bản hiện hành:** 0.17.1  
-Database schema: `23`
-**Ưu tiên tài liệu:** Tiếng Việt trước, English sau.
-
-## Tiếng Việt — Coordination Enforcement Boundary
-
-v0.13.0 đưa toàn bộ thao tác điều phối nhiều agent vào cùng MCP/tool-proxy boundary với filesystem, process và network. Agent không cần và không được dùng raw shell để acquire lease, claim task hoặc handoff. Mọi request coordination đều đi qua governance preflight, runtime transaction, internal hash-chain audit và external Ed25519 signed audit.
-
-### MCP tools điều phối
-
-`agentos.acquire_resource`, `agentos.heartbeat_resource`, `agentos.release_resource`, `agentos.list_resources`, `agentos.claim_task`, `agentos.handoff_task`, `agentos.task_heartbeat`, `agentos.task_status`, `agentos.force_reclaim_task`.
-
-### Bảo đảm chính
-
-- Handoff lấy danh tính caller từ session đã bind ở gateway; caller không thể tự khai `from_session`.
-- Write lease phải nằm trong approved scope.
-- Symbol lease bị từ chối khi policy tắt.
-- Lease hết TTL được chuyển sang `expired`, không còn hiện là active.
-- Directory/file overlap được phát hiện; exact/incompatible conflict bị block, overlap theo policy có warning có cấu trúc.
-- Task mất heartbeat chuyển sang `stale`; force reclaim chỉ được phép với task stale và có signed audit.
-- Mọi coordination action được liên kết trong bảng `coordination_events` với external event hash.
-
-### Quy trình nhiều agent
-
-1. Mỗi agent dùng session ID riêng.
-2. Agent claim task qua MCP.
-3. Đọc file và giữ `content_hash`.
-4. Acquire resource khi cần work unit dài; `write_file` vẫn tự lấy exclusive lease.
-5. Ghi file với `expected_hash`.
-6. Heartbeat task/lease khi xử lý dài.
-7. Release hoặc handoff qua MCP.
-8. Chạy `audit-verify`, `doctor`, test và report.
-
-### Migration từ v0.12.0
-
-Chạy lệnh AgentOS bất kỳ để migration schema 12 được áp dụng. Cập nhật MCP client để lấy lại `tools/list`; bỏ tham số `--from-session` khỏi `handoff-task`. Review governance rồi xác nhận baseline mới.
-
----
-
-## English — Coordination Enforcement Boundary
-
-v0.13.0 places all multi-agent coordination actions inside the same MCP/tool-proxy enforcement and signed-audit boundary used by filesystem, process, and network capabilities. Caller identity is transport-bound, write leases are scope-checked, expired leases are materialized, stale owners can only be reclaimed through an audited stale-task path, and every coordination mutation is linked to an external signed event.
-
-# AgentOS Local Governance v0.17.1
+# AgentOS Local Governance v0.19.1
 
 **Quản trị local-first, MCP proxy-only và điều phối nhiều agent cho dự án phần mềm.**  
 **Local-first governance, proxy-only MCP enforcement, and concurrent-agent coordination.**
 
-> Phiên bản hiện tại: `v0.17.1`  
-> Current version: `v0.17.1`  
-> Database schema: `23`
+> Phiên bản hiện tại: `v0.19.1`  
+> Current version: `v0.19.1`  
+> Database schema: `27`
 > Trạng thái: active development; cần review trước khi dùng cho production hoặc môi trường bảo mật cao.
 
 ---
@@ -59,11 +14,9 @@ v0.13.0 places all multi-agent coordination actions inside the same MCP/tool-pro
 
 ## 1. AgentOS là gì?
 
-AgentOS Local Governance là lớp quản trị nằm trực tiếp trong repository, giúp coding agent và nhiều tiến trình CLI làm việc theo cùng một bộ quy tắc, workflow, approval gate, write gate, audit trail và cơ chế điều phối tài nguyên.
+AgentOS Local Governance là nền tảng quản trị và thực thi cục bộ cho coding agent. Phiên bản v0.19.1 mở rộng Security Foundation, Knowledge Runtime, Execution Platform, Controlled Evolution và Multi-Agent Protocol trong cùng một enforcement boundary có audit ký ngoài.
 
-AgentOS không phải LLM, không phải IDE và không phải sandbox hệ điều hành. Từ v0.10+, AgentOS có thể làm enforcement point thực sự khi agent chỉ được kết nối tới AgentOS MCP gateway và không còn quyền truy cập trực tiếp filesystem, shell hoặc network backend.
-
-v0.13.0 bổ sung lớp **Concurrent Work Coordination** để nhiều CLI hoặc agent có thể làm việc đồng thời mà không âm thầm ghi đè thay đổi của nhau.
+AgentOS không phải LLM hay IDE. Hệ thống cung cấp gateway, capability session, isolated execution, context/memory có provenance, async jobs, planning/Git gates, evaluation harness và phối hợp nhiều agent có role cùng context isolation. Mức bảo đảm thực tế phụ thuộc security profile và quyền hệ điều hành được cấu hình.
 
 ## 2. Các mục tiêu cốt lõi
 
@@ -79,7 +32,15 @@ v0.13.0 bổ sung lớp **Concurrent Work Coordination** để nhiều CLI hoặ
 - Ghi file hiện hữu phải gửi `expected_hash` để phát hiện stale write.
 - File phải được thay thế atomically để tránh trạng thái ghi dở.
 
-## 3. Năng lực chính của v0.13.0
+## 3. Năng lực chính của v0.19.1
+
+### v0.17.2–v0.19.1 — Knowledge Runtime fixes và Transparent Context Compaction
+
+- `filesystem.read` dùng cache theo task/path/range và tự invalidation khi file thay đổi.
+- Multi-agent disclosure thực sự lọc payload theo `metadata-only`, `summary`, `selected-artifacts`, `full-task-context`.
+- Context pack xếp hạng file/symbol bằng tín hiệu cấu trúc cục bộ, nén theo symbol window, giới hạn ngân sách toàn cục/từng file và báo rõ `omitted_files`, `omitted_symbols`, `approx_tokens`.
+- `context-compare` so sánh `flat_lines` và `symbol_window` mà không gọi LLM hoặc network.
+
 
 ### Governance và workflow
 
@@ -106,8 +67,8 @@ v0.13.0 bổ sung lớp **Concurrent Work Coordination** để nhiều CLI hoặ
 
 ### Điều phối nhiều agent
 
-- session identity riêng cho từng CLI/agent;
-- task owner session;
+- capability session được gateway cấp phát, hash, revoke và chống replay;
+- task owner session và role `executor`, `reviewer`, `planner`, `observer`;
 - task claim và explicit handoff;
 - resource lease với TTL;
 - `shared_read`, `intent_write`, `exclusive_write`;
@@ -118,7 +79,26 @@ v0.13.0 bổ sung lớp **Concurrent Work Coordination** để nhiều CLI hoặ
 - file version history;
 - SQLite WAL, busy timeout và immediate transactions;
 - task workspace riêng;
-- khuyến nghị audit daemon khi multi-process mode bật.
+- structured messages có correlation/causation ID và disclosure level;
+- collaboration readiness gate yêu cầu capability, role và context pack còn mới.
+
+
+### v0.18.1–v0.19.1 — Skill Promotion và Local Semantic Retrieval
+
+- Procedural memory có provenance có thể được promote thành skill candidate.
+- Candidate không được tự động kích hoạt; graduation bắt buộc human approval và signed audit.
+- Graduated skill được version, match, revoke và drift-track trong `.agents/skills/`.
+- `knowledge-search` cung cấp abstraction thống nhất cho memory, findings, symbols và skills.
+- Backend mặc định `lexical_structured` chạy hoàn toàn local, không dùng LLM/network; interface sẵn sàng cho local embeddings sau này.
+
+Các lệnh chính:
+
+```bash
+agentos skill-promote --memory-id 42 --promoted-by AGENT-A
+agentos skill-graduate --skill-id 7 --approved-by human_reviewer --note "Đã xác minh"
+agentos skill-match "convert excel date"
+agentos knowledge-search "convert excel date" --kinds '["memory","symbol","skill"]'
+```
 
 ## 4. Kiến trúc thực thi
 
@@ -345,7 +325,6 @@ Chuyển task:
 ```bash
 agentos --session-id ADMIN handoff-task \
   --task-id TASK-A \
-  --from-session AGENT-A \
   --to-session AGENT-C \
   --note "Agent A dừng; Agent C tiếp quản sau checkpoint."
 ```
@@ -361,9 +340,9 @@ Policy mặc định:
 - file write: yêu cầu lease;
 - existing file write: yêu cầu expected hash;
 - task: single writer session;
-- symbol leases: tắt trong v0.13.0.
+- symbol leases: mặc định tắt trong policy hiện hành; file-level locking vẫn là cơ chế ghi chính.
 
-v0.13.0 ưu tiên file-level locking. Symbol/line-range parallel editing được để cho bản sau vì cần patch-range validation mạnh hơn.
+Symbol/line-range parallel editing chỉ nên bật khi có patch-range validation và conflict reconciliation phù hợp.
 
 ## 14. SQLite multi-process hardening
 
@@ -388,7 +367,7 @@ Nhiều proxy không nên append trực tiếp cùng JSONL. Khuyến nghị:
 all proxy processes → one AgentOS audit daemon
 ```
 
-Policy v0.13.0 đánh dấu `daemon` là sink bắt buộc được khuyến nghị cho multi-process. Daemon cấp sequence, nối previous hash, ký và append tuần tự.
+Policy hiện hành dùng một audit sink tuần tự cho multi-process. Daemon cấp sequence, nối previous hash, ký và append tuần tự; hardened deployments nên chạy daemon bằng identity riêng.
 
 ## 16. MCP gateway
 
@@ -462,7 +441,7 @@ PYTHONPATH=.agents python3 -m pytest .agents/tests -q
 
 ## 21. Giới hạn bảo mật
 
-v0.13.0 không phải OS sandbox. Agent có raw shell hoặc quyền sửa trực tiếp SQLite vẫn có thể bypass governance. Để enforcement có ý nghĩa:
+v0.17.1 có isolated execution nhưng không thay thế hardening cấp hệ điều hành. Agent có raw shell, quyền sửa SQLite, truy cập gateway socket hoặc signing key vẫn có thể làm suy yếu enforcement. Để enforcement có ý nghĩa:
 
 - agent chỉ được dùng MCP proxy;
 - backend credential thuộc proxy/daemon;
@@ -470,20 +449,26 @@ v0.13.0 không phải OS sandbox. Agent có raw shell hoặc quyền sửa trự
 - signing key nằm ngoài repository;
 - production nên dùng container, read-only mount hoặc OS sandbox bổ sung.
 
-## 22. Nâng cấp từ v0.11.0
+## 22. Nâng cấp lên v0.17.1
 
-1. Thay `.agents/` bằng bản v0.13.0 hoặc merge source.
-2. Chạy `db-status`; migration 11 tự áp dụng.
-3. Cập nhật `governance.json` với `concurrency_policy`.
-4. Cấp session ID riêng cho mỗi CLI/agent.
-5. Sửa client write để luôn gửi `expected_hash` cho file hiện hữu.
-6. Chọn audit daemon cho multi-process.
-7. Review và xác nhận baseline mới.
-8. Chạy toàn bộ checks và test.
+1. Sao lưu `.agents/state`, audit store và public-key registry.
+2. Thay hoặc merge `.agents/`, `AGENTS.md`, `README.md`, `huong_dan.md` và `VERSION`.
+3. Chạy `db-migrate` rồi xác nhận schema `23`.
+4. Khởi động gateway và kiểm tra capability-session/revocation.
+5. Tạo context pack mới; validate project memory và stale sources.
+6. Kiểm tra async jobs, active plan, pre-commit gate và evaluation baseline.
+7. Chỉ bật controlled evolution sau evaluation; chỉ bật multi-agent messaging khi readiness gate đạt.
+8. Chạy `doctor`, `docs-check`, `instruction-check`, `audit-verify` và toàn bộ test.
 
 <!-- AGENTOS_VERSION_HISTORY_BEGIN -->
 ## 23. Lịch sử phiên bản rút gọn
 
+- v0.17.0–v0.17.1: Controlled Evolution và Multi-Agent Protocol.
+- v0.16.0–v0.16.2: Execution Platform.
+- v0.15.0–v0.15.1: Knowledge Runtime.
+- v0.14.0–v0.14.3: Security Foundation.
+- v0.13.1: bản vá bảo mật tương thích.
+- v0.13.0: coordination enforcement boundary.
 - v0.11.0: process/domain hardening, key rotation, audit daemon.
 - v0.10.1: MCP enforcement gateway và external signed audit.
 - v0.9.0: trust-boundary hardening, guarded execution token, provenance.
@@ -497,7 +482,7 @@ v0.13.0 không phải OS sandbox. Agent có raw shell hoặc quyền sửa trự
 
 ## 1. Overview
 
-AgentOS Local Governance is a repository-local governance and enforcement layer for coding agents. Version 0.13.0 adds concurrent work coordination so multiple CLI processes and agents can operate at the same time without silently overwriting one another.
+AgentOS Local Governance v0.19.1 is a repository-local governance and execution platform for coding agents. It combines a hardened gateway, capability sessions, isolated execution, verifiable state, context and project memory, asynchronous jobs, planning/Git gates, evaluation-driven controlled evolution, and role-authorized multi-agent collaboration with context isolation.
 
 ## 2. Concurrent coordination model
 
@@ -574,7 +559,7 @@ PYTHONPATH=.agents python3 -m pytest .agents/tests -q
 
 ## 9. Limitations
 
-AgentOS is not an operating-system sandbox or a distributed lock service. Network filesystems and agents with unrestricted shell/database access remain outside the guaranteed trust boundary.
+AgentOS includes isolated execution adapters but is not a substitute for a hardened operating-system security boundary. Deployments that give agents unrestricted shell, database, gateway-socket, or signing-key access remain outside the guaranteed trust boundary.
 
 ## Knowledge Runtime v0.15.0–v0.15.1
 
@@ -613,7 +598,7 @@ Deterministic context packs, stale-source detection, provenance-aware project me
 - Xuất JSON/CSV bằng `evaluation-report`.
 - Dimension so sánh gồm agent, model, policy version và repository version.
 
-**Database schema: `23`.**
+**Schema at the v0.16.2 milestone: `21`.**
 
 ### English summary
 
@@ -651,4 +636,37 @@ agentos message-send --task-id T1 --to-session EXECUTOR --kind review_request --
 - v0.16.0–v0.16.2: Execution Platform.
 - v0.17.0–v0.17.1: Adaptive Multi-Agent Platform.
 
-Database schema: `23`.
+Database schema: `27`.
+
+
+## v0.17.2–v0.18.0 — Knowledge Runtime fixes and Transparent Context Compaction
+
+v0.17.2–v0.18.0 added validated file-read caching, enforced collaboration disclosure filtering, deterministic symbol-window context compaction, global/per-file budgets, omission reasons, approximate token reporting, and context mode comparison. v0.18.1–v0.18.2 added skill promotion and unified local retrieval. v0.19.0–v0.19.1 adds optional local RAG and an evidence-backed relationship graph. Database schema is now 27.
+
+## v0.19.0–v0.19.1 — Optional Local RAG and Relationship Graph
+
+### Tiếng Việt
+
+`v0.19.0` bổ sung embeddings/RAG cục bộ **tùy chọn**. Backend mặc định vẫn là `lexical_structured`; backend `local_feature_hash_v1` dùng feature hashing xác định, không tải model, không gọi mạng và không gọi LLM.
+
+```bash
+agentos embedding-index
+agentos knowledge-search "excel date conversion" --backend local_feature_hash_v1
+agentos rag-query "how to validate release" --top-k 8
+```
+
+`v0.19.1` chỉ xây relationship graph cho các use case đã xác định: impact analysis, finding-to-symbol và skill provenance. Hệ thống không cố tạo knowledge graph tổng quát hoặc suy diễn quan hệ không có bằng chứng.
+
+```bash
+agentos graph-build
+agentos graph-neighbors --node-id "skill:1"
+agentos graph-path --from-node "skill:1" --to-node "memory:42"
+```
+
+Schema hiện hành: `27`.
+
+### English
+
+`v0.19.0` adds optional local embeddings and RAG. `lexical_structured` remains the default; `local_feature_hash_v1` is deterministic and dependency-free, with no model download, network call, LLM call, or API key.
+
+`v0.19.1` materializes only evidence-backed relationships for concrete use cases: impact analysis, finding-to-symbol navigation, and skill provenance. It intentionally does not create a speculative general-purpose knowledge graph.

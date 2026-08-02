@@ -19,8 +19,12 @@ from pathlib import Path
 from typing import Any
 
 from .cache import cache_lookup, cache_store
-from .context_runtime import build_context_pack, context_explain, context_status
+from .context_runtime import build_context_pack, context_compare, context_explain, context_status
 from .memory import query_memory, record_finding, remember, validate_memory
+from .skills import graduate_skill, list_skills, match_skills, promote_skill_candidate, revoke_skill
+from .retrieval import search_knowledge
+from .embeddings import build_embedding_index, rag_query
+from .knowledge_graph import build_graph, graph_neighbors, graph_path
 from .jobs import cancel_job, discover_tools, job_status, recover_jobs, submit_job
 from .planning import active_plan, approve_plan, precommit_check, submit_plan
 from .evaluation import aggregate_metrics, export_metrics
@@ -97,8 +101,20 @@ def parser() -> argparse.ArgumentParser:
     a=s.add_parser("context-build"); _task_arg(a); a.add_argument("--max-lines",type=int,default=500)
     a=s.add_parser("context-status"); _task_arg(a)
     a=s.add_parser("context-explain"); _task_arg(a)
+    a=s.add_parser("context-compare"); _task_arg(a); a.add_argument("--max-lines",type=int,default=500)
     a=s.add_parser("memory-record"); a.add_argument("--kind",required=True,choices=["semantic","episodic","procedural","evidence"]); a.add_argument("--statement",required=True); a.add_argument("--source-path"); _task_arg(a); a.add_argument("--confidence",type=float,default=1.0); a.add_argument("--evidence-hash")
     a=s.add_parser("memory-query"); a.add_argument("query"); a.add_argument("--kind",choices=["semantic","episodic","procedural","evidence"]); a.add_argument("--limit",type=int,default=20); a.add_argument("--include-stale",action="store_true")
+    a=s.add_parser("skill-promote"); a.add_argument("--memory-id",required=True,type=int); a.add_argument("--promoted-by",required=True)
+    a=s.add_parser("skill-list"); a.add_argument("--status",choices=["candidate","graduated","revoked","superseded","archived"])
+    a=s.add_parser("skill-graduate"); a.add_argument("--skill-id",required=True,type=int); a.add_argument("--approved-by",required=True); a.add_argument("--note",required=True)
+    a=s.add_parser("skill-match"); a.add_argument("query"); a.add_argument("--limit",type=int,default=10)
+    a=s.add_parser("skill-revoke"); a.add_argument("--skill-id",required=True,type=int); a.add_argument("--reason",required=True); a.add_argument("--revoked-by",required=True)
+    a=s.add_parser("knowledge-search"); a.add_argument("query"); a.add_argument("--kinds",default='["memory","finding","symbol","skill"]'); a.add_argument("--limit",type=int,default=20); a.add_argument("--backend",default="lexical_structured")
+    a=s.add_parser("embedding-index"); a.add_argument("--kinds",default='["memory","finding","symbol","skill"]')
+    a=s.add_parser("rag-query"); a.add_argument("query"); a.add_argument("--kinds",default='["memory","finding","symbol","skill"]'); a.add_argument("--top-k",type=int,default=8); a.add_argument("--max-chars",type=int,default=12000); a.add_argument("--no-auto-index",action="store_true")
+    s.add_parser("graph-build")
+    a=s.add_parser("graph-neighbors"); a.add_argument("--node-id",required=True); a.add_argument("--relation"); a.add_argument("--limit",type=int,default=50)
+    a=s.add_parser("graph-path"); a.add_argument("--from-node",required=True); a.add_argument("--to-node",required=True); a.add_argument("--max-depth",type=int,default=4)
     a=s.add_parser("memory-validate")
     a=s.add_parser("finding-record"); a.add_argument("--kind",required=True); a.add_argument("--message",required=True); a.add_argument("--path"); a.add_argument("--symbol"); _task_arg(a)
     a=s.add_parser("docs-scan"); a.add_argument("--scope",default="src"); _task_arg(a)
@@ -186,7 +202,7 @@ def main() -> int:
     args=parser().parse_args(); root=Path(args.root).resolve(); session=normalize_session_id(args.session_id)
     try:
         tid=getattr(args,"task_id",None)
-        task_commands={"role-assign","collaboration-readiness","message-send","message-list","job-submit","tools-discover","plan-submit","plan-show","precommit-check","context-build","context-status","context-explain","memory-record","finding-record","approve-task","acquire-resource","heartbeat-resource","release-resource","list-resources","claim-task","handoff-task","mark-step","workflow-status","index-build","guard-tool","prepare-change","record-claim","list-claims","egress-report","cache-store","cache-lookup","report","proxy-execute","mcp-serve"}
+        task_commands={"role-assign","collaboration-readiness","message-send","message-list","job-submit","tools-discover","plan-submit","plan-show","precommit-check","context-build","context-status","context-explain","context-compare","memory-record","finding-record","approve-task","acquire-resource","heartbeat-resource","release-resource","list-resources","claim-task","handoff-task","mark-step","workflow-status","index-build","guard-tool","prepare-change","record-claim","list-claims","egress-report","cache-store","cache-lookup","report","proxy-execute","mcp-serve"}
         if args.cmd in task_commands:
             tid=resolve_task_id(root,tid,session)
         if args.cmd=="start-task":
@@ -239,8 +255,20 @@ def main() -> int:
         elif args.cmd=="context-build": result=build_context_pack(root,tid,args.max_lines)
         elif args.cmd=="context-status": result=context_status(root,tid)
         elif args.cmd=="context-explain": result=context_explain(root,tid)
+        elif args.cmd=="context-compare": result=context_compare(root,tid,args.max_lines)
         elif args.cmd=="memory-record": result=remember(root,args.kind,args.statement,args.source_path,tid,args.confidence,args.evidence_hash)
         elif args.cmd=="memory-query": result=query_memory(root,args.query,args.kind,args.limit,args.include_stale)
+        elif args.cmd=="skill-promote": result=promote_skill_candidate(root,args.memory_id,args.promoted_by)
+        elif args.cmd=="skill-list": result=list_skills(root,args.status)
+        elif args.cmd=="skill-graduate": result=graduate_skill(root,args.skill_id,args.approved_by,args.note)
+        elif args.cmd=="skill-match": result=match_skills(root,args.query,args.limit)
+        elif args.cmd=="skill-revoke": result=revoke_skill(root,args.skill_id,args.reason,args.revoked_by)
+        elif args.cmd=="knowledge-search": result=search_knowledge(root,args.query,_json_arg(args.kinds,"kinds"),args.limit,args.backend)
+        elif args.cmd=="embedding-index": result=build_embedding_index(root,_json_arg(args.kinds,"kinds"))
+        elif args.cmd=="rag-query": result=rag_query(root,args.query,_json_arg(args.kinds,"kinds"),args.top_k,args.max_chars,not args.no_auto_index)
+        elif args.cmd=="graph-build": result=build_graph(root)
+        elif args.cmd=="graph-neighbors": result=graph_neighbors(root,args.node_id,args.relation,args.limit)
+        elif args.cmd=="graph-path": result=graph_path(root,args.from_node,args.to_node,args.max_depth)
         elif args.cmd=="memory-validate": result=validate_memory(root)
         elif args.cmd=="finding-record": result=record_finding(root,args.kind,args.message,args.path,args.symbol,tid)
         elif args.cmd=="job-submit": result=submit_job(root,tid,session,_json_arg(args.command,"command"),args.cwd,args.timeout,_json_arg(args.env,"env"),not args.no_start)

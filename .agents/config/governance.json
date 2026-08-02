@@ -1,5 +1,5 @@
 {
-  "version": "0.17.1",
+  "version": "0.19.1",
   "language_policy": {
     "understand_user_language_directly": true,
     "preserve_original_request": true,
@@ -117,7 +117,8 @@
       ".agents/config/**/*.json",
       ".agents/agentos/**/*.py",
       ".agents/bin/**",
-      ".agents/docs/**/*.md"
+      ".agents/docs/**/*.md",
+      ".agents/skills/**"
     ],
     "excluded_paths": [
       ".agents/runtime/**",
@@ -263,7 +264,7 @@
       "huong_dan.md",
       "AGENTS.md"
     ],
-    "current_schema": 23,
+    "current_schema": 25,
     "history_begin": "AGENTOS_VERSION_HISTORY_BEGIN",
     "history_end": "AGENTOS_VERSION_HISTORY_END"
   },
@@ -308,7 +309,18 @@
       "deterministic": true,
       "default_max_lines": 500,
       "stale_source_detection": true,
-      "llm_summarization": "forbidden"
+      "llm_summarization": "forbidden",
+      "compaction_mode": "symbol_window",
+      "compaction_mode_allowed": [
+        "flat_lines",
+        "symbol_window"
+      ],
+      "global_max_lines": 500,
+      "global_max_approx_tokens": 12000,
+      "per_file_max_lines": 160,
+      "report_omitted_context": true,
+      "shadow_compare_modes": false,
+      "relevance_scoring": true
     },
     "project_memory": {
       "enabled": true,
@@ -321,6 +333,48 @@
       "provenance_required": true,
       "stale_source_invalidation": true,
       "finding_deduplication": true
+    },
+    "skill_policy": {
+      "enabled": true,
+      "candidate_confidence_threshold": 0.8,
+      "graduation_requires_human_approval": true,
+      "candidate_auto_activation": false,
+      "graduated_skills_only_in_context": true,
+      "executable_skills": "forbidden"
+    },
+    "retrieval": {
+      "enabled": true,
+      "default_backend": "lexical_structured",
+      "allowed_backends": [
+        "lexical_structured",
+        "local_feature_hash_v1"
+      ],
+      "sources": [
+        "memory",
+        "finding",
+        "symbol",
+        "skill"
+      ],
+      "network": "forbidden",
+      "llm": "forbidden",
+      "backend_interface_stable": true,
+      "optional_embeddings": true,
+      "embedding_backend": "local_feature_hash_v1",
+      "rag_enabled": true,
+      "auto_index": true,
+      "external_model_download": "forbidden"
+    },
+    "relationship_graph": {
+      "enabled": true,
+      "scope": "use_case_driven",
+      "use_cases": [
+        "impact_analysis",
+        "finding_to_symbol",
+        "skill_provenance"
+      ],
+      "general_purpose_graph": "forbidden",
+      "max_path_depth": 4,
+      "evidence_required": true
     }
   },
   "execution_platform": {
@@ -358,6 +412,12 @@
       "selected-artifacts",
       "full-task-context"
     ],
-    "signed_messages": true
+    "signed_messages": true,
+    "enforce_disclosure_payload_filtering": true
+  },
+  "knowledge_runtime_fixes": {
+    "filesystem_read_cache_integration": true,
+    "structured_clarity_assessment": true,
+    "context_candidate_reporting": true
   }
 }

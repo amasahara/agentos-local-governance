@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from .core import check_write
+from .cache import cache_lookup, cache_store
 from .concurrency import acquire_resource, atomic_write, claim_task, file_hash, force_reclaim_task, handoff_task, heartbeat_resource, list_resources, release_resource, task_heartbeat, task_status
 from .db import connect
 from .drift import drift_check
@@ -254,14 +255,23 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
     policy = load_policy(root)
     if capability == "filesystem.read":
         path = _inside(root, str(args["path"]))
-        content = path.read_text(encoding=str(args.get("encoding", "utf-8")))
         start, end = int(args.get("start", 1)), int(args.get("end", 0))
-        if end:
-            content = "\n".join(content.splitlines()[start - 1:end])
-        digest = hashlib.sha256(content.encode()).hexdigest()
+        range_key = f"{start}:{end or 'EOF'}"
+        cached = cache_lookup(root, task_id, path.relative_to(root.resolve()).as_posix(), range_key)
+        if cached.get("hit"):
+            content = cached["summary"]
+            digest = hashlib.sha256(content.encode()).hexdigest()
+            cache_hit = True
+        else:
+            content = path.read_text(encoding=str(args.get("encoding", "utf-8")))
+            if end:
+                content = "\n".join(content.splitlines()[start - 1:end])
+            cache_store(root, task_id, path.relative_to(root.resolve()).as_posix(), range_key, content)
+            digest = hashlib.sha256(content.encode()).hexdigest()
+            cache_hit = False
         with connect(root) as c:
             row = c.execute("SELECT COALESCE(MAX(version),0) AS version FROM file_versions WHERE path=?", (path.relative_to(root.resolve()).as_posix(),)).fetchone()
-        return True, {"content": content, "sha256": digest, "content_hash": digest, "version": row["version"]}
+        return True, {"content": content, "sha256": digest, "content_hash": digest, "version": row["version"], "cache_hit": cache_hit, "range_key": range_key}
     if capability == "filesystem.write":
         result = atomic_write(root, task_id, session_id, str(args["path"]), str(args.get("content", "")), args.get("expected_hash"), str(args.get("encoding", "utf-8")))
         return bool(result.get("allowed")), result

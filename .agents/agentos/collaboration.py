@@ -59,6 +59,19 @@ def assign_role(root: Path, task_id: str, session_id: str, role: str, assigned_b
     return {"assignment_id": cur.lastrowid, "task_id": task_id, "session_id": session_id, "role": role, "external_event_hash": event["event_hash"]}
 
 
+def _filter_payload(disclosure_level: str, payload: dict[str, Any], artifact_refs: list[str]) -> dict[str, Any]:
+    """Return only content allowed by the declared disclosure level."""
+    if disclosure_level == "metadata-only":
+        allowed = {"title", "status", "kind", "summary_length", "content_hash"}
+        return {k: v for k, v in payload.items() if k in allowed}
+    if disclosure_level == "summary":
+        summary = payload.get("summary")
+        return {"summary": summary} if isinstance(summary, str) else {}
+    if disclosure_level == "selected-artifacts":
+        return {"artifact_refs": artifact_refs, "summary": payload.get("summary", "")}
+    return payload
+
+
 def send_message(root: Path, task_id: str, from_session: str, to_session: str, kind: str, payload: dict[str, Any], disclosure_level: str = "metadata-only", artifact_refs: list[str] | None = None, correlation_id: str | None = None, causation_id: str | None = None) -> dict[str, Any]:
     """Send a structured message while enforcing role and disclosure constraints."""
     readiness = collaboration_readiness(root, task_id)
@@ -67,6 +80,7 @@ def send_message(root: Path, task_id: str, from_session: str, to_session: str, k
     if disclosure_level not in DISCLOSURE_LEVELS:
         raise RuntimeError("invalid_disclosure_level")
     refs = artifact_refs or []
+    filtered_payload = _filter_payload(disclosure_level, payload, refs)
     if disclosure_level == "selected-artifacts" and not refs:
         raise RuntimeError("selected_artifacts_required")
     with connect(root) as c:
@@ -78,7 +92,7 @@ def send_message(root: Path, task_id: str, from_session: str, to_session: str, k
             raise RuntimeError("role_message_permission_denied")
         message_id = secrets.token_hex(16)
         corr = correlation_id or message_id
-        c.execute("INSERT INTO task_messages(message_id,correlation_id,causation_id,task_id,from_session,to_session,kind,payload_json,payload_schema_version,disclosure_level,artifact_refs_json,status) VALUES(?,?,?,?,?,?,?,?,1,?,?, 'sent')", (message_id, corr, causation_id, task_id, from_session, to_session, kind, json.dumps(payload, sort_keys=True), disclosure_level, json.dumps(refs)))
+        c.execute("INSERT INTO task_messages(message_id,correlation_id,causation_id,task_id,from_session,to_session,kind,payload_json,payload_schema_version,disclosure_level,artifact_refs_json,status) VALUES(?,?,?,?,?,?,?,?,1,?,?, 'sent')", (message_id, corr, causation_id, task_id, from_session, to_session, kind, json.dumps(filtered_payload, sort_keys=True), disclosure_level, json.dumps(refs)))
     event = append_signed_event(root, "collaboration.message_sent", {"message_id": message_id, "task_id": task_id, "from_session": from_session, "to_session": to_session, "kind": kind, "disclosure_level": disclosure_level, "artifact_refs": refs}, task_id, from_session)
     with connect(root) as c:
         c.execute("UPDATE task_messages SET external_event_hash=? WHERE message_id=?", (event["event_hash"], message_id))

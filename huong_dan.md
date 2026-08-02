@@ -1,26 +1,44 @@
-# Hướng dẫn AgentOS v0.17.1 / AgentOS v0.17.1 Developer Guide
+# Hướng dẫn AgentOS v0.19.1 / AgentOS v0.19.1 Developer Guide
 
-> Phiên bản hiện tại: `v0.17.1`  
-> Current version: `v0.17.1`  
-> Database schema: `23`
+> Phiên bản hiện tại: `v0.19.1`  
+> Current version: `v0.19.1`  
+> Database schema: `27`
 
-## Tiếng Việt — Điều phối nhiều CLI/agent
+## Tiếng Việt
+## Skill Promotion và Local Retrieval v0.18.1–v0.19.1
 
-v0.13.0 yêu cầu mỗi tiến trình dùng `session-id` riêng. File write phải đi qua proxy, có exclusive lease và gửi `expected_hash` đối với file hiện hữu. Khi hash đã thay đổi, AgentOS trả `stale_write_conflict`; agent phải đọc lại và merge. Task có một writer owner và chỉ được chuyển bằng `handoff-task`. Với nhiều proxy, dùng audit daemon thay vì nhiều process append trực tiếp JSONL.
+Luồng skill an toàn:
 
-Các lệnh chính:
-
-```bash
-agentos claim-task --task-id TASK-A
-agentos acquire-resource --task-id TASK-A --type file --resource src/a.py --mode exclusive_write
-agentos heartbeat-resource --task-id TASK-A --lease-id 1
-agentos release-resource --task-id TASK-A --lease-id 1
-agentos handoff-task --task-id TASK-A --from-session A --to-session B --note "handoff reviewed"
+```text
+active procedural memory + provenance
+→ skill candidate (runtime, chưa được load)
+→ human review
+→ graduated skill + signed audit
+→ match/search qua retrieval abstraction
+→ revoke hoặc supersede khi không còn hợp lệ
 ```
 
-## English — Concurrent CLI/agent coordination
+`knowledge-search` dùng backend `lexical_structured` mặc định, tìm đồng thời trong memory, findings, symbol index và graduated skills. Backend không gọi mạng hoặc LLM và giữ API ổn định để có thể bổ sung local embedding sau này.
+ — Nền tảng hiện hành v0.19.1
 
-Version 0.13.0 requires a unique session ID per concurrent process. Existing-file writes must go through the proxy with an exclusive lease and an `expected_hash`. A changed hash produces `stale_write_conflict`, requiring reread and merge. Tasks use single-writer ownership and explicit handoff. Multi-process deployments should serialize signed audit writes through the audit daemon.
+AgentOS v0.19.1 gồm năm chương trình đã hoàn tất:
+
+1. **Security Foundation v0.13.1–v0.14.3:** gateway boundary, capability session, isolated execution, verifiable state và recovery.
+2. **Knowledge Runtime v0.15.0–v0.15.1:** context pack xác định, stale detection và project memory có provenance.
+3. **Execution Platform v0.16.0–v0.16.2:** async jobs, task plans, Git gate và evaluation harness.
+4. **Controlled Evolution v0.17.0:** proposal chỉ được phát triển từ evaluation baseline và phải qua review, shadow, canary.
+5. **Multi-Agent Protocol v0.17.1:** chỉ hoạt động khi capability, role và context isolation đều sẵn sàng.
+
+Luồng khuyến nghị hiện tại:
+
+```text
+claim task → build context → approve plan → execute isolated job
+→ validate/evaluate → review evidence → coordinate by role → report
+```
+
+## English — Current v0.19.1 platform
+
+AgentOS v0.19.1 combines the Security Foundation, Knowledge Runtime, Execution Platform, Controlled Evolution, and the role- and context-isolated Multi-Agent Protocol. Controlled policy evolution requires persisted evaluation evidence; multi-agent messaging requires valid capabilities, active roles, and a fresh context pack.
 
 ---
 
@@ -54,7 +72,7 @@ README.md, huong_dan.md         tài liệu cho con người
 VERSION                         định danh phiên bản
 ```
 
-AgentOS không phải sandbox hệ điều hành. Một tool bên ngoài vẫn có thể ghi file trực tiếp nếu framework cho phép. AgentOS giảm rủi ro bằng approval gate, write check, audit trail, workflow checklist, drift detection và Git hook.
+AgentOS có isolated execution adapter nhưng không thay thế hardening ở cấp hệ điều hành. Để enforcement có ý nghĩa, agent không được truy cập trực tiếp database, gateway socket, signing key, raw filesystem, shell hoặc network backend ngoài policy.
 
 ---
 
@@ -1077,7 +1095,7 @@ Install `.agents/requirements.txt`, bind the MCP gateway to an approved task and
 
 Các bước sau nâng cấp:
 
-1. Chạy `db-status` và xác nhận schema `10`.
+1. Khi di trú từ v0.11.0, xác nhận schema milestone `10`; sau khi nâng cấp đầy đủ lên v0.17.1, chạy migration tới schema `23`.
 2. Cấu hình `proxy_policy.process_exec` và `proxy_policy.network_http.allowed_domains`.
 3. Loại bỏ tool backend trực tiếp khỏi cấu hình IDE/agent.
 4. Chạy `doctor`, sau đó review drift và tạo baseline mới.
@@ -1136,7 +1154,7 @@ Job chạy trong isolated workspace, dùng environment đã lọc, không có ne
 
 Use asynchronous governed jobs for long-running commands, submit and approve revisioned task plans, validate Git changes with `precommit-check`, and export versioned evaluation metrics in JSON or CSV.
 
-Database schema: `23`.
+Schema at the v0.16.2 milestone: `21`.
 
 ## Adaptive Multi-Agent Platform v0.17.0–v0.17.1 — Tiếng Việt
 
@@ -1173,4 +1191,41 @@ Controlled Evolution depends on a persisted Evaluation Harness baseline and enfo
 4. v0.16.0–v0.16.2: Execution Platform.
 5. v0.17.0–v0.17.1: Adaptive Multi-Agent Platform.
 
-Database schema: `23`.
+Database schema: `27`.
+
+
+## Knowledge Runtime fixes v0.17.2 và Transparent Context Compaction v0.18.0 — Tiếng Việt
+
+1. `filesystem.read` dùng cache đã xác thực theo task, path và range.
+2. `message-send` lọc payload theo disclosure level thay vì chỉ gắn nhãn.
+3. `context-build` mặc định dùng `symbol_window`, giữ module-level statements, xếp hạng symbol/file và áp dụng ngân sách toàn cục/từng file.
+4. `context-explain` báo tổng candidate, file đã chọn, file/symbol bị loại và lý do.
+5. `context-compare` so sánh hai chế độ compaction.
+6. Riêng v0.18.0 không có migration mới; v0.18.1–v0.19.1 nâng schema hiện hành lên 25.
+
+## Knowledge Runtime fixes v0.17.2 and Transparent Context Compaction v0.18.0 — English
+
+The current release adds validated read caching, enforced disclosure filtering, deterministic symbol-window compaction, transparent omission reports, approximate token accounting, and context mode comparison. No LLM or network call is used by compaction.
+
+## v0.19.0–v0.19.1 — Local Embeddings/RAG và Relationship Graph
+
+### Tiếng Việt
+
+1. Chạy `agentos embedding-index` để tạo chỉ mục embeddings cục bộ tùy chọn.
+2. Dùng `knowledge-search --backend local_feature_hash_v1` khi lexical matching không đủ.
+3. Dùng `rag-query` để tạo context bundle có giới hạn, provenance và context hash.
+4. Backend mặc định vẫn là `lexical_structured`; không có dependency model bắt buộc.
+5. Chạy `graph-build` chỉ khi cần impact analysis, truy vết finding tới symbol hoặc skill tới memory.
+6. Dùng `graph-neighbors` và `graph-path`; path bị giới hạn độ sâu theo policy.
+7. Không đưa quan hệ suy đoán vào graph. Mọi edge phải có evidence từ database hoặc AST import hiện có.
+
+### English
+
+1. Run `agentos embedding-index` to build the optional local embedding index.
+2. Use `knowledge-search --backend local_feature_hash_v1` when lexical matching is insufficient.
+3. Use `rag-query` for a bounded context bundle with provenance and a content hash.
+4. `lexical_structured` remains the default and no embedding model dependency is mandatory.
+5. Build the graph only for impact analysis, finding-to-symbol navigation, or skill provenance.
+6. Graph paths are bounded by policy and speculative edges are forbidden.
+
+Current database schema: `27`.

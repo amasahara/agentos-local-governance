@@ -16,7 +16,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-SCHEMA_VERSION = 23
+SCHEMA_VERSION = 27
 
 
 def _db_path(root: Path) -> Path:
@@ -74,7 +74,7 @@ def migrate(connection: sqlite3.Connection) -> None:
     """
     connection.execute("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY)")
     current = connection.execute("SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations").fetchone()["v"]
-    migrations = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9, _m10, _m11, _m12, _m13, _m14, _m15, _m16, _m17, _m18, _m19, _m20, _m21, _m22, _m23]
+    migrations = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9, _m10, _m11, _m12, _m13, _m14, _m15, _m16, _m17, _m18, _m19, _m20, _m21, _m22, _m23, _m24, _m25, _m26, _m27]
     for version, fn in enumerate(migrations, start=1):
         if version > current:
             fn(connection)
@@ -677,4 +677,73 @@ def _m23(c: sqlite3.Connection) -> None:
         external_event_hash TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(task_id) REFERENCES tasks(id));
     CREATE INDEX idx_task_messages_route ON task_messages(task_id,to_session,created_at);
+    """)
+
+
+def _m24(c: sqlite3.Connection) -> None:
+    """Add versioned skill-promotion state for v0.18.1."""
+    c.executescript("""
+    CREATE TABLE promoted_skills(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        skill_key TEXT NOT NULL, version INTEGER NOT NULL,
+        memory_id INTEGER NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL,
+        candidate_path TEXT NOT NULL, graduated_path TEXT,
+        status TEXT NOT NULL DEFAULT 'candidate', content_hash TEXT NOT NULL,
+        promoted_by TEXT NOT NULL, approved_by TEXT, approval_note TEXT,
+        external_event_hash TEXT, supersedes_skill_id INTEGER,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, graduated_at TEXT,
+        revoked_at TEXT, revoke_reason TEXT,
+        UNIQUE(skill_key,version),
+        FOREIGN KEY(memory_id) REFERENCES project_memory(id),
+        FOREIGN KEY(supersedes_skill_id) REFERENCES promoted_skills(id));
+    CREATE INDEX idx_promoted_skills_status ON promoted_skills(status,skill_key,version);
+    """)
+
+
+def _m25(c: sqlite3.Connection) -> None:
+    """Add local retrieval observability for v0.18.2."""
+    c.executescript("""
+    CREATE TABLE knowledge_retrieval_events(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, query_hash TEXT NOT NULL,
+        backend TEXT NOT NULL, kinds_json TEXT NOT NULL, limit_value INTEGER NOT NULL,
+        result_count INTEGER NOT NULL, result_ids_json TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE INDEX idx_knowledge_retrieval_backend ON knowledge_retrieval_events(backend,created_at);
+    """)
+
+
+def _m26(c: sqlite3.Connection) -> None:
+    """Add optional local embedding and RAG state for v0.19.0."""
+    c.executescript("""
+    CREATE TABLE knowledge_embeddings(
+        source_kind TEXT NOT NULL, source_id TEXT NOT NULL, content_hash TEXT NOT NULL,
+        backend TEXT NOT NULL, dimensions INTEGER NOT NULL, vector_json TEXT NOT NULL,
+        text_snapshot TEXT NOT NULL, metadata_json TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(source_kind,source_id,backend));
+    CREATE INDEX idx_knowledge_embeddings_backend ON knowledge_embeddings(backend,source_kind);
+    CREATE TABLE rag_retrieval_events(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, query_hash TEXT NOT NULL, backend TEXT NOT NULL,
+        kinds_json TEXT NOT NULL, top_k INTEGER NOT NULL, result_count INTEGER NOT NULL,
+        context_hash TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    """)
+
+
+def _m27(c: sqlite3.Connection) -> None:
+    """Add use-case-driven knowledge relationship graph for v0.19.1."""
+    c.executescript("""
+    CREATE TABLE knowledge_nodes(
+        node_id TEXT PRIMARY KEY, node_type TEXT NOT NULL, label TEXT NOT NULL,
+        properties_json TEXT NOT NULL, content_hash TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active', updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE INDEX idx_knowledge_nodes_type ON knowledge_nodes(node_type,status);
+    CREATE TABLE knowledge_edges(
+        edge_id TEXT PRIMARY KEY, from_node_id TEXT NOT NULL, to_node_id TEXT NOT NULL,
+        relation TEXT NOT NULL, evidence_json TEXT NOT NULL, confidence REAL NOT NULL DEFAULT 1.0,
+        status TEXT NOT NULL DEFAULT 'active', updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(from_node_id) REFERENCES knowledge_nodes(node_id),
+        FOREIGN KEY(to_node_id) REFERENCES knowledge_nodes(node_id));
+    CREATE INDEX idx_knowledge_edges_from ON knowledge_edges(from_node_id,relation,status);
+    CREATE INDEX idx_knowledge_edges_to ON knowledge_edges(to_node_id,relation,status);
     """)

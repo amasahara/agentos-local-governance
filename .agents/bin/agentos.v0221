@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+set -eu
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ROOT=$(CDPATH= cd -- "$HERE/../.." && pwd)
+CMD="${1:-}"
+case "$CMD" in
+  db-identity-policy-create|db-identity-policy-show|db-identity-policy-review|db-identity-policy-approve|db-identity-resolution-create|db-identity-resolution-run|db-identity-resolution-show|db-identity-candidates-list|db-identity-candidate-decide|db-identity-candidate-show|db-identity-readiness|db-entity-lineage-show|db-identity-resolution-db-sync)
+    PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.identity_resolution_cli --root "$ROOT" "$@"
+    ;;
+  docs-check)
+    PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.identity_resolution_cli --root "$ROOT" docs-check-v0221
+    ;;
+esac
+exec "$HERE/agentos.v0220" "$@"

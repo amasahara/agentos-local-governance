@@ -1,0 +1,28 @@
+{
+  "reconciliation_recovery_policy": {
+    "reconciliation_version": 1,
+    "database_schema": 40,
+    "target_reconciliation_is_read_only": true,
+    "reconciliation_uses_business_key_scope": true,
+    "whole_row_fingerprint_comparison": true,
+    "raw_values_in_reconciliation_state_allowed": false,
+    "raw_query_parameters_in_state_allowed": false,
+    "source_write_allowed": false,
+    "generic_target_write_allowed": false,
+    "in_doubt_auto_retry_allowed": false,
+    "in_doubt_auto_resolution_allowed": false,
+    "commit_recovery_requires_human_confirmation": true,
+    "committed_verified_requires_matched_reconciliation": true,
+    "not_committed_verified_requires_observed_none": true,
+    "partial_target_auto_repair_allowed": false,
+    "partial_target_state_requires_manual_intervention": true,
+    "reconciled_not_committed_manual_retry_allowed": true,
+    "reconciled_not_committed_automatic_retry_allowed": false,
+    "lineage_recovery_is_local_idempotent": true,
+    "lineage_recovery_requires_known_commit_receipt": true,
+    "recovery_checkpoints_required": true,
+    "mcp_mutation_tools_exposed": false,
+    "mcp_reconciliation_execution_exposed": false,
+    "mcp_recovery_decision_exposed": false
+  }
+}

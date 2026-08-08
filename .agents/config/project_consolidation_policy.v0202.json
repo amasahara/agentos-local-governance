@@ -1,0 +1,31 @@
+{
+  "version": "0.20.2",
+  "primary_project_consolidation_policy": {
+    "consolidation_version": 1,
+    "exactly_one_primary_target": true,
+    "primary_must_be_human_selected": true,
+    "primary_must_equal_active_root": true,
+    "secondary_projects_read_only": true,
+    "secondary_project_writes_forbidden": true,
+    "secondary_governance_import_forbidden": true,
+    "primary_governance_is_authoritative": true,
+    "component_mapping_required": true,
+    "allowed_actions": ["REUSE", "MOVE", "ADAPT", "REIMPLEMENT", "IGNORE", "CONFLICT"],
+    "unresolved_conflict_blocks_review": true,
+    "human_review_required": true,
+    "human_approval_required": true,
+    "approval_bound_to_plan_hash": true,
+    "approved_plan_is_immutable": true,
+    "source_manifest_reverification_required": true,
+    "source_file_hash_reverification_required": true,
+    "target_expected_hash_or_absence_required": true,
+    "atomic_primary_writes": true,
+    "per_component_provenance_required": true,
+    "rollback_backup_for_replaced_target": true,
+    "llm_may_read_plan": true,
+    "llm_may_approve_plan": false,
+    "llm_may_execute_consolidation_via_mcp": false,
+    "llm_may_rollback_via_mcp": false,
+    "database_schema": 34
+  }
+}

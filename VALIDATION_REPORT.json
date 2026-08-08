@@ -1,0 +1,50 @@
+{
+  "release": "0.22.2",
+  "name": "Reconciliation & Recovery",
+  "database_schema": 40,
+  "node_tests": {
+    "file": ".agents/tests/test_reconciliation_recovery_v0222.py",
+    "passed": 18,
+    "failed": 0
+  },
+  "available_full_regression": {
+    "passed": 159,
+    "failed": 0
+  },
+  "clean_upgrade_from_v0.22.1": {
+    "dry_run": "passed",
+    "apply": "passed",
+    "schema_sync": "passed",
+    "release_validator": "passed",
+    "regression_tests_passed": 159
+  },
+  "checks": {
+    "docs_check": "passed",
+    "instruction_check": "passed",
+    "docs_code_check_new_module": "passed",
+    "python_compile": "passed",
+    "release_validator": "passed",
+    "mcp_server_version": "0.22.2",
+    "mcp_read_only_tool_count": 37,
+    "mcp_mutation_tools_exposed": false
+  },
+  "security_invariants": {
+    "source_write_allowed": false,
+    "generic_target_write_allowed": false,
+    "reconciliation_target_write_allowed": false,
+    "in_doubt_auto_retry_allowed": false,
+    "in_doubt_auto_resolution_allowed": false,
+    "partial_target_auto_repair_allowed": false,
+    "raw_values_in_reconciliation_state_allowed": false,
+    "human_commit_recovery_required": true
+  },
+  "engine_coverage": {
+    "postgresql_select_generation": "tested",
+    "mysql_select_generation": "tested",
+    "mssql_select_generation": "tested",
+    "oracle_select_generation": "tested",
+    "dbapi_select_path": "tested_with_transactional_fakes",
+    "live_external_db_integration": false,
+    "live_external_db_reason": "No external database endpoints or credentials were available in the build runtime."
+  }
+}

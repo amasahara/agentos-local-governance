@@ -1,0 +1,31 @@
+{
+  "identity_resolution_policy": {
+    "resolution_version": 1,
+    "database_schema": 39,
+    "identity_resolution_required_before_new_target_insert": true,
+    "exact_business_key_must_match_target_contract_business_key": true,
+    "exact_business_key_auto_bind_after_human_policy_approval": true,
+    "strong_match_requires_human_decision": true,
+    "llm_may_suggest_identity_candidates": true,
+    "llm_may_decide_identity": false,
+    "llm_may_approve_identity_policy": false,
+    "identity_policy_human_review_required": true,
+    "identity_policy_human_approval_required": true,
+    "source_record_token_hmac_required": true,
+    "target_record_token_hmac_required": true,
+    "raw_identity_values_in_sqlite_forbidden": true,
+    "raw_identity_values_in_audit_forbidden": true,
+    "lineage_key_local_only": true,
+    "deduplicated_staging_local_only": true,
+    "strong_match_method": "deterministic_exact_multifield_candidate",
+    "fuzzy_or_embedding_auto_merge_allowed": false,
+    "cross_source_deduplication_enabled": true,
+    "intra_batch_deduplication_enabled": true,
+    "committed_entity_reinsert_allowed": false,
+    "lineage_required_after_controlled_insert": true,
+    "mcp_mutation_tools_exposed": false,
+    "mcp_may_read_candidates": true,
+    "mcp_may_read_lineage": true,
+    "next_reconciliation_version": "0.22.2"
+  }
+}

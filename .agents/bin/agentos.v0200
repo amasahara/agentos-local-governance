@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+set -eu
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ROOT=$(CDPATH= cd -- "$HERE/../.." && pwd)
+CMD="${1:-}"
+case "$CMD" in
+  project-identity-init|project-identity-show|project-identity-verify|project-purpose-set|project-purpose-show|project-fork|project-identity-db-sync)
+    PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.project_identity_cli --root "$ROOT" "$@"
+    ;;
+  docs-check)
+    PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.project_identity_cli --root "$ROOT" docs-check-v0200
+    ;;
+esac
+exec "$HERE/agentos.v0195" "$@"

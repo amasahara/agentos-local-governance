@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+set -eu
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ROOT=$(CDPATH= cd -- "$HERE/../.." && pwd)
+CMD="${1:-}"
+case "$CMD" in
+  db-target-insert-plan-create|db-target-insert-plan-show|db-target-insert-readiness|db-target-insert-spec|db-target-insert-plan-review|db-target-insert-plan-approve|db-target-insert-execute|db-target-insert-receipt|db-controlled-target-insert-db-sync)
+    PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.controlled_target_insert_cli --root "$ROOT" "$@"
+    ;;
+  docs-check)
+    PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.controlled_target_insert_cli --root "$ROOT" docs-check-v0220
+    ;;
+esac
+exec "$HERE/agentos.v0212" "$@"

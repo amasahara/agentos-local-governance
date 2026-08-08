@@ -1,4 +1,14 @@
 #!/usr/bin/env sh
 set -eu
-ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.cli --root "$ROOT" "$@"
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ROOT=$(CDPATH= cd -- "$HERE/../.." && pwd)
+CMD="${1:-}"
+case "$CMD" in
+  db-reconciliation-create|db-reconciliation-run|db-reconciliation-show|db-reconciliation-summary|db-reconciliation-spec|db-recovery-scan|db-recovery-cases-list|db-recovery-readiness|db-recovery-checkpoints-list|db-recovery-commit-decide|db-recovery-lineage-finalize|db-reconciliation-recovery-db-sync)
+    PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.reconciliation_recovery_cli --root "$ROOT" "$@"
+    ;;
+  docs-check)
+    PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.reconciliation_recovery_cli --root "$ROOT" docs-check-v0222
+    ;;
+esac
+exec "$HERE/agentos.v0221" "$@"

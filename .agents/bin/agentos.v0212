@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+set -eu
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ROOT=$(CDPATH= cd -- "$HERE/../.." && pwd)
+CMD="${1:-}"
+case "$CMD" in
+  db-extraction-batch-create|db-extraction-batch-show|db-extraction-select-spec|db-extraction-run|db-extraction-summary|db-validation-findings|db-staging-verify|db-readonly-extraction-db-sync)
+    PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.read_only_extraction_cli --root "$ROOT" "$@"
+    ;;
+  docs-check)
+    PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.read_only_extraction_cli --root "$ROOT" docs-check-v0212
+    ;;
+esac
+exec "$HERE/agentos.v0211" "$@"

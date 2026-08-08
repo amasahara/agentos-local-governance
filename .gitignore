@@ -1,9 +1,4 @@
-.agents/state/*
-!.agents/state/.gitkeep
-.agents/cache/*
-!.agents/cache/.gitkeep
-.agents/runtime/*
-!.agents/runtime/.gitkeep
-__pycache__/
-.pytest_cache/
-*.pyc
+# AgentOS local runtime data (may contain transformed business data)
+.agents/runtime/data-staging/
+# v0.22.1 local-only identity pseudonymization key
+.agents/state/identity_lineage.key

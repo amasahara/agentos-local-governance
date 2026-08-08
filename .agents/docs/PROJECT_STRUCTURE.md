@@ -165,3 +165,21 @@ Database schema at that milestone: `21`.
 ```
 
 The lexical retriever remains the default. The graph is not a general-purpose inference engine; it materializes only relationships backed by AgentOS state or AST import evidence.
+
+
+## v0.22.3 Core reintegration
+
+The release runtime now requires both layers:
+
+```text
+Historical governance core
+  core.py / policy.py / proxy.py / security.py / tooling.py / workflow.py
+  external_audit.py / memory.py / db.py migrations 1-31
+                    +
+Project/database extension
+  project_identity.py ... reconciliation_recovery.py migrations 32-40
+                    ↓
+Central db.py + CURRENT_SCHEMA_VERSION=40
+```
+
+`release_integrity.py`, `tools/verify_manifest.py`, and the historical + extension test suites are release gates.

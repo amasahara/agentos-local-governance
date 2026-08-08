@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+set -eu
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ROOT=$(CDPATH= cd -- "$HERE/../.." && pwd)
+CMD="${1:-}"
+case "$CMD" in
+  release-integrity-check)
+    shift
+    PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.release_integrity_cli --root "$ROOT" --mode integrity "$@"
+    ;;
+  docs-check|all-docs-check)
+    shift
+    PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.release_integrity_cli --root "$ROOT" --mode docs "$@"
+    ;;
+  manifest-verify)
+    shift
+    exec python3 "$ROOT/tools/verify_manifest.py" "$ROOT" "$@"
+    ;;
+esac
+exec "$HERE/agentos.v0222" "$@"

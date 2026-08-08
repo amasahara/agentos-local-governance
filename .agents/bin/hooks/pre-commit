@@ -2,6 +2,7 @@
 set -eu
 .agents/bin/agentos instruction-check >/dev/null
 .agents/bin/agentos docs-check >/dev/null
+.agents/bin/agentos release-integrity-check >/dev/null
 .agents/bin/agentos docs-scan --scope "${AGENTOS_SOURCE_ROOT:-src}" >/dev/null
 .agents/bin/agentos drift-check >/dev/null
 PYTHONPATH=.agents .agents/bin/agentos audit-verify >/dev/null || exit 1

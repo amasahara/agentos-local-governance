@@ -1,3 +1,5 @@
 # AgentOS Developer Guide
 
-[🇻🇳 Hướng dẫn tiếng Việt](huong_dan.vi.md) | [🇬🇧 English Guide](huong_dan.en.md)
+[🇻🇳 Tiếng Việt](huong_dan.vi.md) | [🇬🇧 English](huong_dan.en.md)
+
+Current version: **0.22.3**. Database schema: **40**.

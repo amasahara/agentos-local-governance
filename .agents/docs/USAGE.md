@@ -210,3 +210,14 @@ agentos collaboration-readiness --task-id T1
 agentos message-send --task-id T1 --to-session EXECUTOR --kind review_request --payload '{}' --disclosure metadata-only
 agentos message-list --task-id T1
 ```
+
+
+## v0.22.3 integrity commands
+
+```bash
+.agents/bin/agentos release-integrity-check
+.agents/bin/agentos docs-check
+python3 tools/verify_manifest.py .
+```
+
+The current release must preserve both the historical governance core and the v0.20-v0.22 extension branch.

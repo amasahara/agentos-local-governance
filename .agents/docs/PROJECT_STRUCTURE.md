@@ -204,7 +204,7 @@ Central db.py + CURRENT_SCHEMA_VERSION=40
 
 ## v0.22.7 Data Subject Rights & Privacy Lifecycle
 
-Database schema: **44**.
+Database schema: **43**.
 
 - `.agents/agentos/data_subject_rights.py`: immutable erasure request/plan, review/approval, active-operation gates, local erasure and tombstones.
 - `.agents/agentos/data_subject_rights_cli.py`: governed operator commands for the privacy lifecycle.
@@ -221,3 +221,28 @@ Database schema: **44**.
 - `.agents/agentos/mcp_context_transport.py`: five read-only MCP inspection/expansion tools.
 - `.agents/tests/test_context_transport_v0230.py`: preservation, budget, codec, stale-source, integrity, evaluation and MCP regression.
 - `.agents/docs/REQUIREMENT_PRESERVING_CONTEXT_COMPRESSION_V0230.md`: transport contract and invariants.
+
+## v0.23.1 Adaptive token-budget components
+
+```text
+.agents/agentos/adaptive_budget.py
+    → data-only model profiles, canonical profile hashes, adaptive/fixed budget decisions,
+      numeric/hash-only token observations and schema migration 45
+
+.agents/agentos/adaptive_budget_cli.py
+    → operator/local profile, decision, calibration inspection and observation recording
+
+.agents/agentos/mcp_adaptive_budget.py
+    → three read-only MCP inspection tools; no model/profile/budget mutation
+
+.agents/agentos/context_transport.py
+    → v2 transport compiler integration; profile-hash and budget-decision pinning
+
+.agents/tests/test_adaptive_budget_v0231.py
+    → migration, hash pin, budget math, calibration, preservation and MCP-boundary regression
+
+.agents/docs/ADAPTIVE_TOKEN_BUDGET_MODEL_PROFILES_V0231.md
+    → v0.23.1 architecture, safety invariants and operator contract
+```
+
+Schema progression for this node is `44 → 45`. The canonical Context Pack and v0.23.0 Requirement Preservation Gate remain the authority; adaptive budgeting changes allocation, not protected content.

@@ -1,38 +1,54 @@
 {
-  "release": "0.23.0",
+  "release": "0.23.1",
   "kind": "upgrade_overlay",
-  "from": "0.22.7",
-  "file_count": 35,
+  "from": "0.23.0",
+  "to": "0.23.1",
+  "file_count": 42,
   "files": [
     {
       "path": ".agents/agentos/__init__.py",
       "size": 23,
-      "sha256": "e9b61c8ed7004ef73df5934c8d351f3e5ac93f7fb559e9d511ceb9eaba159ff2"
+      "sha256": "126b55a95e35626669e8c8f9a649b88865c33339d5104e0640451818689dab7d"
+    },
+    {
+      "path": ".agents/agentos/adaptive_budget.py",
+      "size": 30523,
+      "sha256": "2ff30d086091f4a46b64207b329b73f18fcde5fa6de547bf02def72e84acbd5d"
+    },
+    {
+      "path": ".agents/agentos/adaptive_budget_cli.py",
+      "size": 3655,
+      "sha256": "d43881501bda27fb1edd4e655c06a6b62d3c8c5781b967efa87ded3170a27231"
     },
     {
       "path": ".agents/agentos/cli_runtime.py",
-      "size": 12309,
-      "sha256": "1da7b76fd521bfb5f5b77abd29c5046586c7ba20cdd1730726f51c24f532900b"
+      "size": 12336,
+      "sha256": "2c2b6f0ed8f17d6bed2e82c192f71063c95f3c4d8b3ec0eee3cfb30c4b5ce52a"
     },
     {
       "path": ".agents/agentos/context_transport.py",
-      "size": 59444,
-      "sha256": "31898f4657121945f27fc04f9f247077d6231348eb282855707801b84ae8226e"
+      "size": 65093,
+      "sha256": "ecf296334781a391c4e6b9fc44dd2880fcc34c4fa4aed17d8692da445a2614dd"
     },
     {
       "path": ".agents/agentos/context_transport_cli.py",
-      "size": 4394,
-      "sha256": "9ad393262a54c56ab99ffe4cedbd30683cf8e4e8655d5f074c7db9a7add71e5f"
+      "size": 4488,
+      "sha256": "7a2dc9e5294855bc2b74d672a645563b64322d8e7e5e2f6d4fcb5e0b4487e9e7"
     },
     {
       "path": ".agents/agentos/db.py",
-      "size": 37260,
-      "sha256": "b56b63ce6563e00e147efaa073b438782b2322273bdc1d77f5dceefa4c1fe60e"
+      "size": 37320,
+      "sha256": "2236e40ed637692b2af41d4f512ba89e5e8643910207f535a5d9687d4410c565"
+    },
+    {
+      "path": ".agents/agentos/mcp_adaptive_budget.py",
+      "size": 2927,
+      "sha256": "4b6622f9eb4d6df47aa803a3a2d4850e0224ef1d084833a03020899b9d035688"
     },
     {
       "path": ".agents/agentos/mcp_catalog.py",
-      "size": 3075,
-      "sha256": "8c7a0fbfd3fbfb545acdf7544cf04300481cb122013b6340698561092f88e2f5"
+      "size": 3186,
+      "sha256": "55c4141a881fa3503c00a74753e8cee859837fbb2b71fab7f337f62c94f37b59"
     },
     {
       "path": ".agents/agentos/mcp_context_transport.py",
@@ -42,32 +58,37 @@
     {
       "path": ".agents/agentos/mcp_runtime.py",
       "size": 7875,
-      "sha256": "a16bc729b224b393860b370366da741fe16f92e8b38f73545729fc6d2706c8a3"
+      "sha256": "eba640bc8bfd7f0313922f4d7181bfc11e4637495640e377675de35ae19f201e"
     },
     {
       "path": ".agents/agentos/policy.py",
-      "size": 9703,
-      "sha256": "d8516d1be86d69e50bef7b306c4119b1ebfcf9f49d01ced6748ab529a8ffb4d8"
+      "size": 14413,
+      "sha256": "c896dde26a8e935d64c0b43ad7ac39d2b126eb05ff627b43b86834e0539ad29a"
     },
     {
       "path": ".agents/agentos/release_integrity.py",
-      "size": 14311,
-      "sha256": "fa3db7cda99c619b19534a4b927201f1022602ca476cffebb15cbe13c7d6a715"
+      "size": 14937,
+      "sha256": "529338c6b2f1eaf95125f041e4bc13874edb7863f007ce4ea98af4633f66ae33"
     },
     {
       "path": ".agents/agentos/schema_version.py",
       "size": 312,
-      "sha256": "0d5a2c2327d4df68f511b25671801469480c87e16d7786a662077e81d7f9a889"
+      "sha256": "bd9ce130b401582e664f7037277e2e1ffb6de7a1788cc4168ed1fe2af0b89149"
     },
     {
       "path": ".agents/config/governance.json",
-      "size": 24263,
-      "sha256": "741dcd084bba8f1c60e4d22bf8352dcb32e6c172454b22230e3c092cfe4faa1a"
+      "size": 28078,
+      "sha256": "290571a54bca013ca4efc3295fd80cd2334bf63c226bff55f3b8269dc3fc01dd"
+    },
+    {
+      "path": ".agents/docs/ADAPTIVE_TOKEN_BUDGET_MODEL_PROFILES_V0231.md",
+      "size": 3258,
+      "sha256": "b482f7ef95c09421078cd8290bf0572da403edef4e10598bd9f648752bc5b110"
     },
     {
       "path": ".agents/docs/PROJECT_STRUCTURE.md",
-      "size": 10236,
-      "sha256": "117bfc0f955be0344e025823e27c86de63b13ad704181c383622ff330675a2cf"
+      "size": 11335,
+      "sha256": "5c34730d379fd207d2951e5cceba518be3503397312f568d9784b9b716e6b6db"
     },
     {
       "path": ".agents/docs/REQUIREMENT_PRESERVING_CONTEXT_COMPRESSION_V0230.md",
@@ -76,18 +97,23 @@
     },
     {
       "path": ".agents/docs/RULES_WORKFLOW_CHANGELOG.md",
-      "size": 10445,
-      "sha256": "4726e8d266979bc1c54560506d463fee29342b505da4398d27fc9fbd4a81ccc8"
+      "size": 11578,
+      "sha256": "718a2f24d5564cc9c701e77583eff460c6bf97e0988701048bfd12e44de593c7"
     },
     {
       "path": ".agents/docs/USAGE.md",
-      "size": 8950,
-      "sha256": "997fbe21d761d11da09b82433ffebde9716e4018a09af138b4dd71d960c96f3d"
+      "size": 10501,
+      "sha256": "2b3fc00b2fe08e17ef377d3d84e09d9a2b02c9160ccefc904cee8e80fcd7f455"
+    },
+    {
+      "path": ".agents/tests/test_adaptive_budget_v0231.py",
+      "size": 15827,
+      "sha256": "df9f6911fbecafc58a7e06e01c75084c307ed3036e75ec15810b75be3cee896d"
     },
     {
       "path": ".agents/tests/test_context_transport_v0230.py",
-      "size": 12262,
-      "sha256": "17fc7b12dbaa88889f81a0131084dcbd0700f1640815144519bbbbb658f93f3f"
+      "size": 12315,
+      "sha256": "6b732be0f1a8dcf9bad7d84fe6b84a97f9c5e7a7291507889999fc8fa93b66e0"
     },
     {
       "path": ".agents/tests/test_data_subject_rights_v0227.py",
@@ -95,74 +121,74 @@
       "sha256": "4de43b6be400396556ebef3de73973ee678c38e4a6dc1b61207e65a74b7fad0f"
     },
     {
+      "path": "ADAPTIVE_TOKEN_BUDGET_BENCHMARK.json",
+      "size": 2392,
+      "sha256": "d312691aaae5ddfad164fe47b1f0f1d0af94d65972755b50b7bcb1569ed885d7"
+    },
+    {
       "path": "AGENTS.md",
-      "size": 26562,
-      "sha256": "2f9337c3c9f4b9b56fd8a3659c92a7f26d4045aa647e68600753062394cba646"
+      "size": 29234,
+      "sha256": "d946f4a5be81992d4b5c723eb5d1995385bfe48efa6083080bfe89a97180b392"
     },
     {
       "path": "CHANGELOG.md",
-      "size": 5447,
-      "sha256": "d67a1fed73e1bbeafeca4cfed69320cff88e33ca9d0c727ba51210413301db0a"
-    },
-    {
-      "path": "CONTEXT_TRANSPORT_BENCHMARK.json",
-      "size": 1108,
-      "sha256": "f1676e9528ba2d954d489c94319286529e92a426c48220e5859f4662e45ed86b"
+      "size": 6693,
+      "sha256": "a7a95cfeb74a689f0cea6bdd54ea8bde3e86ac8fdc448f30f4cc97b26cd35df8"
     },
     {
       "path": "PACKAGE_COMPLETENESS.json",
-      "size": 950,
-      "sha256": "2db3bb3d4af21ba2f6655f6dc5cc7cb1c4fb325d6457b22c818315dc5b1ea59e"
+      "size": 1655,
+      "sha256": "5fe63ab553508fd3203415d7346ac560761e90b28f63ee2b0f6435b6f278c228"
     },
     {
       "path": "README.en.md",
-      "size": 1772,
-      "sha256": "a6a0a103f7be1caf0c761b478ee9b4932559f4214a38690eb3eee2aaf190f53c"
+      "size": 2009,
+      "sha256": "f51db2ad80e6121985793414783ab6df942682fa11df9c428260cfeaf1f3e452"
     },
     {
       "path": "README.md",
-      "size": 1116,
-      "sha256": "e8cd34739f75505e51571d176aa6e4bc1c1c13a08513d0e3b1f9d3ef6eaef18d"
+      "size": 1527,
+      "sha256": "cf8929ae3a33afce3098d1701c68ddde55eda122446c6579f0d078cdbb0dfc33"
     },
     {
       "path": "README.vi.md",
-      "size": 2959,
-      "sha256": "9788c91bbcab8c47fe292080f3a79609d1227507ba6373ff09c0b74bcd6e5114"
+      "size": 4533,
+      "sha256": "01ad73bd67978b03a98d50747c7765ba1f2f626d8272a397083240ebcb99f874"
     },
     {
       "path": "RELEASE_NOTES.md",
-      "size": 2719,
-      "sha256": "cb8569a3bd43c9e19785f81fe775109f72b53656d65f8725f46c020710b1c5bd"
+      "size": 2768,
+      "sha256": "977cd9a33787fd7417079b2d9d2efb5bfa26a06cdc1981f80939310678c1e458"
     },
     {
-      "path": "UPGRADE_FROM_0.22.7.md",
-      "size": 873,
-      "sha256": "376cc730d78e9781973f98badb79ffbc76f8a9445a5d65f6a205396c568d2435"
+      "path": "UPGRADE_FROM_0.23.0.md",
+      "size": 853,
+      "sha256": "cfb9fe5d793786b3b857d058dfc72d825d9f0e7853b36aee22444ff46a7b456f"
     },
     {
       "path": "VALIDATION_REPORT.json",
-      "size": 3993,
-      "sha256": "42af5f2deca581998f5ab81b92f44b906e7fe6618ed4ef2fd32a96b0513faac4"
+      "size": 5024,
+      "sha256": "e1f6fab613df5b8c7753f9fe39062955f260addb473a21ed223bb52233ee2a72"
     },
     {
       "path": "VERSION",
       "size": 7,
-      "sha256": "d1994e4942b06ec398ed7d9fa91ecce4079cd3f85ffe9e04588866291263149c"
+      "sha256": "e14c67c5f4dd36234ef4bc5ba5ef48d5d79e27bad4038c9bc8a64714566aa06a"
     },
     {
       "path": "huong_dan.en.md",
-      "size": 486,
-      "sha256": "1527df681445f3d9bb5aca6d1800e9ffa6fab730342db97be4dd2a7336041cd2"
+      "size": 505,
+      "sha256": "a81585da3ef95babc35bc53f13cf4216567a7fca5124cc17f162aafa30f1f33c"
     },
     {
       "path": "huong_dan.md",
-      "size": 565,
-      "sha256": "479774e6bc1c47291813a069b52e04a3e01244709bc438df5bc85bd9e7312b05"
+      "size": 583,
+      "sha256": "d4d62c89785e8d6e214cf9f6013eb3e5e2ac94c37652129ae356ed3944907dd0"
     },
     {
       "path": "huong_dan.vi.md",
-      "size": 973,
-      "sha256": "95cc30cdbda3fb19057b57c51e93b396b096251e31f8ce71669abfb1f594d51a"
+      "size": 1386,
+      "sha256": "413865f6d359276ea71a0920ce790a3b602e6c3b9c7ec3c4d5409fcc10315c57"
     },
     {
       "path": "tools/apply_v0230.py",
@@ -170,14 +196,24 @@
       "sha256": "930f33e61f065784ea85d7999888a9d0067a6859c0d246f7bf4fd4df4ef81f56"
     },
     {
+      "path": "tools/apply_v0231.py",
+      "size": 12959,
+      "sha256": "c3d14b2eb12fb40a3e7b1b2f30167d34b0b4b8dfcc85edc53fa6b74d84e6cae5"
+    },
+    {
       "path": "tools/validate_release.py",
-      "size": 5385,
-      "sha256": "8a0f7f9718d91ee054c944380ea2a73a0ff08e2baae2e9e0fbd5f5c91224d18a"
+      "size": 6281,
+      "sha256": "c4e09e22128fe4f1fb3f3c106dfaf3505974521c29c77db5e697c43838001f8b"
     },
     {
       "path": "tools/validate_v0230.py",
       "size": 7803,
       "sha256": "7e22464f979d71eb0c1ece5db6f363f351506115b31a593f3df015f126cefd89"
+    },
+    {
+      "path": "tools/validate_v0231.py",
+      "size": 10203,
+      "sha256": "a7cae9cb8ba72210a3e18a4f08a6b9163968242e4372aee694c94f5e34b03aa4"
     }
   ]
 }

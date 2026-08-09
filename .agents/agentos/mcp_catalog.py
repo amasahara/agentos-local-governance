@@ -27,6 +27,7 @@ from . import mcp_reconciliation_recovery_gateway as recovery
 from . import mcp_secret_lineage as secret_lineage
 from . import mcp_data_subject_rights as data_subject_rights
 from . import mcp_context_transport as context_transport
+from . import mcp_adaptive_budget as adaptive_budget
 
 FeatureHandler = Callable[[str, dict[str, Any], Path], dict[str, Any]]
 
@@ -49,6 +50,7 @@ REGISTRATIONS: tuple[tuple[list[dict[str, Any]], FeatureHandler], ...] = (
     (secret_lineage.TOOLS, secret_lineage._local_call),
     (data_subject_rights.TOOLS, data_subject_rights._local_call),
     (context_transport.TOOLS, context_transport._local_call),
+    (adaptive_budget.TOOLS, adaptive_budget._local_call),
 )
 
 

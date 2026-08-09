@@ -1,12 +1,14 @@
 {
-  "release": "0.23.0",
+  "release": "0.23.1",
   "kind": "upgrade_overlay",
-  "from": "0.22.7",
-  "to": "0.23.0",
-  "status": "complete_for_v0230_delta",
+  "from": "0.23.0",
+  "to": "0.23.1",
+  "status": "complete_for_v0231_delta",
   "required_groups": {
-    "runtime": true,
-    "schema_migration": true,
+    "adaptive_budget_runtime": true,
+    "model_profile_registry": true,
+    "schema_migration_45": true,
+    "context_transport_v2_integration": true,
     "governance_policy": true,
     "AGENTS_instruction": true,
     "README_landing": true,
@@ -22,10 +24,24 @@
     "node_validator": true,
     "strict_release_validator": true,
     "focused_tests": true,
-    "benchmark_evidence": true,
+    "adaptive_budget_benchmark": true,
     "manifest": true,
     "checksums": true,
     "validation_report": true
   },
-  "note": "The overlay intentionally contains the v0.23.0 delta only; tools/apply_v0230.py preserves all untouched v0.22.7 files and rebuilds a full-target MANIFEST/CHECKSUMS after apply."
+  "safety_properties": {
+    "control_plane_lossless": true,
+    "requirement_preservation_rate_required": 1.0,
+    "model_profiles_data_only": true,
+    "model_profile_hash_pin_required": true,
+    "network_model_discovery": false,
+    "provider_api_profile_discovery": false,
+    "dynamic_profile_code": false,
+    "tokenizer_auto_download": false,
+    "calibration_content_persistence": false,
+    "calibration_can_reduce_safety": false,
+    "agentos_model_switching_authority": false,
+    "adaptive_mcp_mutation": false
+  },
+  "note": "This is the v0.23.1 delta overlay. tools/apply_v0231.py accepts only an exact v0.23.0/schema-44 predecessor, preserves untouched historical files, merges only the v0.23.1 policy sections, and rebuilds full-target MANIFEST/CHECKSUMS after apply."
 }

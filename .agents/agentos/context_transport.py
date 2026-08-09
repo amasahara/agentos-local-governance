@@ -20,18 +20,29 @@ import ast
 import hashlib
 import json
 import math
+import os
 import re
+import tempfile
+import threading
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
 from .context_runtime import context_status
+from .adaptive_budget import (
+    AdaptiveBudgetError,
+    persist_budget_decision,
+    persist_profile_snapshot,
+    resolve_adaptive_budget,
+    resolve_model_profile,
+)
 from .db import connect
 from .planning import active_plan
 from .policy import load_policy
 
-MIGRATION_VERSION = 44
-TRANSPORT_VERSION = 1
+MIGRATION_VERSION = 45
+TRANSPORT_VERSION = 2
 
 REQUIREMENT_KINDS = (
     "objective",
@@ -65,6 +76,7 @@ CRITICAL_POLICY_SECTIONS = (
     "data_subject_rights_policy",
     "privacy_boundary_policy",
     "context_transport_policy",
+    "adaptive_token_budget_policy",
 )
 
 PROHIBITION_PATTERNS = (
@@ -317,23 +329,62 @@ class HeuristicTokenizer(Tokenizer):
         return max(1, char_estimate, lexical_estimate)
 
 
+_TIKTOKEN_CACHE_LOCK = threading.RLock()
+
+
+@contextmanager
+def _tiktoken_local_cache_only() -> Iterable[None]:
+    """Force tiktoken BPE reads to use an already-populated local cache only.
+
+    Tiktoken may otherwise fetch BPE assets lazily. AgentOS v0.23.1 forbids
+    tokenizer auto-download/network discovery, so a cache miss must fail and
+    allow the caller to fall back to the multilingual heuristic tokenizer.
+    """
+    import tiktoken.load as tiktoken_load  # type: ignore
+
+    original = tiktoken_load.read_file_cached
+
+    def local_read_file_cached(blobpath: str, expected_hash: str | None = None) -> bytes:
+        cache_dir = os.environ.get("TIKTOKEN_CACHE_DIR") or os.environ.get("DATA_GYM_CACHE_DIR")
+        if cache_dir is None:
+            cache_dir = os.path.join(tempfile.gettempdir(), "data-gym-cache")
+        if not cache_dir:
+            raise RuntimeError("tiktoken_local_cache_disabled")
+        cache_key = hashlib.sha1(blobpath.encode()).hexdigest()
+        cache_path = Path(cache_dir) / cache_key
+        if not cache_path.is_file():
+            raise RuntimeError("tiktoken_local_cache_miss")
+        data = cache_path.read_bytes()
+        if expected_hash and hashlib.sha256(data).hexdigest() != expected_hash:
+            raise RuntimeError("tiktoken_local_cache_hash_mismatch")
+        return data
+
+    with _TIKTOKEN_CACHE_LOCK:
+        tiktoken_load.read_file_cached = local_read_file_cached
+        try:
+            yield
+        finally:
+            tiktoken_load.read_file_cached = original
+
+
 class TiktokenTokenizer(Tokenizer):
-    """Exact tokenizer wrapper when a local tiktoken encoding is available."""
+    """Exact tokenizer wrapper using only already-cached local tiktoken assets."""
 
     exact = True
 
     def __init__(self, model_name: str | None = None, encoding_name: str | None = None) -> None:
         import tiktoken  # type: ignore
 
-        if encoding_name:
-            self._encoding = tiktoken.get_encoding(encoding_name)
-            self.tokenizer_id = f"tiktoken:{encoding_name}"
-        elif model_name:
-            self._encoding = tiktoken.encoding_for_model(model_name)
-            self.tokenizer_id = f"tiktoken:model:{model_name}"
-        else:
-            self._encoding = tiktoken.get_encoding("cl100k_base")
-            self.tokenizer_id = "tiktoken:cl100k_base"
+        with _tiktoken_local_cache_only():
+            if encoding_name:
+                self._encoding = tiktoken.get_encoding(encoding_name)
+                self.tokenizer_id = f"tiktoken:{encoding_name}"
+            elif model_name:
+                self._encoding = tiktoken.encoding_for_model(model_name)
+                self.tokenizer_id = f"tiktoken:model:{model_name}"
+            else:
+                self._encoding = tiktoken.get_encoding("cl100k_base")
+                self.tokenizer_id = "tiktoken:cl100k_base"
 
     def count(self, text: str) -> int:
         return len(self._encoding.encode(text))
@@ -958,6 +1009,7 @@ def compile_transport_pack(
     system_tool_overhead: int | None = None,
     safety_margin: int | None = None,
     shadow: bool = False,
+    budget_mode: str | None = None,
 ) -> dict[str, Any]:
     """Compile a requirement-preserving transport from the active canonical Context Pack.
 
@@ -985,12 +1037,44 @@ def compile_transport_pack(
     plan_json = str(plan_row["plan_json"]) if plan_row else None
     ledger = build_requirement_ledger(str(task["request"]), plan_json)
     control, control_hashes = _control_plane(root, task, ledger)
+    try:
+        profile = resolve_model_profile(root, model_profile)
+    except AdaptiveBudgetError as exc:
+        raise ContextTransportError(str(exc)) from exc
     tokenizer = resolve_tokenizer(model_profile, cfg)
-    budget = resolve_budget(model_profile, cfg, reserved_output, system_tool_overhead, safety_margin)
     control_tokens = tokenizer.count(_canonical_json(control))
     raw_context_tokens = tokenizer.count(_raw_context_text(control, canonical_manifest))
     revision = _next_transport_revision(root, task_id)
     freshness_hash = _source_freshness_hash(canonical_manifest)
+
+    adaptive_cfg = _policy(root).get("adaptive_token_budget_policy", {})
+    if not isinstance(adaptive_cfg, dict):
+        adaptive_cfg = {}
+    resolved_mode = str(budget_mode or adaptive_cfg.get("default_mode", "adaptive"))
+    try:
+        decision = resolve_adaptive_budget(
+            root,
+            profile,
+            tokenizer.tokenizer_id,
+            control_tokens,
+            ledger,
+            plan_json,
+            mode=resolved_mode,
+            reserved_output_override=reserved_output,
+            system_tool_overhead_override=system_tool_overhead,
+            safety_margin_override=safety_margin,
+        )
+    except AdaptiveBudgetError as exc:
+        raise ContextTransportError(str(exc)) from exc
+    persist_profile_snapshot(root, profile)
+    budget_decision_id = persist_budget_decision(root, task_id, context_revision, revision, decision)
+    budget = TokenBudget(
+        profile=model_profile,
+        context_capacity=decision.context_capacity,
+        reserved_output=decision.reserved_output,
+        system_tool_overhead=decision.system_tool_overhead,
+        safety_margin=decision.safety_margin,
+    )
 
     gate = _preservation_check(control, task, ledger)
     gate["policy_authority"] = (
@@ -1014,14 +1098,26 @@ def compile_transport_pack(
             "status": "FAILED",
             "failure_reason": failure,
             "model_profile": model_profile,
+            "model_profile_hash": profile.profile_hash,
             "tokenizer": {"id": tokenizer.tokenizer_id, "exact": tokenizer.exact},
             "budget": {
+                "mode": decision.mode,
+                "algorithm_version": decision.algorithm_version,
                 "context_capacity": budget.context_capacity,
                 "reserved_output": budget.reserved_output,
                 "system_tool_overhead": budget.system_tool_overhead,
                 "safety_margin": budget.safety_margin,
+                "calibration_headroom": decision.calibration_headroom,
                 "input_budget": budget.input_budget,
                 "control_tokens": control_tokens,
+                "evidence_budget": decision.evidence_budget,
+                "evidence_floor": decision.evidence_floor,
+                "evidence_floor_satisfied": decision.evidence_floor_satisfied,
+                "pressure_score": decision.pressure_score,
+                "observed_output_p95": decision.observed_output_p95,
+                "input_underestimation_p95": decision.input_underestimation_p95,
+                "output_reserve_saturated": decision.output_reserve_saturated,
+                "budget_decision_id": budget_decision_id,
             },
             "preservation_gate": gate,
         }
@@ -1032,8 +1128,8 @@ def compile_transport_pack(
                     task_id,context_revision,transport_revision,transport_version,status,model_profile,tokenizer_id,
                     original_request_hash,authority_hash,scope_hash,plan_hash,source_freshness_hash,transport_hash,
                     raw_tokens,transport_tokens,control_tokens,evidence_tokens,token_budget,saved_tokens,compression_ratio,
-                    preservation_rate,manifest_json,failure_reason
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    preservation_rate,manifest_json,failure_reason,model_profile_hash,budget_mode,budget_decision_id
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     task_id, context_revision, revision, TRANSPORT_VERSION, "FAILED", model_profile, tokenizer.tokenizer_id,
@@ -1041,12 +1137,13 @@ def compile_transport_pack(
                     freshness_hash, None, raw_context_tokens, control_tokens, control_tokens, 0, budget.input_budget,
                     max(0, raw_context_tokens-control_tokens), (raw_context_tokens / max(1, control_tokens)),
                     float(gate["requirement_preservation_rate"]), _canonical_json(failed_manifest), failure,
+                    profile.profile_hash, decision.mode, budget_decision_id,
                 ),
             )
         raise ContextTransportError(failure)
 
     _persist_ledger(root, task_id, context_revision, ledger)
-    evidence_budget = budget.input_budget - control_tokens
+    evidence_budget = decision.evidence_budget
     evidence, raw_evidence_tokens, evidence_tokens = _evidence_plane(
         root, canonical_manifest, context_revision, ledger, tokenizer, evidence_budget
     )
@@ -1063,13 +1160,25 @@ def compile_transport_pack(
         },
         "status": "PREPARED",
         "model_profile": model_profile,
+        "model_profile_hash": profile.profile_hash,
         "tokenizer": {"id": tokenizer.tokenizer_id, "exact": tokenizer.exact},
         "budget": {
+            "mode": decision.mode,
+            "algorithm_version": decision.algorithm_version,
             "context_capacity": budget.context_capacity,
             "reserved_output": budget.reserved_output,
             "system_tool_overhead": budget.system_tool_overhead,
             "safety_margin": budget.safety_margin,
+            "calibration_headroom": decision.calibration_headroom,
             "input_budget": budget.input_budget,
+            "evidence_budget": decision.evidence_budget,
+            "evidence_floor": decision.evidence_floor,
+            "evidence_floor_satisfied": decision.evidence_floor_satisfied,
+            "pressure_score": decision.pressure_score,
+            "observed_output_p95": decision.observed_output_p95,
+            "input_underestimation_p95": decision.input_underestimation_p95,
+            "output_reserve_saturated": decision.output_reserve_saturated,
+            "budget_decision_id": budget_decision_id,
         },
         "control_plane": control,
         "evidence_plane": evidence,
@@ -1117,8 +1226,8 @@ def compile_transport_pack(
                 task_id,context_revision,transport_revision,transport_version,status,model_profile,tokenizer_id,
                 original_request_hash,authority_hash,scope_hash,plan_hash,source_freshness_hash,transport_hash,
                 raw_tokens,transport_tokens,control_tokens,evidence_tokens,token_budget,saved_tokens,compression_ratio,
-                preservation_rate,manifest_json,failure_reason
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL)
+                preservation_rate,manifest_json,failure_reason,model_profile_hash,budget_mode,budget_decision_id
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)
             """,
             (
                 task_id, context_revision, revision, TRANSPORT_VERSION, manifest["status"], model_profile, tokenizer.tokenizer_id,
@@ -1126,6 +1235,7 @@ def compile_transport_pack(
                 freshness_hash, manifest["transport_hash"], raw_context_tokens, transport_tokens, control_tokens, evidence_tokens,
                 budget.input_budget, int(manifest["metrics"]["saved_tokens"]), float(manifest["metrics"]["compression_ratio"]),
                 float(gate["requirement_preservation_rate"]), _canonical_json(manifest),
+                profile.profile_hash, decision.mode, budget_decision_id,
             ),
         )
         pack_id = int(c.execute("SELECT last_insert_rowid() AS id").fetchone()["id"])
@@ -1336,6 +1446,8 @@ def context_token_report(root: Path, task_id: str, revision: int | None = None) 
         "task_id": task_id,
         "transport_revision": pack["transport_revision"],
         "stale": pack["stale"],
+        "model_profile": m.get("model_profile"),
+        "model_profile_hash": m.get("model_profile_hash"),
         "tokenizer": m["tokenizer"],
         "budget": m["budget"],
         **m["metrics"],
@@ -1388,6 +1500,15 @@ def evaluate_transport_pack(root: Path, task_id: str, revision: int | None = Non
         "rework_count": rework,
         "tool_call_count": tool_call_count,
     }
+    budget = manifest.get("budget", {})
+    input_budget = max(1, int(budget.get("input_budget", metrics["transport_tokens"])))
+    evidence_budget = max(0, int(budget.get("evidence_budget", 0)))
+    result["budget_utilization"] = int(metrics["transport_tokens"]) / input_budget
+    result["evidence_budget_utilization"] = (int(metrics["evidence_tokens"]) / evidence_budget) if evidence_budget else 0.0
+    result["budget_mode"] = str(budget.get("mode", "fixed"))
+    result["model_profile_hash"] = manifest.get("model_profile_hash")
+    result["calibration_headroom"] = int(budget.get("calibration_headroom", 0) or 0)
+
     if persist:
         with connect(root, immediate=True) as c:
             c.execute(
@@ -1410,7 +1531,7 @@ def evaluate_transport_pack(root: Path, task_id: str, revision: int | None = Non
 
 
 def sync_schema(root: Path) -> dict[str, Any]:
-    """Open the central database so migration 44 is applied through db.connect()."""
+    """Open the central database so migrations through schema 45 are applied via db.connect()."""
     with connect(root) as c:
         version = int(c.execute("SELECT COALESCE(MAX(version),0) AS v FROM schema_migrations").fetchone()["v"])
         foreign_keys = int(c.execute("PRAGMA foreign_keys").fetchone()[0])

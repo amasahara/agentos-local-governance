@@ -1,87 +1,115 @@
 {
-  "release": "0.23.0",
-  "node": "Requirement-Preserving Context Compression",
+  "release": "0.23.1",
+  "node": "Adaptive Token Budget & Model Profiles",
+  "verification_date": "2026-08-09",
   "baseline": {
-    "github_verified_version": "0.22.7",
-    "github_verified_schema": 43,
-    "data_subject_rights_document_present": true,
-    "verification_date": "2026-08-09"
+    "required_predecessor": "0.23.0",
+    "required_schema": 44,
+    "local_predecessor_artifact_used": "agentos-local-governance-v0.23.0-upgrade-overlay",
+    "github_main_observed_version": "0.22.6",
+    "github_main_observed_schema": 42,
+    "github_exact_v0230_baseline_available": false,
+    "note": "GitHub main did not expose v0.23.0 at verification time, so this release is built/tested against the previously materialized local v0.23.0 artifact. The upgrader refuses any target that is not exact v0.23.0/schema 44."
   },
-  "result": "passed_with_explicit_environment_limitations",
+  "result": "passed_focused_and_representative_with_explicit_full_repo_limitations",
   "schema": {
-    "from": 43,
-    "to": 44,
-    "migration_chain_1_to_current": "passed",
-    "foreign_keys_on": true,
+    "from": 44,
+    "to": 45,
+    "representative_pre_upgrade_chain_1_to_44": "passed",
+    "representative_post_upgrade_chain_1_to_45": "passed",
+    "foreign_keys_on_before": true,
+    "foreign_keys_on_after": true,
     "new_tables": [
-      "context_transport_packs",
-      "context_requirement_ledger",
-      "context_expansion_events",
-      "context_transport_evaluations"
-    ]
+      "context_model_profile_snapshots",
+      "context_budget_decisions",
+      "context_token_observations"
+    ],
+    "transport_pack_columns": [
+      "model_profile_hash",
+      "budget_mode",
+      "budget_decision_id"
+    ],
+    "calibration_prompt_response_columns_present": false
   },
-  "runtime": {
-    "unified_cli_unique_commands": 227,
-    "unified_mcp_unique_tools": 65,
-    "new_context_mcp_tools": 5,
-    "context_mcp_mutation_exposed": false,
-    "version_forwarding_reintroduced": false,
-    "mcp_subprocess_forwarding_reintroduced": false
+  "adaptive_budget": {
+    "algorithm": "adaptive_budget_v1",
+    "default_mode": "adaptive",
+    "compatibility_mode": "fixed",
+    "profile_registry": "local_data_only",
+    "profile_hash_pin": "sha256",
+    "network_model_discovery": false,
+    "provider_api_profile_discovery": false,
+    "dynamic_profile_code": false,
+    "tokenizer_auto_download": false,
+    "exact_tiktoken_mode": "local_cache_only",
+    "calibration_numeric_hash_only": true,
+    "calibration_source_allowlist": [
+      "runtime_report",
+      "provider_usage",
+      "tokenizer_probe",
+      "operator_verified",
+      "benchmark",
+      "local_runtime"
+    ],
+    "one_observation_per_transport_source": true,
+    "calibration_can_reduce_safety_margin": false,
+    "calibration_can_reduce_output_floor": false,
+    "adaptive_explicit_overrides_can_reduce_protection": false,
+    "model_switching_authority": "external_runtime_only"
+  },
+  "requirement_preservation": {
+    "v0230_control_plane_lossless_preserved": true,
+    "original_request_verbatim_required": true,
+    "requirement_preservation_rate_required": 1.0,
+    "control_plane_budget_priority": 1,
+    "evidence_plane_budget_priority": 2,
+    "protected_overflow": "fail_closed",
+    "generative_summary_authority": false,
+    "word_level_deletion": false
+  },
+  "cli_mcp_delta": {
+    "new_cli_commands": 5,
+    "new_mcp_tools": 3,
+    "new_mcp_tools_read_only": true,
+    "adaptive_mcp_mutation_exposed": false,
+    "expected_context_mcp_tools_after_upgrade": 8,
+    "predecessor_full_registry_counts_from_v0230_artifact": {
+      "cli": 227,
+      "mcp": 65
+    },
+    "expected_counts_if_exact_predecessor_registry_is_unchanged_except_v0231_delta": {
+      "cli": 232,
+      "mcp": 68
+    },
+    "exact_full_registry_reverified_in_this_environment": false,
+    "note": "tools/validate_v0231.py and tools/validate_release.py fail closed on duplicate/full-registry mismatches when run on the user's exact full repository."
   },
   "tests_actually_run": {
-    "focused_v0230": "12 passed",
-    "full_available_regression": "144 passed",
-    "clean_representative_v0227_to_v0230_upgrade": "144 passed",
-    "validate_v0230": "passed",
-    "docs_check": "passed",
+    "focused_v0230_plus_v0231": "27 passed",
+    "representative_clean_v0230_to_v0231_upgrade_dry_run": "passed",
+    "representative_clean_v0230_to_v0231_apply": "passed",
+    "representative_schema_44_to_45": "passed",
+    "representative_post_upgrade_focused_tests": "27 passed",
+    "wrong_predecessor_version_refusal": "passed",
+    "policy_fail_closed_negative_tests": "passed",
+    "dynamic_tokenizer_profile_rejection": "passed",
+    "protected_control_overflow": "passed",
+    "adaptive_override_monotonic_protection": "passed",
+    "token_observation_content_leakage": "passed",
+    "token_observation_source_allowlist": "passed",
+    "token_observation_conflicting_replay_block": "passed",
     "python_compile": "passed",
-    "cli_mcp_collision_checks": "passed",
-    "unknown_cli_and_mcp_protocol_regression": "passed as part of available historical suite",
-    "sensitive_data_leakage_regression": "passed as part of v0.22.6/v0.22.7 available suite",
+    "adaptive_budget_benchmark": "generated from deterministic local calculation",
     "overlay_manifest_and_checksums": "passed",
     "clean_zip_unpack": "passed",
-    "zip_integrity": "passed",
-    "wrong_baseline_version_refusal": "passed (VERSION 0.22.6 refused)",
-    "strict_release_integrity_on_representative_tree": "not passed because the locally materialized predecessor omits historical packaging/policy files; strict fail-closed validator retained for exact repository"
+    "unpacked_upgrader_validator_executable_bits": "passed (0755)",
+    "unpacked_upgrader_dry_run": "passed"
   },
-  "preservation_guarantees": {
-    "original_request_verbatim": true,
-    "original_request_hash": true,
-    "stable_requirement_ledger": true,
-    "agents_authority_verbatim": true,
-    "approved_scope_lossless": true,
-    "active_plan_hash": true,
-    "policy_authority_hash": true,
-    "source_freshness_gate": true,
-    "transport_integrity_gate_before_ready": true,
-    "required_preservation_rate": 1.0,
-    "control_plane_budget_overflow": "fail_closed",
-    "generative_llm_summarization_authority": false,
-    "word_level_deletion": false,
-    "gzip_base64_minify_semantic_compression": false
-  },
-  "compression": {
-    "ladder": [
-      "exact_dedup",
-      "metadata_normalization",
-      "structural_projection",
-      "requirement_aware_ranking",
-      "omission_handles",
-      "fail_closed"
-    ],
-    "representative_shadow_benchmark": {
-      "tokenizer": "multilingual_heuristic_v1",
-      "generic_64k_ratio": 3.0296296296296297,
-      "generic_128k_ratio": 2.807219201587728,
-      "generic_200k_ratio": 2.807219201587728,
-      "requirement_preservation_rate": 1.0,
-      "interpretation": "Representative local benchmark is inside the initial 2-4x target; this is not a universal production performance claim."
-    }
-  },
-  "environment_limitations": [
-    "The build shell could not clone/download the exact GitHub repository tree because direct shell DNS resolution to github.com was unavailable; GitHub baseline version/schema were verified through the web source instead.",
-    "Clean upgrade regression used the locally materialized v0.22.7 predecessor tree created by the prior release workflow.",
-    "That representative predecessor tree omits several older packaging files/policy sections that the strict historical release-integrity checker expects. Therefore strict full-tree release-integrity is not claimed as passed in this build environment; tools/validate_release.py remains fail-closed and should be run on the user's exact repository after applying the overlay.",
-    "No exact model tokenizer package was installed in this environment; benchmark token accounting used multilingual_heuristic_v1. The runtime will prefer an exact local tokenizer when available."
+  "not_claimed": [
+    "Full historical regression on the user's exact v0.23.0 repository was not run because GitHub main still exposed v0.22.6 and shell DNS could not clone github.com.",
+    "Strict full-tree release-integrity is not claimed on the partial local predecessor artifact; the strict validator is shipped for the exact repository.",
+    "Native Windows cmd.exe integration was not run in this Linux build environment.",
+    "Exact tiktoken execution was not live-tested because tiktoken is not installed; the code path is local-cache-only and a cache miss cannot initiate tokenizer download.",
+    "No provider API/model endpoint was called, and AgentOS does not gain provider/model switching authority."
   ]
 }

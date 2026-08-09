@@ -2,7 +2,7 @@
 File: .agents/agentos/context_transport_cli.py
 
 Purpose:
-    Provide operator CLI commands for v0.23.0 Requirement-Preserving Context Compression.
+    Provide operator CLI commands for v0.23.1 adaptive Requirement-Preserving Context Compression.
 
 Responsibilities:
     - Compile transport packs locally from canonical Context Packs.
@@ -52,6 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
     x.add_argument("--system-tool-overhead", type=int)
     x.add_argument("--safety-margin", type=int)
     x.add_argument("--shadow", action="store_true")
+    x.add_argument("--budget-mode", choices=("adaptive", "fixed"))
 
     x = sub.add_parser("context-transport-get"); _task_arg(x); x.add_argument("--revision", type=int)
     x = sub.add_parser("context-transport-explain"); _task_arg(x); x.add_argument("--revision", type=int)
@@ -76,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         c = args.command
         if c == "context-transport-compile":
-            return _emit(compile_transport_pack(root, _require_task(args.task_id), args.model_profile, args.reserved_output, args.system_tool_overhead, args.safety_margin, args.shadow))
+            return _emit(compile_transport_pack(root, _require_task(args.task_id), args.model_profile, args.reserved_output, args.system_tool_overhead, args.safety_margin, args.shadow, args.budget_mode))
         if c == "context-transport-get":
             return _emit(context_transport_get(root, _require_task(args.task_id), args.revision))
         if c == "context-transport-explain":

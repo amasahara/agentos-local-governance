@@ -160,3 +160,13 @@ Added Primary-Project Consolidation as a directed, plan-hashed workflow:
 - Preserved SOURCE SELECT-only and Controlled Target Insert safety; v0.22.7 adds no TARGET UPDATE/DELETE/UPSERT/MERGE authority.
 - Added explicit `local_erasure_completed` and `external_target_erasure_required` outcomes for external TARGET handoff.
 - Added three read-only MCP inspection tools; request/review/approval/execute remain governed operator mutations.
+
+## v0.23.1 — Adaptive Token Budget & Model Profiles
+
+- **User requirement:** make token budgeting adapt to model capacity/runtime observations without weakening requirement preservation or granting AgentOS model-routing authority.
+- **Decision:** add hash-pinned local model profiles and deterministic adaptive budget decisions; keep a fixed v0.23.0 compatibility mode.
+- **Enforcement:** profile registry is data-only/local; no network/provider discovery, dynamic code or tokenizer downloads; calibration is numeric/hash-only and may only increase protection.
+- **Persistence:** schema 45 adds profile snapshots, budget decisions and token observations, plus exact profile/budget provenance on transport packs.
+- **Control Plane invariant:** protected request/instruction/scope/plan content remains lossless and budgeted before evidence; control overflow fails closed.
+- **MCP boundary:** added read-only profile/history/calibration inspection only; observation/profile/budget/model mutation is not exposed.
+- **Compatibility:** SOURCE/TARGET, signed-audit, privacy, secret/key and v0.23.0 transport invariants remain unchanged.

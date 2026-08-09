@@ -1,0 +1,73 @@
+{
+  "release": "0.23.1",
+  "benchmark": "adaptive_token_budget_representative_v1",
+  "scope": "deterministic representative budget calculation; not a live model/provider benchmark",
+  "model_profile": "generic-128k",
+  "model_profile_hash": "2ca80fd367facf417e34e0cbf79df0cf5309acede07325f68dfab75d36523c1d",
+  "tokenizer_id": "multilingual_heuristic_v1",
+  "context_capacity": 131072,
+  "control_tokens": 12000,
+  "cases": [
+    {
+      "name": "adaptive_low_pressure_no_calibration",
+      "pressure_score": 0.14,
+      "reserved_output": 8192,
+      "system_tool_overhead": 8192,
+      "safety_margin": 6554,
+      "calibration_headroom": 0,
+      "input_budget": 108134,
+      "evidence_budget": 96134,
+      "evidence_floor": 8192,
+      "evidence_floor_satisfied": true
+    },
+    {
+      "name": "adaptive_high_pressure_no_calibration",
+      "pressure_score": 1.0,
+      "reserved_output": 16384,
+      "system_tool_overhead": 8192,
+      "safety_margin": 6554,
+      "calibration_headroom": 0,
+      "input_budget": 99942,
+      "evidence_budget": 87942,
+      "evidence_floor": 8192,
+      "evidence_floor_satisfied": true
+    },
+    {
+      "name": "adaptive_high_pressure_with_numeric_calibration",
+      "pressure_score": 1.0,
+      "calibration_samples": 3,
+      "input_underestimation_p95": 8000,
+      "observed_output_p95": 15000,
+      "reserved_output": 16384,
+      "system_tool_overhead": 8192,
+      "safety_margin": 8512,
+      "calibration_headroom": 8512,
+      "input_budget": 97984,
+      "evidence_budget": 85984,
+      "evidence_floor": 8192,
+      "evidence_floor_satisfied": true,
+      "content_persisted": false
+    },
+    {
+      "name": "fixed_v0230_compat_high_pressure",
+      "pressure_score": 1.0,
+      "algorithm_version": "fixed_v0230_compat",
+      "reserved_output": 8192,
+      "system_tool_overhead": 8192,
+      "safety_margin": 4096,
+      "calibration_headroom": 0,
+      "input_budget": 110592,
+      "evidence_budget": 98592,
+      "evidence_floor": 8192,
+      "evidence_floor_satisfied": true
+    }
+  ],
+  "interpretation": {
+    "control_plane_priority": true,
+    "adaptive_high_pressure_reserves_more_output_than_low_pressure": true,
+    "calibration_only_increases_protection": true,
+    "model_switching_performed": false,
+    "network_or_provider_discovery_performed": false,
+    "prompt_or_response_content_persisted": false
+  }
+}

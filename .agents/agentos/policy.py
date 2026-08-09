@@ -20,7 +20,7 @@ from .db import connect
 
 CLAIM_TYPES = {"business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"}
 RISK_LEVELS = {"low", "medium", "high"}
-SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy"}
+SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy"}
 SAFE_OVERRIDE_KEYS = {"source_root", "test_path", "encoding", "runtime_paths"}
 
 
@@ -74,7 +74,7 @@ def load_policy(root: Path) -> dict[str, Any]:
 
 def validate_policy(policy: dict[str, Any]) -> None:
     """Fail closed when mandatory policy sections are absent or invalid."""
-    required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy"}
+    required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy"}
     missing = sorted(required - policy.keys())
     if missing:
         raise RuntimeError(f"missing policy keys: {missing}")
@@ -144,6 +144,9 @@ def validate_policy(policy: dict[str, Any]) -> None:
         "tokenizer_abstraction_required",
         "expansion_read_only",
         "evaluation_shadow_framework",
+        "adaptive_token_budget_enabled",
+        "model_profile_hash_pin_required",
+        "budget_decision_persistence_required",
     )
     disabled_transport = [key for key in transport_required_true if transport.get(key) is not True]
     if disabled_transport:
@@ -157,9 +160,85 @@ def validate_policy(policy: dict[str, Any]) -> None:
         "generative_llm_summarization_allowed",
         "gzip_base64_minify_as_semantic_compression_allowed",
         "mcp_mutation_allowed",
+        "token_observation_content_persistence_allowed",
+        "network_model_profile_discovery_allowed",
+        "provider_api_model_profile_discovery_allowed",
+        "dynamic_model_profile_code_allowed",
+        "tokenizer_auto_download_allowed",
     )
     poisoned_transport = [key for key in transport_required_false if transport.get(key) is not False]
     if poisoned_transport:
         raise RuntimeError(f"context transport fail-closed invariant violated: {poisoned_transport}")
     if float(transport.get("requirement_preservation_rate_required", 0.0)) != 1.0:
         raise RuntimeError("context transport requires 100% protected requirement preservation")
+
+    adaptive = policy["adaptive_token_budget_policy"]
+    adaptive_required_true = (
+        "profile_hash_pin_required",
+        "calibration_enabled",
+        "calibration_numeric_only",
+        "fail_closed_if_control_plane_exceeds_budget",
+        "agentos_budget_profile_must_not_switch_provider_or_model",
+    )
+    disabled_adaptive = [key for key in adaptive_required_true if adaptive.get(key) is not True]
+    if disabled_adaptive:
+        raise RuntimeError(f"adaptive token budget invariant disabled: {disabled_adaptive}")
+    adaptive_required_false = (
+        "network_model_discovery_allowed",
+        "provider_api_profile_discovery_allowed",
+        "dynamic_profile_code_allowed",
+        "tokenizer_auto_download_allowed",
+        "calibration_prompt_content_persist_allowed",
+        "calibration_response_content_persist_allowed",
+        "calibration_can_reduce_safety_margin",
+        "calibration_can_reduce_output_floor",
+        "mcp_observation_mutation_allowed",
+        "mcp_profile_mutation_allowed",
+        "mcp_budget_mutation_allowed",
+    )
+    poisoned_adaptive = [key for key in adaptive_required_false if adaptive.get(key) is not False]
+    if poisoned_adaptive:
+        raise RuntimeError(f"adaptive token budget fail-closed invariant violated: {poisoned_adaptive}")
+    if adaptive.get("default_mode") not in {"adaptive", "fixed"}:
+        raise RuntimeError("adaptive token budget default_mode is invalid")
+    if set(adaptive.get("allowed_modes", [])) != {"adaptive", "fixed"}:
+        raise RuntimeError("adaptive token budget allowed_modes are invalid")
+    if adaptive.get("algorithm") != "adaptive_budget_v1":
+        raise RuntimeError("adaptive token budget algorithm is invalid")
+    observation_sources = set(adaptive.get("observation_sources", []))
+    expected_observation_sources = {
+        "runtime_report", "provider_usage", "tokenizer_probe",
+        "operator_verified", "benchmark", "local_runtime",
+    }
+    if observation_sources != expected_observation_sources:
+        raise RuntimeError("adaptive token observation-source allowlist is invalid")
+    calibration_window = int(adaptive.get("calibration_window", 0) or 0)
+    if calibration_window < 1 or calibration_window > 512:
+        raise RuntimeError("adaptive token calibration window is invalid")
+    if adaptive.get("model_switching_authority") != "external_runtime_only":
+        raise RuntimeError("AgentOS must not gain provider/model switching authority")
+
+    profiles = transport.get("model_profiles", {})
+    if not isinstance(profiles, dict) or not profiles:
+        raise RuntimeError("context transport model_profiles registry is missing")
+    forbidden_profile_keys = {"importlib", "module", "function", "callable", "command", "executable", "provider_api"}
+    for profile_name, profile in profiles.items():
+        if not isinstance(profile, dict):
+            raise RuntimeError(f"model profile must be data-only object: {profile_name}")
+        if forbidden_profile_keys & set(profile):
+            raise RuntimeError(f"dynamic model profile code/discovery is forbidden: {profile_name}")
+        try:
+            capacity = int(profile.get("context_capacity", 0) or 0)
+            output_min = int(profile.get("reserved_output_min", 0) or 0)
+            output_default = int(profile.get("reserved_output_default", 0) or 0)
+            output_max = int(profile.get("reserved_output_max", 0) or 0)
+            safety_min = int(profile.get("safety_margin_min", 0) or 0)
+            overhead = int(profile.get("system_tool_overhead", 0) or 0)
+        except (TypeError, ValueError) as exc:
+            raise RuntimeError(f"model profile numeric fields are invalid: {profile_name}") from exc
+        if capacity < 128 or min(output_min, output_default, output_max, safety_min, overhead) < 0:
+            raise RuntimeError(f"model profile budget values are invalid: {profile_name}")
+        if not (output_min <= output_default <= output_max < capacity):
+            raise RuntimeError(f"model profile output bounds are invalid: {profile_name}")
+        if str(profile.get("tokenizer", "auto")) not in {"auto", "heuristic", "tiktoken"}:
+            raise RuntimeError(f"model profile tokenizer policy is invalid: {profile_name}")

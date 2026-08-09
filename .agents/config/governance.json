@@ -1,7 +1,7 @@
 {
-  "version": "0.23.0",
+  "version": "0.23.1",
   "documentation_policy": {
-    "current_schema": 44
+    "current_schema": 45
   },
   "read_only_extraction_policy": {
     "default_secret_resolver": "trusted_registry_v1",
@@ -634,9 +634,9 @@
     }
   },
   "context_transport_policy": {
-    "version": 1,
-    "database_schema": 44,
-    "compiler": "llm_transport_compiler_v1",
+    "version": 2,
+    "database_schema": 45,
+    "compiler": "llm_transport_compiler_v2",
     "source": "canonical_context_pack_only",
     "control_plane_mode": "lossless",
     "evidence_plane_mode": "deterministic_extractable",
@@ -693,23 +693,68 @@
     "model_profiles": {
       "generic-16k": {
         "context_capacity": 16384,
-        "tokenizer": "auto"
+        "tokenizer": "auto",
+        "reserved_output_min": 1024,
+        "reserved_output_default": 2048,
+        "reserved_output_max": 4096,
+        "system_tool_overhead": 2048,
+        "safety_margin_min": 1024,
+        "minimum_evidence_tokens": 1024,
+        "profile_version": 1,
+        "enabled": true,
+        "safety_margin_ratio_ppm": 50000
       },
       "generic-32k": {
         "context_capacity": 32768,
-        "tokenizer": "auto"
+        "tokenizer": "auto",
+        "reserved_output_min": 2048,
+        "reserved_output_default": 4096,
+        "reserved_output_max": 8192,
+        "system_tool_overhead": 4096,
+        "safety_margin_min": 2048,
+        "minimum_evidence_tokens": 2048,
+        "profile_version": 1,
+        "enabled": true,
+        "safety_margin_ratio_ppm": 50000
       },
       "generic-64k": {
         "context_capacity": 65536,
-        "tokenizer": "auto"
+        "tokenizer": "auto",
+        "reserved_output_min": 4096,
+        "reserved_output_default": 8192,
+        "reserved_output_max": 12288,
+        "system_tool_overhead": 6144,
+        "safety_margin_min": 3072,
+        "minimum_evidence_tokens": 4096,
+        "profile_version": 1,
+        "enabled": true,
+        "safety_margin_ratio_ppm": 50000
       },
       "generic-128k": {
         "context_capacity": 131072,
-        "tokenizer": "auto"
+        "tokenizer": "auto",
+        "reserved_output_min": 4096,
+        "reserved_output_default": 8192,
+        "reserved_output_max": 16384,
+        "system_tool_overhead": 8192,
+        "safety_margin_min": 4096,
+        "minimum_evidence_tokens": 8192,
+        "profile_version": 1,
+        "enabled": true,
+        "safety_margin_ratio_ppm": 50000
       },
       "generic-200k": {
         "context_capacity": 200000,
-        "tokenizer": "auto"
+        "tokenizer": "auto",
+        "reserved_output_min": 8192,
+        "reserved_output_default": 12288,
+        "reserved_output_max": 24576,
+        "system_tool_overhead": 8192,
+        "safety_margin_min": 8192,
+        "minimum_evidence_tokens": 12288,
+        "profile_version": 1,
+        "enabled": true,
+        "safety_margin_ratio_ppm": 50000
       }
     },
     "budget_priority": [
@@ -723,7 +768,10 @@
       "agentos.context_transport_explain",
       "agentos.context_expand",
       "agentos.context_requirement_get",
-      "agentos.context_token_report"
+      "agentos.context_token_report",
+      "agentos.context_model_profiles_get",
+      "agentos.context_budget_history_get",
+      "agentos.context_token_calibration_get"
     ],
     "evaluation_shadow_framework": true,
     "evaluation_metrics": [
@@ -740,6 +788,59 @@
       "rework_count",
       "tool_call_count"
     ],
-    "initial_compression_target": "2-4x_stable_priority"
+    "initial_compression_target": "2-4x_stable_priority",
+    "adaptive_token_budget_enabled": true,
+    "model_profile_hash_pin_required": true,
+    "budget_decision_persistence_required": true,
+    "token_observation_content_persistence_allowed": false,
+    "network_model_profile_discovery_allowed": false,
+    "provider_api_model_profile_discovery_allowed": false,
+    "dynamic_model_profile_code_allowed": false,
+    "tokenizer_auto_download_allowed": false
+  },
+  "adaptive_token_budget_policy": {
+    "version": 1,
+    "database_schema": 45,
+    "default_mode": "adaptive",
+    "allowed_modes": [
+      "adaptive",
+      "fixed"
+    ],
+    "algorithm": "adaptive_budget_v1",
+    "profile_registry": "local_data_only",
+    "profile_hash_pin_required": true,
+    "network_model_discovery_allowed": false,
+    "provider_api_profile_discovery_allowed": false,
+    "dynamic_profile_code_allowed": false,
+    "tokenizer_auto_download_allowed": false,
+    "calibration_enabled": true,
+    "calibration_window": 32,
+    "calibration_numeric_only": true,
+    "calibration_prompt_content_persist_allowed": false,
+    "calibration_response_content_persist_allowed": false,
+    "calibration_can_reduce_safety_margin": false,
+    "calibration_can_reduce_output_floor": false,
+    "input_calibration_percentile": 0.95,
+    "output_calibration_percentile": 0.95,
+    "input_calibration_guard_tokens": 512,
+    "output_calibration_guard_tokens": 512,
+    "max_calibration_headroom_tokens": 16384,
+    "control_plane_budget_priority": 1,
+    "evidence_plane_budget_priority": 2,
+    "fail_closed_if_control_plane_exceeds_budget": true,
+    "evidence_floor_is_advisory": true,
+    "model_switching_authority": "external_runtime_only",
+    "agentos_budget_profile_must_not_switch_provider_or_model": true,
+    "mcp_observation_mutation_allowed": false,
+    "mcp_profile_mutation_allowed": false,
+    "mcp_budget_mutation_allowed": false,
+    "observation_sources": [
+      "runtime_report",
+      "provider_usage",
+      "tokenizer_probe",
+      "operator_verified",
+      "benchmark",
+      "local_runtime"
+    ]
   }
 }

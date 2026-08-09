@@ -310,3 +310,19 @@ Database consolidation is directional and fail-closed.
 - Token budget MUST be capacity minus reserved output, system/tool overhead and safety margin, allocating Control Plane first.
 - A Transport Pack may become READY only after request/span/scope/plan/AGENTS/policy/source-freshness/transport-integrity gates pass.
 - MCP may expose only read-only transport inspection/expansion. It MUST NOT expose compile, evaluate-persist, requirement mutation, task/scope mutation or policy mutation authority.
+
+<!-- AGENTOS_V0231_ADAPTIVE_BUDGET_BEGIN -->
+## AgentOS v0.23.1 — Adaptive Token Budget & Model Profiles
+
+- Requirement preservation from v0.23.0 remains authoritative: original user request, protected requirements, AGENTS/policy authority, approved scope and active-plan constraints stay LOSSLESS and are budgeted before evidence.
+- Model profiles MUST be local, data-only definitions. Every profile used by a Transport Pack MUST be normalized and pinned by a canonical SHA-256 `model_profile_hash` before budget calculation.
+- Model-profile resolution MUST NOT perform network discovery, provider-API discovery, dynamic Python/module loading, executable loading, or tokenizer auto-download. Exact `tiktoken` use is local-cache-only; cache miss must fall back or fail according to exact-tokenizer policy. Unknown/invalid profile data fails closed.
+- AgentOS budget logic MUST NOT select, switch, route, or invoke a provider/model. Model selection authority remains outside AgentOS; AgentOS only budgets against the explicitly selected profile.
+- Adaptive budgeting MAY adjust reserved-output protection and safety headroom within approved profile bounds, but MUST NOT reduce configured safety/output floors. Calibration is monotonic-protective only.
+- Token calibration state MUST be numeric/hash-only plus bounded profile/tokenizer/source identifiers. Prompt text, response text, credentials, protected Control Plane content, raw evidence, tool payloads, model responses, and user data MUST NOT be persisted in calibration tables. Observation source values MUST come from the shipped allowlist; one transport/source pair cannot be rewritten with different counts.
+- Budget calculation remains `context capacity - reserved output - system/tool overhead - safety margin`. Control Plane tokens are allocated first; remaining input capacity is Evidence Plane budget.
+- If Control Plane exceeds the computed input budget, compilation MUST fail closed. Evidence floor is advisory and MUST NOT cause protected Control Plane deletion or model switching.
+- A budget decision MUST record the exact profile hash, algorithm version, budget mode, token allocations and calibration headroom, and the Transport Pack MUST pin that decision before READY integrity hashing.
+- `fixed` mode exists only as an explicit v0.23.0 compatibility path; `adaptive` is the v0.23.1 default when policy enables it.
+- MCP may expose only read-only model-profile, budget-history and token-calibration inspection. Profile mutation, observation recording, budget mutation, transport compilation/evaluation mutation, and model switching MUST NOT be MCP tools.
+<!-- AGENTOS_V0231_ADAPTIVE_BUDGET_END -->

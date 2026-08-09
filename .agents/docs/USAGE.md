@@ -286,3 +286,37 @@ agentos --task-id TASK context-transport-evaluate
 ```
 
 Compilation and evaluation persistence are CLI/operator functions. MCP exposes only get/explain/expand/requirement/token report.
+
+## v0.23.1 Adaptive Token Budget & Model Profiles
+
+Inspect the local model-profile registry and its canonical hash pins:
+
+```bash
+.agents/bin/agentos context-model-profiles-list
+.agents/bin/agentos context-model-profile-get --model-profile generic-128k
+```
+
+Compile transport with the default adaptive budget, or explicitly request the v0.23.0-compatible fixed calculation:
+
+```bash
+.agents/bin/agentos --task-id TASK-001 context-transport-compile --model-profile generic-128k --budget-mode adaptive
+.agents/bin/agentos --task-id TASK-001 context-transport-compile --model-profile generic-128k --budget-mode fixed
+```
+
+Inspect decisions and numeric-only calibration evidence:
+
+```bash
+.agents/bin/agentos --task-id TASK-001 context-budget-history
+.agents/bin/agentos context-token-calibration-get --model-profile generic-128k --tokenizer-id multilingual_heuristic_v1
+```
+
+An operator/runtime may record observed token counts for future local calibration:
+
+```bash
+.agents/bin/agentos --task-id TASK-001 context-token-observation-record \
+  --observed-input-tokens 43800 \
+  --observed-output-tokens 6100 \
+  --source local_runtime
+```
+
+Only numeric counts/hashes plus bounded profile/tokenizer/source identifiers are persisted. `--source` must be one of `runtime_report`, `provider_usage`, `tokenizer_probe`, `operator_verified`, `benchmark`, or `local_runtime`. Do not pass prompt text, response text, credentials or raw context to calibration commands. AgentOS never uses a model profile to switch providers/models; the caller selects the profile.

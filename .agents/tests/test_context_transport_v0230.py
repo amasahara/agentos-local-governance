@@ -88,11 +88,11 @@ def _canonical(root: Path, task_id: str, request: str, files: list[Path]) -> Non
         )
 
 
-def test_schema_44_and_foreign_keys(tmp_path: Path, project_root: Path) -> None:
+def test_schema_44_contract_survives_current_schema_and_foreign_keys(tmp_path: Path, project_root: Path) -> None:
     root = _root(tmp_path, project_root)
     with connect(root) as c:
-        assert CURRENT_SCHEMA_VERSION == 44
-        assert c.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0] == 44
+        assert CURRENT_SCHEMA_VERSION >= 44
+        assert c.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0] == CURRENT_SCHEMA_VERSION
         assert c.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         assert c.execute("SELECT name FROM sqlite_master WHERE name='context_transport_packs'").fetchone()
 

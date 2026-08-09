@@ -1,17 +1,28 @@
-# AgentOS Local Governance v0.23.0 — Requirement-Preserving Context Compression
+# AgentOS Local Governance v0.23.1 — Adaptive Token Budget & Model Profiles
 
 [README landing](README.md) | [Tiếng Việt](README.vi.md)
 
-## Goal
+v0.23.1 extends v0.23.0 with a deterministic local **Model Profile Registry** and **Adaptive Token Budget** while keeping the lossless Control Plane unchanged.
 
-v0.23.0 adds a deterministic **LLM Transport Compiler** derived from the canonical Context Pack. It reduces evidence tokens while preserving user requirements, constraints, authority, safety rules, and approved scope without semantic rewriting.
+A model profile is a data-only, SHA-256-pinned budget contract containing context capacity, tokenizer policy, output reservation bounds, system/tool overhead, safety floors, and a minimum evidence target. AgentOS performs no provider/network model discovery, dynamic profile code loading, or tokenizer auto-download, and it does not gain authority to switch providers or models.
 
-The Control Plane is **LOSSLESS** and contains the verbatim original request + hash, stable Requirement Ledger, verbatim AGENTS authority, lossless approved scope, active plan + hash, protected policy authority and freshness/integrity hashes. Protected content is never translated, paraphrased, summarized, token-pruned, or word-pruned; budget overflow fails closed.
+Adaptive mode computes:
 
-The Evidence Plane is compressed only by deterministic/extractive codecs: exact deduplication, metadata normalization, structural source projection, requirement-aware ranking, and hash-pinned omission handles. Python uses symbol/dependency windows, JSON uses policy-key projection, and repetitive logs may be aggregated structurally.
+```text
+input_budget = context_capacity
+             - reserved_output
+             - system_tool_overhead
+             - safety_margin
 
-Token budget is `context capacity - reserved output - system/tool overhead - safety margin`, with Control Plane allocation first. Exact local tokenizers are preferred when available; `multilingual_heuristic_v1` is the offline fallback.
+evidence_budget = max(0, input_budget - control_tokens)
+```
 
-Read-only MCP tools are `agentos.context_transport_get`, `agentos.context_transport_explain`, `agentos.context_expand`, `agentos.context_requirement_get`, and `agentos.context_token_report`. Compile/evaluation mutation is not exposed over MCP.
+Requirement/plan complexity may increase the output reserve. Numeric runtime token observations may increase future output reserve or safety headroom. Calibration can never reduce the profile safety floor or weaken the lossless Control Plane. Fixed mode remains available for v0.23.0-compatible budgeting behavior.
 
-Schema **44** adds transport packs, Requirement Ledger rows, expansion observability and evaluation metrics. The initial target is stable **2–4x compression**, not extreme compression.
+Schema **45** adds immutable profile snapshots, budget decisions, numeric token observations, and profile/budget provenance columns on transport packs. No prompt, response, evidence, credential, or raw source content is stored in the calibration table.
+
+New read-only MCP tools are `agentos.context_model_profiles_get`, `agentos.context_budget_history_get`, and `agentos.context_token_calibration_get`. Observation recording, profile mutation, budget mutation, compilation, evaluation mutation, and model switching are not exposed over MCP.
+
+## Calibration/tokenizer hardening
+
+Exact `tiktoken` assets are local-cache-only; cache misses never trigger downloads. Observation sources are allowlisted identifiers and one transport/source pair is write-once (identical replay is idempotent).

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.23.1 — Adaptive Token Budget & Model Profiles
+
+- Added schema 45 for hash-pinned model-profile snapshots, per-transport budget decisions and numeric/hash-only token calibration observations.
+- Added local data-only model profiles with exact profile SHA-256 pinning; network/provider discovery, dynamic profile code and tokenizer auto-download are forbidden.
+- Added deterministic adaptive budget calculation that allocates Control Plane first and adjusts output/safety protection without weakening configured floors.
+- Added local calibration using input-underestimation and observed-output percentiles; calibration can only increase protective headroom and never stores prompt/response content.
+- Preserved v0.23.0 `fixed` budget behavior as an explicit compatibility mode while making `adaptive` the default policy mode.
+- Added budget decision/profile-hash provenance to Transport Packs and evaluation/token reports.
+- Added CLI inspection/observation commands and three read-only MCP inspection tools; MCP model/profile/budget/observation mutation remains forbidden.
+- Preserved all v0.22.3-v0.23.0 safety invariants, SOURCE read-only boundary, Controlled Target Insert authority, privacy lifecycle and requirement-preservation gate.
+
 ## 0.23.0 — Requirement-Preserving Context Compression
 
 - Added schema 44 transport packs, stable Requirement Ledger persistence, expansion observability and transport evaluation metrics.

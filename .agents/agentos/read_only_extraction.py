@@ -34,6 +34,7 @@ from contextlib import contextmanager
 
 from .db import connect as central_connect
 from .governance_enforcement import governed_mutation, mirror_domain_event
+from .secret_lineage import resolve_runtime_secret
 
 
 from .database_boundary import DatabaseBoundaryError, authorize_operation
@@ -591,18 +592,21 @@ def build_select_spec(root: Path | str, batch_id: int) -> dict[str, Any]:
 
 
 def _resolve_env_secret(credential_ref: str) -> dict[str, Any]:
-    """Resolve env:// JSON credentials locally; other secret providers require an injected resolver."""
+    """Compatibility-only env:// JSON resolver retained for non-governed library callers.
+
+    The production extraction path does not call this helper in v0.22.6. Governed
+    AgentOS roots resolve through the trusted registry with provider pin/capability
+    approval via :func:`secret_lineage.resolve_runtime_secret`.
+    """
     if not credential_ref.startswith("env://"):
-        raise ReadOnlyExtractionError(
-            "default v0.21.2 secret resolver supports env:// only; inject a trusted resolver for secret://, keychain://, vault://, or file-secret://"
-        )
+        raise ReadOnlyExtractionError("compatibility env resolver accepts env:// only")
     key = credential_ref[len("env://"):].strip()
     if not key or key not in os.environ:
-        raise ReadOnlyExtractionError(f"credential environment variable is unavailable: {key}")
+        raise ReadOnlyExtractionError("credential environment variable is unavailable")
     try:
         value = json.loads(os.environ[key])
     except json.JSONDecodeError as exc:
-        raise ReadOnlyExtractionError(f"credential environment variable {key} must contain a JSON object") from exc
+        raise ReadOnlyExtractionError("credential environment variable must contain a JSON object") from exc
     if not isinstance(value, dict):
         raise ReadOnlyExtractionError("credential secret must resolve to a JSON object")
     return value
@@ -700,8 +704,14 @@ def _source_rows_from_database(
         source = conn.execute("SELECT * FROM db_connections WHERE id=?", (int(batch["source_connection_id"]),)).fetchone()
         credential_ref = str(source["credential_ref"])
         chunk_size = int(batch["chunk_size"])
-    resolver = secret_resolver or _resolve_env_secret
-    secret = resolver(credential_ref)
+    try:
+        secret = resolve_runtime_secret(
+            root, credential_ref, capability="db.source.select", compatibility_resolver=secret_resolver
+        )
+    except Exception as exc:
+        if isinstance(exc, ReadOnlyExtractionError):
+            raise
+        raise ReadOnlyExtractionError("SOURCE credential resolution failed") from exc
     source_conn = _open_source_connection(source, secret)
 
     def generator() -> Iterator[dict[str, Any]]:

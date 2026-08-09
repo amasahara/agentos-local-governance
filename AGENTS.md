@@ -271,3 +271,16 @@ Database consolidation is directional and fail-closed.
 - Project/database extension MCP tools remain read-only; privileged database/identity/recovery mutation MUST NOT be added to MCP.
 - Privileged extension CLI mutations remain bound to v0.22.4 task/session/capability/drift/token/signed-audit enforcement.
 <!-- AGENTOS_V0225_UNIFIED_RUNTIME_END -->
+
+<!-- AGENTOS_V0226_SECRET_LINEAGE_BEGIN -->
+## AgentOS v0.22.6 — Secret Resolver & Lineage Key Lifecycle
+- Credential references MUST resolve only through the shipped trusted resolver registry and exact provider identity/version/hash pins approved by a human operator. Governance configuration MUST NOT name arbitrary `importlib`, module, function, or executable resolver code.
+- Supported resolver schemes are `env://`, `keychain://`, `vault://`, `secret://` aliases, and bounded `file-secret://`. Missing, unapproved, hash-mismatched, revoked, or capability-incompatible providers fail closed.
+- Credential values are process-memory-only. Never persist, log, audit, index, cache, expose through MCP, or send resolved credentials to an LLM.
+- Production DB extraction/insert/reconciliation MUST use the trusted resolver registry. Arbitrary injected resolver callbacks are test/non-governed compatibility only.
+- Lineage HMAC material lives in the versioned local keyring. Every relevant identity/lineage token records `key_id`; new tokens use the sole active key, retired keys remain lookup/verification-capable, and revoked keys are not used.
+- Keyring initialization is a privileged mutation. Read-only CLI/MCP inspection MUST NOT initialize, rotate, migrate, revoke, or load key material.
+- Legacy `identity_lineage.key` migration moves the same material into the keyring and backfills metadata only; historical HMACs MUST NOT be recomputed without raw identifiers.
+- Key rotation requires immutable plan → human review → human approval → governed execution with signed audit. Rekey requires a governed SOURCE `select_read` re-read; hashes/tokens alone are insufficient raw material.
+- MCP may inspect resolver/key metadata and immutable plans only. Provider approval/revocation, key rotation/revocation, rekey authorization, credential resolution, TARGET mutation, identity decisions, and recovery mutations are not MCP mutation tools.
+<!-- AGENTOS_V0226_SECRET_LINEAGE_END -->

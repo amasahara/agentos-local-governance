@@ -1,0 +1,61 @@
+{
+  "release": "0.22.6",
+  "artifact_type": "exact-upgrade-overlay",
+  "baseline_required": "0.22.5",
+  "schema_from": 41,
+  "schema_to": 42,
+  "governance_update": {
+    "path": ".agents/config/governance.json",
+    "mode": "in-place structural merge by tools/apply_v0226.py",
+    "reason": "preserve all v0.22.5 policy nodes instead of replacing the full governance file from a partial build context"
+  },
+  "required_groups": {
+    "runtime": [
+      ".agents/agentos/__init__.py",
+      ".agents/agentos/cli_runtime.py",
+      ".agents/agentos/controlled_target_insert.py",
+      ".agents/agentos/db.py",
+      ".agents/agentos/identity_resolution.py",
+      ".agents/agentos/mcp_catalog.py",
+      ".agents/agentos/mcp_runtime.py",
+      ".agents/agentos/mcp_secret_lineage.py",
+      ".agents/agentos/project_identity.py",
+      ".agents/agentos/project_selection.py",
+      ".agents/agentos/read_only_extraction.py",
+      ".agents/agentos/reconciliation_recovery.py",
+      ".agents/agentos/release_integrity.py",
+      ".agents/agentos/schema_version.py",
+      ".agents/agentos/secret_lineage.py",
+      ".agents/agentos/secret_lineage_cli.py"
+    ],
+    "tests": [
+      ".agents/tests/test_secret_lineage_v0226.py"
+    ],
+    "docs": [
+      ".agents/docs/SECRET_RESOLVER_LINEAGE_KEY_LIFECYCLE.md",
+      ".agents/docs/USAGE_V0226.md",
+      "AGENTS.md",
+      "CHANGELOG.md",
+      "README.md",
+      "README.vi.md",
+      "README.en.md",
+      "RELEASE_NOTES.md",
+      "UPGRADE_FROM_0.22.5.md",
+      "huong_dan.md",
+      "huong_dan.vi.md",
+      "huong_dan.en.md"
+    ],
+    "tools": [
+      "tools/apply_v0226.py",
+      "tools/validate_v0226.py",
+      "tools/validate_release.py"
+    ],
+    "release_metadata": [
+      "VERSION",
+      "VALIDATION_REPORT.json",
+      "PACKAGE_COMPLETENESS.json",
+      "MANIFEST.json",
+      "CHECKSUMS.sha256"
+    ]
+  }
+}

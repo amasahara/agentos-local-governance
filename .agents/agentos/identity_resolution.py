@@ -28,6 +28,7 @@ from contextlib import contextmanager
 
 from .db import connect as central_connect
 from .governance_enforcement import governed_mutation, mirror_domain_event
+from .secret_lineage import active_key, lookup_keys
 
 
 from .controlled_target_insert import migration_38
@@ -267,25 +268,8 @@ def _event(conn: sqlite3.Connection, event_type: str, payload: dict[str, Any], *
 
 
 def _lineage_key(root: Path) -> bytes:
-    """Load/create a local-only HMAC key used for pseudonymous identity tokens."""
-    path = root / KEY_FILE
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists():
-        data = secrets.token_bytes(32)
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        try:
-            os.write(fd, data)
-            os.fsync(fd)
-        finally:
-            os.close(fd)
-    data = path.read_bytes()
-    if len(data) < 32:
-        raise IdentityResolutionError("identity lineage key is invalid")
-    try:
-        path.chmod(0o600)
-    except OSError:
-        pass
-    return data
+    """Return active key material from the v0.22.6 versioned keyring."""
+    return active_key(root)[1]
 
 
 def _token(key: bytes, namespace: str, payload: Any) -> str:
@@ -460,8 +444,8 @@ def _candidate_decision(conn: sqlite3.Connection, candidate_hash: str) -> sqlite
     return conn.execute("SELECT * FROM identity_candidates WHERE candidate_hash=?", (candidate_hash,)).fetchone()
 
 
-def _get_or_create_entity(conn: sqlite3.Connection, *, consolidation_id: int, schema: str, table: str, exact_fp: str) -> sqlite3.Row:
-    """Get or create the canonical entity for an exact business-key fingerprint."""
+def _get_or_create_entity(conn: sqlite3.Connection, *, consolidation_id: int, schema: str, table: str, exact_fp: str, key_id: str) -> sqlite3.Row:
+    """Get or create a canonical entity and pin the HMAC key used by its primary fingerprint."""
     row = conn.execute(
         "SELECT * FROM canonical_entities WHERE consolidation_id=? AND target_schema=? AND target_table=? AND exact_key_fingerprint=?",
         (consolidation_id, schema, table, exact_fp),
@@ -469,18 +453,21 @@ def _get_or_create_entity(conn: sqlite3.Connection, *, consolidation_id: int, sc
     if row is not None:
         return row
     conn.execute(
-        "INSERT INTO canonical_entities(entity_uuid,consolidation_id,target_schema,target_table,exact_key_fingerprint,created_at) VALUES(?,?,?,?,?,?)",
-        (str(uuid.uuid4()), consolidation_id, schema, table, exact_fp, utc_now()),
+        "INSERT INTO canonical_entities(entity_uuid,consolidation_id,target_schema,target_table,exact_key_fingerprint,created_at,key_id) VALUES(?,?,?,?,?,?,?)",
+        (str(uuid.uuid4()), consolidation_id, schema, table, exact_fp, utc_now(), key_id),
     )
     return conn.execute("SELECT * FROM canonical_entities WHERE id=last_insert_rowid()").fetchone()
 
 
-def _existing_entity_for_strong(conn: sqlite3.Connection, strong_fp: str) -> list[sqlite3.Row]:
-    """Return unique canonical entities already bound to one strong fingerprint."""
+def _existing_entity_for_strong(conn: sqlite3.Connection, strong_fps: list[str]) -> list[sqlite3.Row]:
+    """Return entities matching any active/retired-key strong fingerprint."""
+    if not strong_fps:
+        return []
+    marks = ",".join("?" for _ in strong_fps)
     return conn.execute(
-        """SELECT DISTINCT e.* FROM identity_bindings b JOIN canonical_entities e ON e.id=b.canonical_entity_id
-           WHERE b.strong_fingerprint=? ORDER BY e.id""",
-        (strong_fp,),
+        f"""SELECT DISTINCT e.* FROM identity_bindings b JOIN canonical_entities e ON e.id=b.canonical_entity_id
+           WHERE b.strong_fingerprint IN ({marks}) ORDER BY e.id""",
+        tuple(strong_fps),
     ).fetchall()
 
 
@@ -490,6 +477,7 @@ def create_identity_resolution_run(root: Path | str, *, extraction_batch_id: int
     if not str(created_by).strip():
         raise IdentityResolutionError("created_by is required")
     root_path = Path(root).resolve()
+    active_key_id, _ = active_key(root_path)
     with _connect(root_path) as conn:
         migration_39(conn)
         batch = conn.execute("SELECT * FROM db_extraction_batches WHERE id=?", (int(extraction_batch_id),)).fetchone()
@@ -509,9 +497,9 @@ def create_identity_resolution_run(root: Path | str, *, extraction_batch_id: int
             raise IdentityResolutionError("validated input staging artifact failed integrity check")
         cur = conn.execute(
             """INSERT INTO identity_resolution_runs(
-                resolution_uuid,extraction_batch_id,policy_id,input_staging_path,input_staging_hash,input_rows,status,created_by,created_at
-            ) VALUES(?,?,?,?,?,?,?,?,?)""",
-            (str(uuid.uuid4()), int(extraction_batch_id), int(policy_id), str(batch["staging_path"]), str(batch["staging_hash"]), int(batch["valid_rows"]), "planned", created_by, utc_now()),
+                resolution_uuid,extraction_batch_id,policy_id,input_staging_path,input_staging_hash,input_rows,status,created_by,created_at,key_id
+            ) VALUES(?,?,?,?,?,?,?,?,?,?)""",
+            (str(uuid.uuid4()), int(extraction_batch_id), int(policy_id), str(batch["staging_path"]), str(batch["staging_hash"]), int(batch["valid_rows"]), "planned", created_by, utc_now(), active_key_id),
         )
         rid = int(cur.lastrowid)
         _event(conn, "identity_resolution_planned", {"input_rows": int(batch["valid_rows"]), "input_staging_hash": str(batch["staging_hash"]), "policy_hash": str(policy["policy_hash"])}, policy_id=int(policy_id), run_id=rid)
@@ -559,7 +547,8 @@ def run_identity_resolution(root: Path | str, resolution_run_id: int) -> dict[st
     ``awaiting_human`` and must be resumed after human decisions.
     """
     root_path = Path(root).resolve()
-    key = _lineage_key(root_path)
+    active_key_id, key = active_key(root_path)
+    lookup_keyset = lookup_keys(root_path)
     with _connect(root_path) as conn:
         migration_39(conn)
         run = conn.execute("SELECT * FROM identity_resolution_runs WHERE id=?", (int(resolution_run_id),)).fetchone()
@@ -594,18 +583,25 @@ def run_identity_resolution(root: Path | str, resolution_run_id: int) -> dict[st
         values = record["values"]
         provenance = record.get("provenance") or {}
         exact_fp = _field_fingerprint(key, "exact-identity", values, exact_fields, normalizer)
+        exact_fps = [(kid, _field_fingerprint(kmat, "exact-identity", values, exact_fields, normalizer)) for kid, kmat in lookup_keyset]
         strong_fp = None
+        strong_fps: list[tuple[str, str]] = []
         if strong_fields and all(values.get(f) not in (None, "") for f in strong_fields):
             strong_fp = _field_fingerprint(key, "strong-identity", values, strong_fields, normalizer)
-        source_record_token = _token(key, "source-record", {
+            strong_fps = [(kid, _field_fingerprint(kmat, "strong-identity", values, strong_fields, normalizer)) for kid, kmat in lookup_keyset]
+        source_payload = {
             "source_connection_id": provenance.get("source_connection_id"),
             "source_snapshot_hash": provenance.get("source_snapshot_hash"),
             "source_schema": provenance.get("source_schema"), "source_table": provenance.get("source_table"),
             "source_locator_hash": provenance.get("source_locator_hash"),
-        })
+        }
+        source_record_token = _token(key, "source-record", source_payload)
+        source_tokens = [(kid, _token(kmat, "source-record", source_payload)) for kid, kmat in lookup_keyset]
         with _connect(root_path) as conn:
             migration_39(conn)
-            existing_binding = conn.execute("SELECT b.*,e.entity_uuid FROM identity_bindings b JOIN canonical_entities e ON e.id=b.canonical_entity_id WHERE b.source_record_token=?", (source_record_token,)).fetchone()
+            token_values = [tok for _, tok in source_tokens]
+            marks = ",".join("?" for _ in token_values)
+            existing_binding = conn.execute(f"SELECT b.*,e.entity_uuid FROM identity_bindings b JOIN canonical_entities e ON e.id=b.canonical_entity_id WHERE b.source_record_token IN ({marks}) ORDER BY b.id LIMIT 1", tuple(token_values)).fetchone()
             decision_type = "existing_binding"
             decision_id = None
             if existing_binding is not None:
@@ -615,8 +611,10 @@ def run_identity_resolution(root: Path | str, resolution_run_id: int) -> dict[st
                     """SELECT DISTINCT e.* FROM canonical_entities e
                        LEFT JOIN identity_bindings b ON b.canonical_entity_id=e.id
                        WHERE e.consolidation_id=? AND e.target_schema=? AND e.target_table=?
-                         AND (e.exact_key_fingerprint=? OR b.exact_key_fingerprint=?) ORDER BY e.id""",
-                    (int(policy["consolidation_id"]), str(policy["target_schema"]), str(policy["target_table"]), exact_fp, exact_fp),
+                         AND (e.exact_key_fingerprint IN ({marks_fp}) OR b.exact_key_fingerprint IN ({marks_fp})) ORDER BY e.id""".format(
+                        marks_fp=",".join("?" for _ in exact_fps)),
+                    (int(policy["consolidation_id"]), str(policy["target_schema"]), str(policy["target_table"]),
+                     *[fp for _, fp in exact_fps], *[fp for _, fp in exact_fps]),
                 ).fetchall()
                 if len(exact_entities) > 1:
                     raise IdentityResolutionError("exact identity fingerprint is bound to multiple canonical entities")
@@ -625,7 +623,7 @@ def run_identity_resolution(root: Path | str, resolution_run_id: int) -> dict[st
                     entity = exact_entity
                     decision_type = "exact_business_key"
                 else:
-                    strong_entities = _existing_entity_for_strong(conn, strong_fp) if strong_fp else []
+                    strong_entities = _existing_entity_for_strong(conn, [fp for _, fp in strong_fps]) if strong_fp else []
                     if strong_entities:
                         if len(strong_entities) > 1:
                             raise IdentityResolutionError("strong identity fingerprint matches multiple canonical entities; manual policy/data review required")
@@ -636,10 +634,10 @@ def run_identity_resolution(root: Path | str, resolution_run_id: int) -> dict[st
                         candidate = _candidate_decision(conn, candidate_hash)
                         if candidate is None:
                             cur = conn.execute(
-                                """INSERT INTO identity_candidates(resolution_run_id,source_record_token,matched_entity_uuid,candidate_hash,match_method,evidence_json,status,created_at)
-                                   VALUES(?,?,?,?,?,?,?,?)""",
+                                """INSERT INTO identity_candidates(resolution_run_id,source_record_token,matched_entity_uuid,candidate_hash,match_method,evidence_json,status,created_at,key_id)
+                                   VALUES(?,?,?,?,?,?,?,?,?)""",
                                 (int(resolution_run_id), source_record_token, str(matched["entity_uuid"]), candidate_hash, "strong_multifield_exact",
-                                 _canonical_json({"strong_fingerprint": strong_fp, "field_count": len(strong_fields), "raw_values_stored": False}), "pending", utc_now()),
+                                 _canonical_json({"strong_fingerprint": strong_fp, "field_count": len(strong_fields), "raw_values_stored": False}), "pending", utc_now(), active_key_id),
                             )
                             candidate = conn.execute("SELECT * FROM identity_candidates WHERE id=?", (int(cur.lastrowid),)).fetchone()
                         if candidate["status"] == "pending":
@@ -650,23 +648,23 @@ def run_identity_resolution(root: Path | str, resolution_run_id: int) -> dict[st
                             decision_type = "human_confirmed_strong_match"
                             decision_id = int(candidate["id"])
                         elif candidate["status"] == "rejected":
-                            entity = _get_or_create_entity(conn, consolidation_id=int(policy["consolidation_id"]), schema=str(policy["target_schema"]), table=str(policy["target_table"]), exact_fp=exact_fp)
+                            entity = _get_or_create_entity(conn, consolidation_id=int(policy["consolidation_id"]), schema=str(policy["target_schema"]), table=str(policy["target_table"]), exact_fp=exact_fp, key_id=active_key_id)
                             decision_type = "human_rejected_strong_match_new_entity"
                             decision_id = int(candidate["id"])
                         else:
                             raise IdentityResolutionError("invalid identity candidate status")
                     else:
-                        entity = _get_or_create_entity(conn, consolidation_id=int(policy["consolidation_id"]), schema=str(policy["target_schema"]), table=str(policy["target_table"]), exact_fp=exact_fp)
+                        entity = _get_or_create_entity(conn, consolidation_id=int(policy["consolidation_id"]), schema=str(policy["target_schema"]), table=str(policy["target_table"]), exact_fp=exact_fp, key_id=active_key_id)
                         decision_type = "new_exact_identity"
                 if existing_binding is None:
                     conn.execute(
                         """INSERT INTO identity_bindings(
                             canonical_entity_id,resolution_run_id,source_connection_id,source_snapshot_hash,source_schema,source_table,
-                            source_locator_hash,source_record_token,exact_key_fingerprint,strong_fingerprint,decision_type,decision_id,created_at
-                        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                            source_locator_hash,source_record_token,exact_key_fingerprint,strong_fingerprint,decision_type,decision_id,created_at,key_id
+                        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                         (int(entity["id"]), int(resolution_run_id), int(provenance["source_connection_id"]), str(provenance["source_snapshot_hash"]),
                          str(provenance["source_schema"]), str(provenance["source_table"]), str(provenance["source_locator_hash"]), source_record_token,
-                         exact_fp, strong_fp, decision_type, decision_id, utc_now()),
+                         exact_fp, strong_fp, decision_type, decision_id, utc_now(), active_key_id),
                     )
             entity_id = int(entity["id"])
             existing_lineage = conn.execute("SELECT * FROM target_record_lineage WHERE canonical_entity_id=? ORDER BY id LIMIT 1", (entity_id,)).fetchone()
@@ -678,13 +676,14 @@ def run_identity_resolution(root: Path | str, resolution_run_id: int) -> dict[st
                     """INSERT OR IGNORE INTO target_record_lineage(
                         canonical_entity_id,insert_run_id,extraction_batch_id,target_connection_id,target_schema,target_table,target_record_token,
                         source_record_token,source_connection_id,source_snapshot_hash,source_schema,source_table,source_locator_hash,
-                        mapping_set_hash,target_contract_hash,commit_receipt_hash,created_at
-                    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        mapping_set_hash,target_contract_hash,commit_receipt_hash,created_at,key_id,source_key_id,target_key_id
+                    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (entity_id, int(existing_lineage["insert_run_id"]), int(run["extraction_batch_id"]), int(existing_lineage["target_connection_id"]),
                      str(existing_lineage["target_schema"]), str(existing_lineage["target_table"]), str(existing_lineage["target_record_token"]),
                      source_record_token, int(provenance["source_connection_id"]), str(provenance["source_snapshot_hash"]), str(provenance["source_schema"]),
                      str(provenance["source_table"]), str(provenance["source_locator_hash"]), str(provenance["mapping_set_hash"]),
-                     str(provenance["target_contract_hash"]), str(existing_lineage["commit_receipt_hash"]), utc_now()),
+                     str(provenance["target_contract_hash"]), str(existing_lineage["commit_receipt_hash"]), utc_now(), active_key_id, active_key_id,
+                     str(existing_lineage["target_key_id"] or existing_lineage["key_id"])),
                 )
 
         target_record_token = _token(key, "target-record", {
@@ -694,13 +693,13 @@ def run_identity_resolution(root: Path | str, resolution_run_id: int) -> dict[st
         })
         manifest_rows.append({
             "canonical_entity_uuid": str(entity["entity_uuid"]), "source_record_token": source_record_token,
-            "target_record_token": target_record_token, "included_for_insert": False,
+            "target_record_token": target_record_token, "key_id": active_key_id, "included_for_insert": False,
         })
         if already_committed or entity_id in seen_entities:
             duplicates += 1
             continue
         seen_entities.add(entity_id)
-        record["identity"] = {"canonical_entity_uuid": str(entity["entity_uuid"]), "target_record_token": target_record_token}
+        record["identity"] = {"canonical_entity_uuid": str(entity["entity_uuid"]), "target_record_token": target_record_token, "key_id": active_key_id}
         included[entity_id] = record
         manifest_rows[-1]["included_for_insert"] = True
 
@@ -733,6 +732,7 @@ def run_identity_resolution(root: Path | str, resolution_run_id: int) -> dict[st
         "candidate_count": 0,
         "rows": manifest_rows,
         "raw_business_values_stored": False,
+        "key_id": active_key_id,
     }
     manifest_data = (_canonical_json(manifest) + "\n").encode("utf-8")
     manifest_hash = _write_atomic(manifest_path, manifest_data)
@@ -867,12 +867,13 @@ def finalize_insert_lineage(root: Path | str, insert_run_id: int) -> dict[str, A
                 """INSERT OR IGNORE INTO target_record_lineage(
                     canonical_entity_id,insert_run_id,extraction_batch_id,target_connection_id,target_schema,target_table,target_record_token,
                     source_record_token,source_connection_id,source_snapshot_hash,source_schema,source_table,source_locator_hash,
-                    mapping_set_hash,target_contract_hash,commit_receipt_hash,created_at
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    mapping_set_hash,target_contract_hash,commit_receipt_hash,created_at,key_id,source_key_id,target_key_id
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (int(b["canonical_entity_id"]), int(insert_run_id), int(insert["extraction_batch_id"]), int(insert["target_connection_id"]),
                  str(insert["target_schema"]), str(insert["target_table"]), token, str(b["source_record_token"]), int(b["source_connection_id"]),
                  str(b["source_snapshot_hash"]), str(b["source_schema"]), str(b["source_table"]), str(b["source_locator_hash"]),
-                 str(insert["mapping_set_hash"]), str(insert["target_contract_hash"]), str(insert["commit_receipt_hash"]), utc_now()),
+                 str(insert["mapping_set_hash"]), str(insert["target_contract_hash"]), str(insert["commit_receipt_hash"]), utc_now(),
+                 str(run["key_id"]), str(b["key_id"] or run["key_id"]), str(run["key_id"])),
             )
             inserted += 1
         _event(conn, "target_lineage_finalized", {"insert_run_id": int(insert_run_id), "lineage_rows": inserted, "commit_receipt_hash": str(insert["commit_receipt_hash"]), "raw_values_stored": False}, run_id=int(resolution_id))
@@ -893,6 +894,7 @@ def get_entity_lineage(root: Path | str, entity_uuid: str) -> dict[str, Any]:
         "source_record_token": str(r["source_record_token"]), "source_connection_id": int(r["source_connection_id"]), "source_snapshot_hash": str(r["source_snapshot_hash"]),
         "source_schema": str(r["source_schema"]), "source_table": str(r["source_table"]), "source_locator_hash": str(r["source_locator_hash"]),
         "mapping_set_hash": str(r["mapping_set_hash"]), "target_contract_hash": str(r["target_contract_hash"]), "commit_receipt_hash": str(r["commit_receipt_hash"]),
+        "key_id": r["key_id"], "source_key_id": r["source_key_id"], "target_key_id": r["target_key_id"],
     } for r in rows], "raw_values_included": False}
 
 

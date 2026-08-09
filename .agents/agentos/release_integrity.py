@@ -53,6 +53,11 @@ RELEASE_FILES = (
     ".agents/tests/test_unified_runtime_v0225.py",
     "UPGRADE_FROM_0.22.3.md",
     "UPGRADE_FROM_0.22.4.md",
+    "tools/apply_v0226.py",
+    "tools/validate_v0226.py",
+    "tools/validate_release.py",
+    ".agents/tests/test_secret_lineage_v0226.py",
+    "UPGRADE_FROM_0.22.5.md",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -67,6 +72,9 @@ EXTENSION_FILES = (
     ".agents/agentos/governance_enforcement.py",
     ".agents/agentos/governance_enforcement_cli.py",
     ".agents/agentos/release_manifest.py",
+    ".agents/agentos/secret_lineage.py",
+    ".agents/agentos/secret_lineage_cli.py",
+    ".agents/agentos/mcp_secret_lineage.py",
 )
 REQUIRED_POLICY_SECTIONS = (
     "language_policy", "instruction_policy", "filesystem_policy", "claim_policy",
@@ -81,6 +89,7 @@ REQUIRED_POLICY_SECTIONS = (
     "controlled_target_insert_policy", "identity_resolution_policy",
     "reconciliation_recovery_policy", "governance_enforcement_policy",
     "unified_runtime_policy",
+    "secret_resolver_policy", "lineage_key_lifecycle_policy",
 )
 
 
@@ -135,8 +144,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     findings.extend(_db_contract_findings(root))
 
     version = (root / "VERSION").read_text(encoding="utf-8").strip() if (root / "VERSION").exists() else None
-    if version != "0.22.5":
-        findings.append(_finding("version_mismatch", f"expected VERSION 0.22.5, got {version!r}", "VERSION"))
+    if version != "0.22.6":
+        findings.append(_finding("version_mismatch", f"expected VERSION 0.22.6, got {version!r}", "VERSION"))
 
     policy_path = root / ".agents/config/governance.json"
     if not policy_path.exists():
@@ -147,8 +156,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             missing = sorted(set(REQUIRED_POLICY_SECTIONS) - set(policy))
             if missing:
                 findings.append(_finding("missing_policy_sections", f"missing policy sections: {missing}", ".agents/config/governance.json"))
-            if policy.get("version") != "0.22.5":
-                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.22.5", ".agents/config/governance.json"))
+            if policy.get("version") != "0.22.6":
+                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.22.6", ".agents/config/governance.json"))
         except Exception as exc:
             findings.append(_finding("invalid_governance", f"cannot parse governance.json: {exc}", ".agents/config/governance.json"))
 
@@ -241,6 +250,8 @@ DOC_FILES = (
     ".agents/docs/CORE_REINTEGRATION_V0223.md",
     ".agents/docs/UNIFIED_GOVERNANCE_ENFORCEMENT_V0224.md",
     ".agents/docs/UNIFIED_CLI_MCP_RUNTIME_V0225.md",
+    ".agents/docs/SECRET_RESOLVER_LINEAGE_KEY_LIFECYCLE.md",
+    ".agents/docs/USAGE_V0226.md",
     ".agents/docs/RULES_WORKFLOW_CHANGELOG.md",
 )
 
@@ -249,7 +260,7 @@ def docs_check_current(root: Path) -> dict[str, Any]:
     """Run the current release documentation gate without stale node-version checks.
 
     Older node-specific docs checks intentionally validate their historical release
-    numbers and therefore cannot be chained as the current-release gate. v0.22.5
+    numbers and therefore cannot be chained as the current-release gate. v0.22.6
     validates their authoritative documents are present, while the core docs checker
     validates the current VERSION/governance/package synchronization.
     """

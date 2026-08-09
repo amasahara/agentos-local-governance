@@ -24,6 +24,7 @@ from . import mcp_read_only_extraction_gateway as extraction
 from . import mcp_controlled_target_insert_gateway as target_insert
 from . import mcp_identity_resolution_gateway as identity_resolution
 from . import mcp_reconciliation_recovery_gateway as recovery
+from . import mcp_secret_lineage as secret_lineage
 
 FeatureHandler = Callable[[str, dict[str, Any], Path], dict[str, Any]]
 
@@ -43,6 +44,7 @@ REGISTRATIONS: tuple[tuple[list[dict[str, Any]], FeatureHandler], ...] = (
     (target_insert.TOOLS, target_insert._local_call),
     (identity_resolution.TOOLS, identity_resolution._local_call),
     (recovery.LOCAL_TOOLS, recovery._local_call),
+    (secret_lineage.TOOLS, secret_lineage._local_call),
 )
 
 

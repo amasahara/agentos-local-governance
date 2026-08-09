@@ -1,59 +1,124 @@
 {
-  "version": "0.22.5",
-  "release_name": "Unified CLI/MCP & Cross-Platform Runtime",
-  "database_schema": 41,
-  "source_basis": {
-    "github_repository": "amasahara/agentos-local-governance",
-    "github_version_observed": "0.22.3",
-    "github_runtime_state_observed": "transitional: top CLI points to v0224 while VERSION remains 0.22.3",
-    "v0.22.4_baseline": "previously validated v0.22.4 full release/overlay applied over the GitHub-derived v0.22.3 baseline"
+  "release": "0.22.6",
+  "node": "Secret Resolver & Lineage Key Lifecycle",
+  "generated_at": "2026-08-09T04:39:01.714610+00:00",
+  "baseline": {
+    "repository": "https://github.com/amasahara/agentos-local-governance",
+    "verified_remote_version": "0.22.5",
+    "verified_remote_schema": 41,
+    "verified_remote_runtime": "Unified CLI/MCP in-process; active version/subprocess forwarding disabled"
   },
-  "runtime": {
-    "cli_runtime": "agentos.cli_runtime",
-    "mcp_runtime": "agentos.mcp_runtime",
-    "cli_command_count": 193,
-    "mcp_tool_count": 52,
-    "mcp_core_proxy_tools": 14,
-    "mcp_extension_readonly_tools": 37,
-    "mcp_health_tools": 1,
-    "version_forwarding_active": false,
-    "mcp_subprocess_forwarding_active": false,
-    "native_windows_execution_tested": false,
-    "windows_wrapper_static_parity_tested": true
+  "schema": 42,
+  "artifact_type": "exact-upgrade-overlay",
+  "verification": {
+    "focused_regression": {
+      "status": "passed",
+      "tests": 17,
+      "duration_observed_seconds": 3.31
+    },
+    "migration_representative": {
+      "status": "passed",
+      "from": 41,
+      "to": 42,
+      "foreign_keys_on": true
+    },
+    "continuous_migration_focused": {
+      "status": "passed",
+      "evidence": "test_schema_42_and_foreign_keys creates a fresh state DB and reaches schema 42 through agentos.db.connect()"
+    },
+    "clean_upgrade_representative": {
+      "status": "passed",
+      "dry_run": true,
+      "backup": true,
+      "apply": true,
+      "post_upgrade_validation": true
+    },
+    "exact_predecessor_guard": {
+      "status": "passed",
+      "wrong_version_rejected": true,
+      "observed_exit_code": 1
+    },
+    "cli_registry": {
+      "status": "passed",
+      "commands": 210,
+      "unique": 210,
+      "duplicate_commands": 0
+    },
+    "mcp_catalog": {
+      "status": "passed",
+      "tools": 57,
+      "unique": 57,
+      "new_read_only_tools": 5,
+      "forbidden_secret_or_key_mutation_tools": 0
+    },
+    "protocol": {
+      "status": "passed",
+      "unknown_cli_exit_code": 2,
+      "unknown_mcp_jsonrpc_code": -32601
+    },
+    "secret_resolver": {
+      "status": "passed",
+      "schemes": [
+        "env",
+        "keychain",
+        "vault",
+        "secret(alias)",
+        "file-secret"
+      ],
+      "env_local_test": true,
+      "file_secret_local_test": true,
+      "keychain_adapter_contract_test": true,
+      "vault_adapter_contract_test": true,
+      "dynamic_importlib_blocked": true,
+      "governed_callback_injection_blocked": true,
+      "capability_fail_closed": true,
+      "credential_leakage_test": true
+    },
+    "lineage_key_lifecycle": {
+      "status": "passed",
+      "legacy_bytes_preserved": true,
+      "historical_rehmac_performed": false,
+      "key_id_backfill": true,
+      "rotation_active_to_retired": true,
+      "retired_lookup": true,
+      "revoked_lookup_blocked": true,
+      "read_only_status_does_not_initialize": true,
+      "crash_left_key_recovery": true,
+      "material_path_tamper_blocked": true
+    },
+    "privileged_boundary_negative_test": {
+      "status": "passed",
+      "governed_secret_approval_without_task_session_rejected": true
+    },
+    "target_manifest_rebuild_representative": {
+      "status": "passed",
+      "authoritative_files": 93
+    },
+    "python_compile": {
+      "status": "passed"
+    }
   },
-  "tests": {
-    "historical_core": 79,
-    "v0_20_1_project_selection": 17,
-    "v0_20_2_project_consolidation": 21,
-    "v0_21_0_database_boundary": 24,
-    "v0_21_1_schema_mapping": 23,
-    "v0_21_2_read_only_extraction": 25,
-    "v0_22_0_controlled_target_insert": 21,
-    "v0_22_1_identity_resolution": 10,
-    "v0_22_2_reconciliation_recovery": 18,
-    "v0_22_3_core_reintegration": 9,
-    "v0_22_4_governance_enforcement": 12,
-    "v0_22_5_unified_runtime": 11,
-    "verified_total": 270,
-    "clean_upgrade_recent_regression": 32
+  "not_verified_as_passed": {
+    "full_historical_regression_on_exact_github_tree": {
+      "status": "not_verified",
+      "reason": "The build shell could not clone/materialize the entire GitHub repository and exact 822-line governance.json. A historical-suite attempt on a representative tree produced 21 passed / 58 failed because required policy sections and agentos.audit_daemon were absent from that representative tree; those results are non-authoritative and are not claimed as a release regression result."
+    },
+    "live_keychain_integration": {
+      "status": "not_run",
+      "reason": "No provisioned OS keychain credential was available; provider contract was tested with a deterministic adapter fake."
+    },
+    "live_vault_integration": {
+      "status": "not_run",
+      "reason": "No Vault endpoint/token was available; KV-v2 provider contract was tested with a deterministic adapter fake."
+    },
+    "native_windows_integration": {
+      "status": "not_run",
+      "reason": "Build host is Linux; cross-platform runtime invariant is preserved from v0.22.5 and registry code remains platform-neutral, but cmd.exe was not available."
+    },
+    "full_end_to_end_new_mutation_signed_audit": {
+      "status": "not_run",
+      "reason": "New mutation APIs are decorated with the existing governed_mutation boundary and domain events mirror to signed audit; a full production task/session/baseline/token audit execution could not be established without the exact full governance tree."
+    }
   },
-  "gates": {
-    "release_integrity": true,
-    "docs_check": true,
-    "instruction_check": true,
-    "policy_load": true,
-    "schema_1_to_41": true,
-    "foreign_keys_on": true,
-    "unknown_cli_fails_nonzero": true,
-    "unknown_mcp_method_returns_minus_32601": true,
-    "duplicate_cli_commands": 0,
-    "duplicate_mcp_tools": 0,
-    "privileged_extension_mcp_mutation_exposed": false,
-    "clean_upgrade_v0224_to_v0225": true
-  },
-  "limitations": [
-    "The build environment cannot execute native Windows cmd.exe, so Windows parity is verified statically and through the shared Python runtime rather than on a native Windows host.",
-    "GitHub main reported VERSION 0.22.3 during verification even though its top CLI already referenced agentos.v0224; v0.22.5 therefore uses the validated v0.22.4 release generated from that GitHub-derived baseline rather than claiming the remote was a synchronized v0.22.4 tag.",
-    "Historical gateway/version files remain in the repository for compatibility/audit evidence, but top-level v0.22.5 wrappers do not use them."
-  ]
+  "release_claim": "Focused v0.22.6 implementation and representative clean upgrade are verified. No claim is made that unavailable external/live or exact-full-tree regression suites passed."
 }

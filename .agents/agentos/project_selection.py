@@ -34,6 +34,7 @@ from .project_identity import (
 )
 
 SCHEMA_VERSION = 33
+MIGRATION_VERSION = SCHEMA_VERSION  # unified CLI compatibility alias
 COMPATIBLE = "compatible"
 CONDITIONAL = "conditionally_compatible"
 INCOMPATIBLE = "incompatible"

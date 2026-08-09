@@ -1,36 +1,33 @@
-[🇻🇳 Tiếng Việt](README.vi.md) | [🇬🇧 English](README.en.md)
+# AgentOS Local Governance v0.22.6
 
-# AgentOS Local Governance v0.22.5
+**Node:** Secret Resolver & Lineage Key Lifecycle  
+**Schema:** 42  
+**Baseline:** v0.22.5 — Unified CLI/MCP & Cross-Platform Runtime
 
-## Unified CLI/MCP & Cross-Platform Runtime
+## Production secret resolver
 
-v0.22.5 removes version-forwarding chains from the **active runtime path** while preserving the v0.22.4 enforcement boundary.
+The production DB pipeline now uses one trusted resolver registry instead of a standalone `env://` default. Supported references are `env://`, `keychain://`, `vault://`, `secret://` aliases, and bounded `file-secret://` under `.agents/state/secrets/`.
 
-### Runtime architecture
+Every shipped provider has a stable provider identity, version, and implementation SHA-256 pin. A human operator must approve the exact provider pin for the exact runtime capability. Missing/untrusted providers, changed pins, unapproved capabilities, or unavailable optional dependencies fail closed.
 
-```text
-POSIX agentos ─┐
-Windows .cmd ──┴→ agentos.cli_runtime → one command registry → in-process handlers
+Governance configuration may map aliases to trusted URIs but may not name arbitrary `importlib`, `module:function`, executable, or plugin resolver code. Legacy callback injection is compatibility-only for non-governed tests/library roots and is rejected on production AgentOS roots.
 
-POSIX MCP ─────┐
-Windows MCP.cmd┴→ agentos.mcp_runtime → one flat tool catalog → direct handlers
-```
+Resolved credentials exist only in operation memory. Raw credential values are not persisted to AgentOS SQLite, audit, MCP, context/LLM, or caches.
 
-### Guarantees
+## Versioned lineage keyring
 
-- No top-level CLI execution through `agentos.v0224 → ... → agentos.v0195`.
-- No MCP subprocess forwarding through historical gateway/version chains.
-- POSIX and Windows wrappers execute the same Python runtimes.
-- Duplicate CLI commands and MCP tool names fail closed.
-- Unknown CLI commands return non-zero; unknown MCP methods return JSON-RPC `-32601`.
-- `agentos.mcp_health` reports privacy-safe runtime/catalog health.
-- 14 historical core MCP proxy tools remain governed through the session gateway.
-- 37 project/database extension MCP tools remain read-only; privileged database/identity/recovery mutation is not exposed.
-- Privileged extension CLI commands still require task/session context and v0.22.4 signed governance enforcement.
-- Historical launchers/gateways may remain for audit/reference but are not active runtime dependencies.
+The single `identity_lineage.key` model is replaced by a versioned local keyring with `key_id`, `active/retired/revoked` lifecycle states, timestamps, predecessor metadata, and rotation-plan provenance.
 
-Current registry size: **193 CLI commands** and **52 MCP tools**. Database schema remains **41**.
+Keyring initialization is a privileged mutation and is never triggered by read-only MCP status inspection. A legacy key is moved with identical bytes into the keyring and historical rows are only backfilled with `key_id`; historical HMACs are not recomputed.
 
-## Upgrade
+New tokens use the active key. Identity lookup evaluates active plus retired keys so old records remain resolvable. Revoked keys are excluded.
 
-See [UPGRADE_FROM_0.22.4.md](UPGRADE_FROM_0.22.4.md).
+Rotation requires immutable plan → human review → human approval → governed execution → signed audit. Rekey never derives a new HMAC from an old HMAC; it requires a governed SOURCE `select_read` re-read of the raw identifier.
+
+## Preserved invariants
+
+- Continuous migrations schema 1 → 42 through `agentos.db.connect()` with `foreign_keys=ON`.
+- Unified CLI/MCP remains in-process with no active version/subprocess forwarding.
+- Privileged mutations remain inside task/session/capability/baseline-drift/one-time-token/hash-chain/Ed25519 signed-audit enforcement.
+- MCP exposes no credential resolution, approval, identity decision, key mutation, TARGET mutation, or recovery mutation.
+- SOURCE remains read-only; TARGET writes remain Controlled Target Insert only.

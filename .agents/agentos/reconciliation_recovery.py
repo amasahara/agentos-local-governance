@@ -34,6 +34,7 @@ from contextlib import contextmanager
 
 from .db import connect as central_connect
 from .governance_enforcement import governed_mutation, mirror_domain_event
+from .secret_lineage import load_key, resolve_runtime_secret
 
 
 from .controlled_target_insert import (
@@ -44,7 +45,6 @@ from .controlled_target_insert import (
 )
 from .identity_resolution import (
     IdentityResolutionError,
-    _lineage_key,
     _normalize,
     finalize_insert_lineage,
     migration_39,
@@ -386,10 +386,11 @@ def create_reconciliation_run(root: Path | str, *, insert_run_id: int, created_b
     if not str(created_by).strip():
         raise ReconciliationRecoveryError("created_by is required")
     root_path = Path(root).resolve()
-    key = _lineage_key(root_path)
     with _connect(root_path) as conn:
         migration_40(conn)
         context = _load_context(conn, int(insert_run_id), root_path)
+        lineage_key_id = str(context["resolution"]["key_id"])
+        key = load_key(root_path, lineage_key_id)
         _, row_fps, key_fps = _expected_evidence(context, key)
         insert = context["insert"]
         plan = {
@@ -407,6 +408,7 @@ def create_reconciliation_run(root: Path | str, *, insert_run_id: int, created_b
             "mapping_set_hash": str(insert["mapping_set_hash"]),
             "identity_resolution_run_id": int(context["resolution"]["id"]),
             "identity_manifest_hash": str(context["resolution"]["manifest_hash"]),
+            "lineage_key_id": lineage_key_id,
             "business_key_fields": context["business_fields"],
             "column_order": context["columns"],
             "expected_row_count": sum(row_fps.values()),
@@ -570,7 +572,6 @@ def run_reconciliation(
         Performs SELECT-only TARGET reads and updates only local AgentOS reconciliation state.
     """
     root_path = Path(root).resolve()
-    key = _lineage_key(root_path)
     with _connect(root_path) as conn:
         migration_40(conn)
         run = conn.execute("SELECT * FROM db_reconciliation_runs WHERE id=?", (int(reconciliation_run_id),)).fetchone()
@@ -578,6 +579,8 @@ def run_reconciliation(
             raise ReconciliationRecoveryError("reconciliation run is not runnable")
         context = _load_context(conn, int(run["insert_run_id"]), root_path)
         plan = json.loads(run["plan_json"])
+        lineage_key_id = str(plan.get("lineage_key_id") or context["resolution"]["key_id"])
+        key = load_key(root_path, lineage_key_id)
         if _sha256_json(plan) != str(run["plan_hash"]):
             raise ReconciliationRecoveryError("reconciliation plan hash mismatch")
         if str(context["insert"]["insert_plan_hash"]) != str(plan["insert_plan_hash"]):
@@ -595,10 +598,13 @@ def run_reconciliation(
         if target_row_provider is not None:
             observed_values = list(target_row_provider(context["columns"], context["business_fields"], key_rows))
         else:
-            from .read_only_extraction import _resolve_env_secret
+            def governed_target_secret(ref: str) -> dict[str, Any]:
+                return resolve_runtime_secret(
+                    root_path, ref, capability="db.target.reconciliation_select", compatibility_resolver=secret_resolver
+                )
             observed_values = _rows_from_target(
                 context, key_rows,
-                secret_resolver=secret_resolver or _resolve_env_secret,
+                secret_resolver=governed_target_secret,
                 target_connection_factory=target_connection_factory or _open_target_connection,
             )
         observed_rows: Counter[str] = Counter()

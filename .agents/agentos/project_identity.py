@@ -30,6 +30,7 @@ from uuid import UUID, uuid4
 
 IDENTITY_VERSION = 1
 SCHEMA_VERSION = 32
+MIGRATION_VERSION = SCHEMA_VERSION  # unified CLI compatibility alias
 PROJECT_ID_REL = Path(".agents/config/project.id")
 PURPOSE_REL = Path(".agents/config/project.purpose.json")
 INSTANCE_ID_REL = Path(".agents/state/project.instance.json")

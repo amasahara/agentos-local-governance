@@ -33,12 +33,12 @@ from contextlib import contextmanager
 
 from .db import connect as central_connect
 from .governance_enforcement import governed_mutation, mirror_domain_event
+from .secret_lineage import resolve_runtime_secret
 
 
 from .database_boundary import DatabaseBoundaryError, authorize_operation
 from .read_only_extraction import (
     ReadOnlyExtractionError,
-    _resolve_env_secret,
     migration_37,
     verify_staging_artifact,
 )
@@ -764,7 +764,7 @@ def execute_target_insert(
     Args:
         root: Active AgentOS project root.
         insert_run_id: Human-reviewed and human-approved insert run.
-        secret_resolver: Optional trusted secret resolver; default accepts env:// JSON only.
+        secret_resolver: Compatibility-only resolver hook for non-governed tests/adapters. Governed roots reject callback injection.
         target_connection_factory: Optional trusted DB-API factory for tests/integration adapters.
 
     Returns:
@@ -817,9 +817,10 @@ def execute_target_insert(
                consolidation_id=int(row["consolidation_id"]), target_connection_id=int(row["target_connection_id"]),
                payload={"insert_plan_hash": str(row["insert_plan_hash"]), "row_count": int(row["row_count"]), "write_mode": "INSERT_ONLY"})
 
-    resolver = secret_resolver or _resolve_env_secret
     try:
-        secret = resolver(credential_ref)
+        secret = resolve_runtime_secret(
+            root_path, credential_ref, capability="db.target.controlled_insert", compatibility_resolver=secret_resolver
+        )
         if not isinstance(secret, dict):
             raise ControlledTargetInsertError("TARGET secret resolver must return an object")
     except Exception as exc:

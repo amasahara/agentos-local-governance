@@ -279,8 +279,21 @@ Database consolidation is directional and fail-closed.
 - Credential values are process-memory-only. Never persist, log, audit, index, cache, expose through MCP, or send resolved credentials to an LLM.
 - Production DB extraction/insert/reconciliation MUST use the trusted resolver registry. Arbitrary injected resolver callbacks are test/non-governed compatibility only.
 - Lineage HMAC material lives in the versioned local keyring. Every relevant identity/lineage token records `key_id`; new tokens use the sole active key, retired keys remain lookup/verification-capable, and revoked keys are not used.
-- Keyring initialization is a privileged mutation. Read-only CLI/MCP inspection MUST NOT initialize, rotate, migrate, revoke, or load key material.
-- Legacy `identity_lineage.key` migration moves the same material into the keyring and backfills metadata only; historical HMACs MUST NOT be recomputed without raw identifiers.
+- Legacy `identity_lineage.key` migration imports the same material and backfills metadata only; historical HMACs MUST NOT be recomputed without raw identifiers.
 - Key rotation requires immutable plan → human review → human approval → governed execution with signed audit. Rekey requires a governed SOURCE `select_read` re-read; hashes/tokens alone are insufficient raw material.
 - MCP may inspect resolver/key metadata and immutable plans only. Provider approval/revocation, key rotation/revocation, rekey authorization, credential resolution, TARGET mutation, identity decisions, and recovery mutations are not MCP mutation tools.
 <!-- AGENTOS_V0226_SECRET_LINEAGE_END -->
+
+
+<!-- AGENTOS_V0227_DATA_SUBJECT_RIGHTS_BEGIN -->
+## AgentOS v0.22.7 — Data Subject Rights & Privacy Lifecycle
+- Data-subject erasure MUST follow immutable request → immutable plan → human review → human approval → governed local execution → canonical tombstone → signed evidence.
+- Requests/plans MUST NOT contain raw subject identifiers, business-record values, credentials, secret material, lineage key material, or raw TARGET rows. Use the canonical pseudonymous entity UUID and privacy-safe hashes/counts only.
+- Erasure planning/execution MUST fail closed while related extraction, identity resolution, TARGET insert, reconciliation, or recovery is active, uncertain, or `in_doubt`.
+- Local execution MUST remove or disable relinkable identity bindings/candidates/lineage and purge related local staging/cache/memory/index material according to policy.
+- Canonical tombstones retain only the minimum pseudonymous/audit linkage required for integrity; HMAC lookup fingerprints and lineage `key_id` MUST be removed from the tombstoned canonical entity.
+- v0.22.7 MUST NOT add TARGET UPDATE/DELETE/UPSERT/MERGE or recovery repair authority. When external TARGET data may remain, set `local_erasure_completed=true` and `external_target_erasure_required=true`.
+- Historical signed audit evidence is not rewritten or deleted; new privacy evidence stores hashes/counts/status only and MUST NOT preserve unnecessary relinkable subject data.
+- Erasure execution MUST be idempotent. A completed plan cannot create a second tombstone or replay deletion side effects.
+- MCP may inspect erasure request/plan/status only. Request creation, review, approval, execution, identity decisions, credential resolution, TARGET mutation, and recovery mutation MUST NOT be exposed as MCP mutation tools.
+<!-- AGENTOS_V0227_DATA_SUBJECT_RIGHTS_END -->

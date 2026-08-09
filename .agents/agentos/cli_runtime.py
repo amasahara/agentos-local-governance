@@ -26,7 +26,7 @@ from .release_integrity import check_release_integrity, docs_check_current
 from .release_manifest import verify_manifest
 from .schema_version import CURRENT_SCHEMA_VERSION
 
-VERSION = "0.22.6"
+VERSION = "0.22.7"
 
 FEATURE_CLI_MODULES = (
     "project_identity_cli",
@@ -39,6 +39,7 @@ FEATURE_CLI_MODULES = (
     "identity_resolution_cli",
     "reconciliation_recovery_cli",
     "secret_lineage_cli",
+    "data_subject_rights_cli",
 )
 
 SPECIAL_COMMANDS = {
@@ -60,7 +61,7 @@ PRIVILEGED_COMMANDS = {
     "db-identity-policy-create", "db-identity-policy-review", "db-identity-policy-approve",
     "db-identity-resolution-create", "db-identity-resolution-run", "db-identity-candidate-decide",
     "db-reconciliation-create", "db-reconciliation-run", "db-recovery-scan", "db-recovery-commit-decide", "db-recovery-lineage-finalize",
-    "secret-provider-approve", "secret-provider-revoke", "lineage-keyring-initialize",
+    "secret-provider-approve", "secret-provider-revoke",
     "lineage-key-rotation-plan-create", "lineage-key-rotation-plan-review", "lineage-key-rotation-plan-approve",
     "lineage-key-rotation-execute", "lineage-key-revoke", "lineage-rekey-plan-create", "lineage-rekey-plan-review",
     "lineage-rekey-plan-approve", "lineage-rekey-source-reread-authorize",
@@ -259,7 +260,7 @@ def _dispatch_special(command: str, root: Path, args: list[str]) -> int:
 
 def _help() -> None:
     registry = command_registry()
-    print("AgentOS Local Governance v0.22.6 — unified CLI runtime")
+    print("AgentOS Local Governance v0.22.7 — unified CLI runtime")
     print("Usage: agentos [--root PATH] [--task-id ID] [--session-id ID] COMMAND [ARGS]")
     print("Commands:")
     for command in sorted(registry):

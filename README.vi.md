@@ -1,122 +1,80 @@
-# AgentOS Local Governance v0.23.1 — Adaptive Token Budget & Model Profiles
+# AgentOS Local Governance v0.23.2 — Context Expansion & Compression Evaluation
 
 [README landing](README.md) | [English](README.en.md)
 
 ## Mục tiêu
 
-v0.23.1 giữ nguyên toàn bộ guarantee của v0.23.0 và bổ sung lớp **Adaptive Token Budget & Model Profiles** để AgentOS chọn lượng token dành cho output/overhead/safety/evidence theo cách xác định, cục bộ và có thể audit.
-
-Pipeline vẫn là:
+v0.23.2 hoàn thiện vòng lặp **nén → mở rộng có kiểm soát → đánh giá → so sánh shadow** trên nền Requirement-Preserving Context Compression. Control Plane vẫn giữ nguyên 100% original request, Requirement Ledger, AGENTS authority, approved scope và active plan; node này không nới quyền nén protected content.
 
 ```text
 Canonical Context Pack
         ↓
-Requirement Ledger + protected authority lock
+Requirement-Preserving Transport
         ↓
-Control Plane — LOSSLESS
+Deterministic Evidence Compression
         ↓
-Model Profile (hash-pinned)
+Hash-pinned omission handles
         ↓
-Adaptive Budget Decision
+Bounded read-only expansion
         ↓
-Evidence Plane — deterministic/extractive
+Compression Evaluation v2
         ↓
-Requirement Preservation Gate
-        ↓
-READY Transport Pack
+PASS / WARN / FAIL + shadow comparison
 ```
 
-## Model Profile Registry
+## Context Expansion v2
 
-Profile chỉ là dữ liệu cấu hình, không phải code/plugin. Mỗi profile được chuẩn hóa và pin bằng SHA-256 trên toàn bộ definition quan trọng:
+- mở rộng chỉ từ omission handle đã hash-pin;
+- kiểm tra transport hash, canonical revision và source hash trước khi đọc;
+- hỗ trợ `line_start`, `max_lines`, `max_tokens`, reason code allowlist và Requirement Ledger IDs;
+- batch expansion có giới hạn số handle và tổng token;
+- nội dung mở rộng chỉ trả về memory/caller, **không persist vào SQLite/audit**;
+- telemetry chỉ giữ request hash, handle, line range, token count, reason code và requirement IDs;
+- MCP expansion chạy `record_event=false`, không tạo mutation telemetry từ LLM.
 
-- `context_capacity`;
-- tokenizer policy (`auto`, `heuristic`, `tiktoken`);
-- optional `model_name`/`encoding` dùng cho tokenizer local;
-- `reserved_output_min/default/max`;
-- `system_tool_overhead`;
-- `safety_margin_min` + ratio;
-- `minimum_evidence_tokens`.
+## Compression Evaluation v2
 
-Không cho network/provider API discovery, dynamic import, arbitrary code hoặc tokenizer auto-download. `tiktoken` nếu dùng chỉ được đọc asset đã có trong local cache; cache miss sẽ fallback heuristic hoặc fail nếu policy bắt buộc exact tokenizer. AgentOS **không tự đổi provider/model**; profile chỉ mô tả budget contract mà runtime/operator đã chọn.
+Hard gate:
 
-## Adaptive Token Budget
+- requirement preservation rate = **100%**;
+- mọi canonical evidence candidate phải được included hoặc có expansion handle;
+- expansion-handle integrity = **100%**;
+- transport không vượt input budget;
+- transport integrity và source freshness phải được xác minh.
 
-Budget vẫn tuân theo công thức bất biến:
+Mục tiêu compression **2–4x** vẫn là stability target advisory: dưới 2x hoặc trên 4x tạo warning để review, không được đổi thành lý do cắt Control Plane.
 
-```text
-input_budget = context_capacity
-             - reserved_output
-             - system_tool_overhead
-             - safety_margin
-```
+Evaluation giữ metric contract cũ (`raw_tokens`, `transport_tokens`, `compression_ratio`, requirement preservation, context miss, expansion request, task/test success, rework, tool calls) và bổ sung candidate accountability, handle integrity, expansion success/failure, budget utilization, hard failures và warnings.
 
-Control Plane luôn được tính trước. Evidence chỉ nhận phần còn lại:
+## Shadow comparison
 
-```text
-evidence_budget = max(0, input_budget - control_tokens)
-```
+Có thể so sánh hai transport revision, kể cả revision `SUPERSEDED`, theo read-only historical verification. Regression flags gồm requirement preservation giảm, context miss tăng, expansion failure tăng, budget vượt, hard gate fail, task/test success giảm hoặc rework tăng.
 
-Adaptive mode dùng các tín hiệu deterministic từ Requirement Ledger/active plan để tăng output reserve khi task phức tạp. Safety margin lấy giá trị lớn nhất giữa floor của profile, tỷ lệ capacity và headroom calibration. Nếu Control Plane vượt input budget thì **fail-closed**, không cắt request/AGENTS/scope/plan/requirements.
-
-`fixed` mode vẫn còn để tái tạo hành vi budgeting kiểu v0.23.0 khi operator cần.
-
-## Calibration an toàn
-
-CLI có thể ghi số token runtime thực tế sau một transport:
-
-```text
-predicted input tokens
-observed input tokens
-predicted output reserve
-observed output tokens
-profile hash
-tokenizer id
-```
-
-Không lưu prompt, response, evidence, credential hoặc raw source text trong bảng calibration. `source` chỉ nhận enum allowlist (`runtime_report`, `provider_usage`, `tokenizer_probe`, `operator_verified`, `benchmark`, `local_runtime`) và mỗi transport/source chỉ được ghi một observation; replay khác số liệu sẽ bị chặn.
-
-Calibration chỉ được dùng theo hướng bảo thủ:
-
-- under-estimation input → tăng safety headroom;
-- output thực tế cao → tăng reserved output cho lần sau;
-- không được giảm `safety_margin_min`;
-- không được giảm output floor;
-- không làm thay đổi Control Plane hoặc Requirement Ledger.
-
-## Schema 45
+## Schema 46
 
 Bổ sung:
 
-- `context_model_profile_snapshots`;
-- `context_budget_decisions`;
-- `context_token_observations`;
-- provenance columns `model_profile_hash`, `budget_mode`, `budget_decision_id` trên `context_transport_packs`.
+- `context_expansion_sessions`;
+- metadata mới trong `context_expansion_events`;
+- `context_compression_evaluation_runs`;
+- `context_compression_comparisons`.
 
-Migration vẫn qua `agentos.db.connect()` với `PRAGMA foreign_keys=ON`.
-
-## CLI mới
-
-```text
-context-model-profiles-list
-context-model-profile-get
-context-budget-history
-context-token-calibration-get
-context-token-observation-record
-```
-
-`context-transport-compile` bổ sung `--budget-mode adaptive|fixed`.
+Migration tiếp tục qua `agentos.db.connect()` với `foreign_keys=ON`.
 
 ## MCP read-only mới
 
 ```text
-agentos.context_model_profiles_get
-agentos.context_budget_history_get
-agentos.context_token_calibration_get
+agentos.context_expansion_explain
+agentos.context_expand_batch
+agentos.context_expansion_history_get
+agentos.context_compression_evaluation_get
+agentos.context_compression_compare
 ```
 
-MCP không expose observation recording, profile mutation, budget mutation, compile/evaluate mutation hay model switching authority.
+Không expose evaluation persistence, comparison persistence, transport compile/mutation, authority mutation hoặc model/provider switching cho LLM.
 
-## Safety invariants giữ nguyên
+## Bản full GitHub-ready
 
-v0.23.1 không thay SOURCE/TARGET database safety, secret/key lifecycle, privacy erasure authority, signed-audit boundary hoặc v0.23.0 Requirement Preservation Gate. Original request, constraint, prohibition, authority, approved scope và plan vẫn phải được bảo toàn 100%.
+Bản phát hành đầy đủ v0.23.2 được materialize từ toàn bộ repository, không phải overlay. Khi dùng gói full, bạn chỉ cần giải nén, upload/replace nội dung repository và commit/push; không cần chạy `apply_v0232.py`. GitHub Actions trong `.github/workflows/agentos-release-validation.yml` sẽ tự chạy compile, validator, release-integrity, manifest/checksum, docs/instruction và toàn bộ test suite.
+
+Chi tiết: [Full GitHub-Ready Materialization](.agents/docs/GITHUB_READY_FULL_RELEASE_V0232.md).

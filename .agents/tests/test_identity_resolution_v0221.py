@@ -164,8 +164,11 @@ def test_cross_batch_duplicate_of_committed_entity_is_not_reinserted_and_keeps_l
 
 def test_lineage_key_is_local_owner_only(tmp_path):
     root, _ = setup_validated_batch(tmp_path)
-    key = root / ".agents/state/identity_lineage.key"
-    assert key.exists() and len(key.read_bytes()) >= 32
+    from agentos.secret_lineage import active_key
+    key_id, material = active_key(root)
+    key = root / ".agents/state/lineage-keys" / f"{key_id}.key"
+    assert key.exists() and key.read_bytes() == material and len(material) >= 32
+    assert not (root / ".agents/state/identity_lineage.key").exists()
     if hasattr(key.stat(), "st_mode"):
         assert key.stat().st_mode & 0o077 == 0
 

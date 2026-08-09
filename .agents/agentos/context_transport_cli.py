@@ -56,7 +56,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     x = sub.add_parser("context-transport-get"); _task_arg(x); x.add_argument("--revision", type=int)
     x = sub.add_parser("context-transport-explain"); _task_arg(x); x.add_argument("--revision", type=int)
-    x = sub.add_parser("context-expand"); _task_arg(x); x.add_argument("--handle-id", required=True); x.add_argument("--revision", type=int); x.add_argument("--max-lines", type=int, default=240)
+    x = sub.add_parser("context-expand"); _task_arg(x); x.add_argument("--handle-id", required=True); x.add_argument("--revision", type=int); x.add_argument("--max-lines", type=int, default=240); x.add_argument("--line-start", type=int, default=1); x.add_argument("--max-tokens", type=int); x.add_argument("--reason-code", default="inspection"); x.add_argument("--requirement-id", action="append", default=[])
     x = sub.add_parser("context-requirement-get"); _task_arg(x); x.add_argument("--requirement-id"); x.add_argument("--context-revision", type=int)
     x = sub.add_parser("context-token-report"); _task_arg(x); x.add_argument("--revision", type=int)
     x = sub.add_parser("context-transport-evaluate"); _task_arg(x); x.add_argument("--revision", type=int); x.add_argument("--no-persist", action="store_true")
@@ -83,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
         if c == "context-transport-explain":
             return _emit(context_transport_explain(root, _require_task(args.task_id), args.revision))
         if c == "context-expand":
-            return _emit(context_expand(root, _require_task(args.task_id), args.handle_id, args.revision, args.max_lines))
+            return _emit(context_expand(root, _require_task(args.task_id), args.handle_id, args.revision, args.max_lines, line_start=args.line_start, max_tokens=args.max_tokens, requirement_ids=args.requirement_id, reason_code=args.reason_code))
         if c == "context-requirement-get":
             return _emit(context_requirement_get(root, _require_task(args.task_id), args.requirement_id, args.context_revision))
         if c == "context-token-report":

@@ -320,3 +320,8 @@ An operator/runtime may record observed token counts for future local calibratio
 ```
 
 Only numeric counts/hashes plus bounded profile/tokenizer/source identifiers are persisted. `--source` must be one of `runtime_report`, `provider_usage`, `tokenizer_probe`, `operator_verified`, `benchmark`, or `local_runtime`. Do not pass prompt text, response text, credentials or raw context to calibration commands. AgentOS never uses a model profile to switch providers/models; the caller selects the profile.
+
+
+## v0.23.2
+
+Use `context-expansion-explain`, bounded `context-expand`/`context-expand-batch`, then `context-compression-evaluate`. MCP reads do not persist expansion/evaluation state.

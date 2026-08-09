@@ -1,115 +1,101 @@
 {
-  "release": "0.23.1",
-  "node": "Adaptive Token Budget & Model Profiles",
-  "verification_date": "2026-08-09",
-  "baseline": {
-    "required_predecessor": "0.23.0",
-    "required_schema": 44,
-    "local_predecessor_artifact_used": "agentos-local-governance-v0.23.0-upgrade-overlay",
-    "github_main_observed_version": "0.22.6",
-    "github_main_observed_schema": 42,
-    "github_exact_v0230_baseline_available": false,
-    "note": "GitHub main did not expose v0.23.0 at verification time, so this release is built/tested against the previously materialized local v0.23.0 artifact. The upgrader refuses any target that is not exact v0.23.0/schema 44."
+  "release": "0.23.2",
+  "release_name": "Context Expansion & Compression Evaluation",
+  "package_kind": "full_materialized_github_ready",
+  "schema": 46,
+  "source_basis": {
+    "uploaded_repository": "agentos-local-governance.zip",
+    "uploaded_version": "0.23.1",
+    "uploaded_git_head": "bc55203",
+    "materialized_from_full_repository": true,
+    "upgrade_overlay_used_as_change_set": "v0.23.2"
   },
-  "result": "passed_focused_and_representative_with_explicit_full_repo_limitations",
-  "schema": {
-    "from": 44,
-    "to": 45,
-    "representative_pre_upgrade_chain_1_to_44": "passed",
-    "representative_post_upgrade_chain_1_to_45": "passed",
-    "foreign_keys_on_before": true,
-    "foreign_keys_on_after": true,
-    "new_tables": [
-      "context_model_profile_snapshots",
-      "context_budget_decisions",
-      "context_token_observations"
-    ],
-    "transport_pack_columns": [
-      "model_profile_hash",
-      "budget_mode",
-      "budget_decision_id"
-    ],
-    "calibration_prompt_response_columns_present": false
-  },
-  "adaptive_budget": {
-    "algorithm": "adaptive_budget_v1",
-    "default_mode": "adaptive",
-    "compatibility_mode": "fixed",
-    "profile_registry": "local_data_only",
-    "profile_hash_pin": "sha256",
-    "network_model_discovery": false,
-    "provider_api_profile_discovery": false,
-    "dynamic_profile_code": false,
-    "tokenizer_auto_download": false,
-    "exact_tiktoken_mode": "local_cache_only",
-    "calibration_numeric_hash_only": true,
-    "calibration_source_allowlist": [
-      "runtime_report",
-      "provider_usage",
-      "tokenizer_probe",
-      "operator_verified",
-      "benchmark",
-      "local_runtime"
-    ],
-    "one_observation_per_transport_source": true,
-    "calibration_can_reduce_safety_margin": false,
-    "calibration_can_reduce_output_floor": false,
-    "adaptive_explicit_overrides_can_reduce_protection": false,
-    "model_switching_authority": "external_runtime_only"
-  },
-  "requirement_preservation": {
-    "v0230_control_plane_lossless_preserved": true,
-    "original_request_verbatim_required": true,
-    "requirement_preservation_rate_required": 1.0,
-    "control_plane_budget_priority": 1,
-    "evidence_plane_budget_priority": 2,
-    "protected_overflow": "fail_closed",
-    "generative_summary_authority": false,
-    "word_level_deletion": false
-  },
-  "cli_mcp_delta": {
-    "new_cli_commands": 5,
-    "new_mcp_tools": 3,
-    "new_mcp_tools_read_only": true,
-    "adaptive_mcp_mutation_exposed": false,
-    "expected_context_mcp_tools_after_upgrade": 8,
-    "predecessor_full_registry_counts_from_v0230_artifact": {
-      "cli": 227,
-      "mcp": 65
+  "materialization_repairs": [
+    "Restored legacy governance sections from exact v0.22.5 Git history commit 9b0657b.",
+    "Restored historical upgrade guides from Git history commits 21a8f38, 9b0657b, 401324d, 1632452, ea6d7c5, and bc55203.",
+    "Completed v0.22.7 privacy implementation to match already-declared hardening tests and governance policy.",
+    "Migration 46 repairs existing schema-45 privacy state with one-way locators and immutable request/plan triggers.",
+    "Updated stale historical regression assertions to validate enduring invariants against the current release.",
+    "Synchronized MCP runtime version metadata to 0.23.2.",
+    "Added GitHub Actions validation for upload-only repository workflows."
+  ],
+  "validation": {
+    "full_shipped_test_suite": {
+      "status": "passed",
+      "tests_passed": 340,
+      "test_files": 17,
+      "execution_note": "Executed in bounded groups/chunks to stay within tool runtime limits."
     },
-    "expected_counts_if_exact_predecessor_registry_is_unchanged_except_v0231_delta": {
-      "cli": 232,
-      "mcp": 68
+    "node_v0232_validator": {
+      "status": "passed",
+      "cli_count": 240,
+      "cli_unique": true,
+      "mcp_count": 73,
+      "mcp_unique": true,
+      "context_mcp_count": 13
     },
-    "exact_full_registry_reverified_in_this_environment": false,
-    "note": "tools/validate_v0231.py and tools/validate_release.py fail closed on duplicate/full-registry mismatches when run on the user's exact full repository."
+    "migration_fresh_1_to_46": {
+      "status": "passed",
+      "foreign_keys": true,
+      "secure_delete": true
+    },
+    "migration_existing_45_to_46_privacy_repair": {
+      "status": "passed",
+      "one_way_locator_backfill": true,
+      "immutability_triggers": true
+    },
+    "clean_v0231_to_v0232_upgrader": {
+      "status": "passed",
+      "schema_from": 45,
+      "schema_to": 46,
+      "restored_policy_sections": true,
+      "focused_post_upgrade_tests_passed": 26
+    },
+    "docs_check": {
+      "status": "passed"
+    },
+    "instruction_check": {
+      "status": "passed"
+    },
+    "release_integrity": {
+      "status": "passed",
+      "findings": []
+    },
+    "python_compile": {
+      "status": "passed"
+    },
+    "runtime_health": {
+      "status": "passed",
+      "version": "0.23.2",
+      "schema": 46,
+      "cli_count": 240,
+      "duplicate_commands": []
+    },
+    "mcp_catalog": {
+      "status": "passed",
+      "version": "0.23.2",
+      "tool_count": 73,
+      "core_tools": 14,
+      "feature_tools": 58,
+      "duplicates": []
+    },
+    "source_target_privacy_invariants": {
+      "status": "passed",
+      "source_write_allowed": false,
+      "target_update_delete_upsert_merge_allowed": false,
+      "mcp_privileged_mutation_exposed": false
+    }
   },
-  "tests_actually_run": {
-    "focused_v0230_plus_v0231": "27 passed",
-    "representative_clean_v0230_to_v0231_upgrade_dry_run": "passed",
-    "representative_clean_v0230_to_v0231_apply": "passed",
-    "representative_schema_44_to_45": "passed",
-    "representative_post_upgrade_focused_tests": "27 passed",
-    "wrong_predecessor_version_refusal": "passed",
-    "policy_fail_closed_negative_tests": "passed",
-    "dynamic_tokenizer_profile_rejection": "passed",
-    "protected_control_overflow": "passed",
-    "adaptive_override_monotonic_protection": "passed",
-    "token_observation_content_leakage": "passed",
-    "token_observation_source_allowlist": "passed",
-    "token_observation_conflicting_replay_block": "passed",
-    "python_compile": "passed",
-    "adaptive_budget_benchmark": "generated from deterministic local calculation",
-    "overlay_manifest_and_checksums": "passed",
-    "clean_zip_unpack": "passed",
-    "unpacked_upgrader_validator_executable_bits": "passed (0755)",
-    "unpacked_upgrader_dry_run": "passed"
+  "limitations": [
+    "No live PostgreSQL/MySQL/SQL Server/Oracle production endpoint was available; external DB behavior remains covered by generated SQL/DB-API regression paths.",
+    "No live Vault or native OS keychain service was available; provider contracts/fail-closed paths are tested, not production secret-service connectivity.",
+    "Native Windows cmd.exe execution was not available in the Linux build environment; Windows wrappers are included and CI validates shared Python runtime behavior."
+  ],
+  "github_ready": {
+    "manual_upgrader_required_for_full_package": false,
+    "github_actions_workflow": ".github/workflows/agentos-release-validation.yml",
+    "generated_state_in_release": false,
+    "git_metadata_in_release": false
   },
-  "not_claimed": [
-    "Full historical regression on the user's exact v0.23.0 repository was not run because GitHub main still exposed v0.22.6 and shell DNS could not clone github.com.",
-    "Strict full-tree release-integrity is not claimed on the partial local predecessor artifact; the strict validator is shipped for the exact repository.",
-    "Native Windows cmd.exe integration was not run in this Linux build environment.",
-    "Exact tiktoken execution was not live-tested because tiktoken is not installed; the code path is local-cache-only and a cache miss cannot initiate tokenizer download.",
-    "No provider API/model endpoint was called, and AgentOS does not gain provider/model switching authority."
-  ]
+  "authoritative_file_count_before_manifest_rebuild": 255
 }

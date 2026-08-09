@@ -97,8 +97,8 @@ def _canonical(root: Path, task_id: str, request: str, files: list[Path]) -> Non
 def test_schema_45_and_adaptive_tables(tmp_path: Path, project_root: Path) -> None:
     root = _root(tmp_path, project_root)
     with connect(root) as c:
-        assert CURRENT_SCHEMA_VERSION == 45
-        assert c.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0] == 45
+        assert CURRENT_SCHEMA_VERSION >= 45
+        assert c.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0] == CURRENT_SCHEMA_VERSION
         assert c.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         tables = {r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         assert {

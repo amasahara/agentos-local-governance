@@ -37,7 +37,7 @@ TOOLS = [
     {
         "name": "agentos.context_expand",
         "description": "Read-only expansion of a hash-pinned omission handle. Does not mutate project or authority state.",
-        "inputSchema": {"type": "object", "properties": {"task_id": {"type": "string"}, "handle_id": {"type": "string"}, "revision": {"type": "integer"}, "max_lines": {"type": "integer"}}, "required": ["task_id", "handle_id"]},
+        "inputSchema": {"type": "object", "properties": {"task_id": {"type": "string"}, "handle_id": {"type": "string"}, "revision": {"type": "integer"}, "max_lines": {"type": "integer"}, "line_start": {"type": "integer"}, "max_tokens": {"type": "integer"}, "reason_code": {"type": "string"}, "requirement_ids": {"type": "array", "items": {"type": "string"}}}, "required": ["task_id", "handle_id"]},
     },
     {
         "name": "agentos.context_requirement_get",
@@ -64,7 +64,13 @@ def _local_call(name: str, arguments: dict[str, Any], root: Path) -> dict[str, A
         if name == "agentos.context_transport_explain":
             return context_transport_explain(root, task_id, revision)
         if name == "agentos.context_expand":
-            return context_expand(root, task_id, str(arguments["handle_id"]), revision, int(arguments.get("max_lines", 240)), record_event=False)
+            return context_expand(
+                root, task_id, str(arguments["handle_id"]), revision, int(arguments.get("max_lines", 240)),
+                record_event=False, line_start=int(arguments.get("line_start", 1)),
+                max_tokens=int(arguments["max_tokens"]) if arguments.get("max_tokens") is not None else None,
+                requirement_ids=arguments.get("requirement_ids") if isinstance(arguments.get("requirement_ids"), list) else None,
+                reason_code=str(arguments.get("reason_code") or "inspection"),
+            )
         if name == "agentos.context_requirement_get":
             context_revision = int(arguments["context_revision"]) if arguments.get("context_revision") is not None else None
             return context_requirement_get(root, task_id, arguments.get("requirement_id"), context_revision)

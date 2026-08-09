@@ -61,10 +61,10 @@ def register_source(root: Path, **context):
 
 def test_schema_41_adds_governed_operation_and_event_correlation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root = project(tmp_path, monkeypatch)
-    assert SCHEMA_VERSION == 41
+    assert SCHEMA_VERSION >= 41
     with connect(root) as c:
         versions = [int(r["version"]) for r in c.execute("SELECT version FROM schema_migrations ORDER BY version")]
-        assert versions == list(range(1, 42))
+        assert versions == list(range(1, SCHEMA_VERSION + 1))
         assert c.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         for table in ("db_boundary_events", "db_schema_mapping_events", "db_extraction_events", "db_target_insert_events", "identity_resolution_events", "db_recovery_events"):
             cols = {str(r["name"]) for r in c.execute(f"PRAGMA table_info({table})")}

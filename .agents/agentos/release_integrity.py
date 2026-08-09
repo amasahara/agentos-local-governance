@@ -76,6 +76,14 @@ RELEASE_FILES = (
     "UPGRADE_FROM_0.23.0.md",
     ".agents/docs/ADAPTIVE_TOKEN_BUDGET_MODEL_PROFILES_V0231.md",
     "ADAPTIVE_TOKEN_BUDGET_BENCHMARK.json",
+    "tools/apply_v0232.py",
+    "tools/validate_v0232.py",
+    ".agents/tests/test_context_expansion_evaluation_v0232.py",
+    "UPGRADE_FROM_0.23.1.md",
+    ".agents/docs/CONTEXT_EXPANSION_COMPRESSION_EVALUATION_V0232.md",
+    "CONTEXT_EXPANSION_EVALUATION_BENCHMARK.json",
+    ".agents/docs/GITHUB_READY_FULL_RELEASE_V0232.md",
+    ".github/workflows/agentos-release-validation.yml",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -102,6 +110,9 @@ EXTENSION_FILES = (
     ".agents/agentos/adaptive_budget.py",
     ".agents/agentos/adaptive_budget_cli.py",
     ".agents/agentos/mcp_adaptive_budget.py",
+    ".agents/agentos/context_evaluation.py",
+    ".agents/agentos/context_evaluation_cli.py",
+    ".agents/agentos/mcp_context_evaluation.py",
 )
 REQUIRED_POLICY_SECTIONS = (
     "language_policy", "instruction_policy", "filesystem_policy", "claim_policy",
@@ -120,6 +131,7 @@ REQUIRED_POLICY_SECTIONS = (
     "data_subject_rights_policy", "privacy_boundary_policy",
     "context_transport_policy",
     "adaptive_token_budget_policy",
+    "context_expansion_evaluation_policy",
 )
 
 
@@ -174,8 +186,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     findings.extend(_db_contract_findings(root))
 
     version = (root / "VERSION").read_text(encoding="utf-8").strip() if (root / "VERSION").exists() else None
-    if version != "0.23.1":
-        findings.append(_finding("version_mismatch", f"expected VERSION 0.23.1, got {version!r}", "VERSION"))
+    if version != "0.23.2":
+        findings.append(_finding("version_mismatch", f"expected VERSION 0.23.2, got {version!r}", "VERSION"))
 
     policy_path = root / ".agents/config/governance.json"
     if not policy_path.exists():
@@ -186,8 +198,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             missing = sorted(set(REQUIRED_POLICY_SECTIONS) - set(policy))
             if missing:
                 findings.append(_finding("missing_policy_sections", f"missing policy sections: {missing}", ".agents/config/governance.json"))
-            if policy.get("version") != "0.23.1":
-                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.23.1", ".agents/config/governance.json"))
+            if policy.get("version") != "0.23.2":
+                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.23.2", ".agents/config/governance.json"))
         except Exception as exc:
             findings.append(_finding("invalid_governance", f"cannot parse governance.json: {exc}", ".agents/config/governance.json"))
 
@@ -292,6 +304,12 @@ DOC_FILES = (
     ".agents/tests/test_adaptive_budget_v0231.py",
     "UPGRADE_FROM_0.23.0.md",
     ".agents/docs/ADAPTIVE_TOKEN_BUDGET_MODEL_PROFILES_V0231.md",
+    "tools/apply_v0232.py",
+    "tools/validate_v0232.py",
+    ".agents/tests/test_context_expansion_evaluation_v0232.py",
+    "UPGRADE_FROM_0.23.1.md",
+    ".agents/docs/CONTEXT_EXPANSION_COMPRESSION_EVALUATION_V0232.md",
+    ".agents/docs/GITHUB_READY_FULL_RELEASE_V0232.md",
 )
 
 
@@ -299,7 +317,7 @@ def docs_check_current(root: Path) -> dict[str, Any]:
     """Run the current release documentation gate without stale node-version checks.
 
     Older node-specific docs checks intentionally validate their historical release
-    numbers and therefore cannot be chained as the current-release gate. v0.23.1
+    numbers and therefore cannot be chained as the current-release gate. v0.23.2
     validates their authoritative documents are present, while the core docs checker
     validates the current VERSION/governance/package synchronization.
     """

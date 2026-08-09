@@ -1,7 +1,7 @@
 {
-  "version": "0.23.1",
+  "version": "0.23.2",
   "documentation_policy": {
-    "current_schema": 45
+    "current_schema": 46
   },
   "read_only_extraction_policy": {
     "default_secret_resolver": "trusted_registry_v1",
@@ -634,8 +634,8 @@
     }
   },
   "context_transport_policy": {
-    "version": 2,
-    "database_schema": 45,
+    "version": 3,
+    "database_schema": 46,
     "compiler": "llm_transport_compiler_v2",
     "source": "canonical_context_pack_only",
     "control_plane_mode": "lossless",
@@ -771,7 +771,12 @@
       "agentos.context_token_report",
       "agentos.context_model_profiles_get",
       "agentos.context_budget_history_get",
-      "agentos.context_token_calibration_get"
+      "agentos.context_token_calibration_get",
+      "agentos.context_expansion_explain",
+      "agentos.context_expand_batch",
+      "agentos.context_expansion_history_get",
+      "agentos.context_compression_evaluation_get",
+      "agentos.context_compression_compare"
     ],
     "evaluation_shadow_framework": true,
     "evaluation_metrics": [
@@ -796,7 +801,17 @@
     "network_model_profile_discovery_allowed": false,
     "provider_api_model_profile_discovery_allowed": false,
     "dynamic_model_profile_code_allowed": false,
-    "tokenizer_auto_download_allowed": false
+    "tokenizer_auto_download_allowed": false,
+    "expansion_contract_version": 2,
+    "compression_evaluation_version": 2,
+    "expansion_content_persistence_allowed": false,
+    "compression_hard_gate_requirement_preservation_rate": 1.0,
+    "compression_hard_gate_unaccounted_candidates": 0,
+    "compression_target_band": {
+      "min": 2.0,
+      "max": 4.0,
+      "enforcement": "advisory_stability_review"
+    }
   },
   "adaptive_token_budget_policy": {
     "version": 1,
@@ -842,5 +857,132 @@
       "benchmark",
       "local_runtime"
     ]
+  },
+  "context_expansion_evaluation_policy": {
+    "version": 1,
+    "database_schema": 46,
+    "expansion_read_only": true,
+    "expanded_content_persistence_allowed": false,
+    "expanded_content_audit_allowed": false,
+    "source_hash_pin_required": true,
+    "transport_hash_pin_required": true,
+    "requirement_id_binding_supported": true,
+    "arbitrary_query_content_persistence_allowed": false,
+    "allowed_reason_codes": [
+      "inspection",
+      "requirement_gap",
+      "tool_execution",
+      "test_failure",
+      "context_miss_probe",
+      "operator_review"
+    ],
+    "max_lines_per_handle": 480,
+    "max_tokens_per_handle": 8192,
+    "max_handles_per_batch": 8,
+    "max_total_tokens_per_batch": 16384,
+    "evaluation_algorithm": "compression_evaluation_v2",
+    "evaluation_persistence_cli_only": true,
+    "mcp_evaluation_persistence_allowed": false,
+    "mcp_comparison_persistence_allowed": false,
+    "hard_gates": {
+      "requirement_preservation_rate": 1.0,
+      "unaccounted_candidate_count": 0,
+      "handle_integrity_rate": 1.0,
+      "transport_within_input_budget": true,
+      "transport_integrity_required": true,
+      "source_freshness_required": true
+    },
+    "compression_target_min": 2.0,
+    "compression_target_max": 4.0,
+    "compression_target_enforcement": "advisory",
+    "shadow_compare_enabled": true,
+    "llm_may_expand_read_only": true,
+    "llm_may_persist_expansion_telemetry": false,
+    "llm_may_read_evaluation": true,
+    "llm_may_persist_evaluation": false,
+    "llm_may_mutate_transport": false
+  },
+  "language_policy": {
+    "understand_user_language_directly": true,
+    "preserve_original_request": true,
+    "external_translation_for_intent_parsing": "forbidden",
+    "response_language": "user_language",
+    "technical_identifiers_language": "english"
+  },
+  "installation_policy": {
+    "never_overwrite_existing_root_files": true,
+    "fallback_suffix": ".agentos",
+    "support_local_policy_override": true,
+    "git_hook_optional": true,
+    "automatic_baseline_acknowledgement": false
+  },
+  "security_program": {
+    "releases": [
+      "0.13.1",
+      "0.14.0",
+      "0.14.1",
+      "0.14.2",
+      "0.14.3"
+    ],
+    "gateway_required": true,
+    "authenticated_capability_sessions": true,
+    "isolated_execution": true,
+    "verifiable_state_recovery": true,
+    "security_profile": "advisory"
+  },
+  "execution_platform": {
+    "async_jobs": true,
+    "workflow_aware_tool_discovery": true,
+    "immutable_job_specs": true,
+    "versioned_task_plans": true,
+    "git_precommit_gate": true,
+    "evaluation_harness": true,
+    "metrics_schema_version": 1
+  },
+  "evolution_policy": {
+    "enabled": true,
+    "evaluation_baseline_required": true,
+    "human_activation_required": true,
+    "stages": [
+      "draft",
+      "simulated",
+      "reviewed",
+      "shadow",
+      "canary",
+      "active",
+      "rolled_back"
+    ],
+    "automatic_activation": false
+  },
+  "multi_agent_policy": {
+    "enabled": true,
+    "require_capability_sessions": true,
+    "require_active_roles": true,
+    "require_fresh_context_pack": true,
+    "disclosure_levels": [
+      "metadata-only",
+      "summary",
+      "selected-artifacts",
+      "full-task-context"
+    ],
+    "signed_messages": true,
+    "enforce_disclosure_payload_filtering": true
+  },
+  "evaluation_policy": {
+    "outcomes_optional": true,
+    "minimum_comparison_sample": 30,
+    "confidence_level": 0.95
+  },
+  "storage_policy": {
+    "retrieval_event_retention_days": 30,
+    "workspace_retention_hours": 24,
+    "audit_segment_size": 10000,
+    "embedding_storage": "blob_float32",
+    "backup_include_rebuildable": false
+  },
+  "knowledge_runtime_fixes": {
+    "filesystem_read_cache_integration": true,
+    "structured_clarity_assessment": true,
+    "context_candidate_reporting": true
   }
 }

@@ -1,4 +1,18 @@
-# AgentOS local runtime data (may contain transformed business data)
-.agents/runtime/data-staging/
-# v0.22.1 local-only identity pseudonymization key
+# AgentOS generated runtime/state/cache — never commit.
+.agents/runtime/
+.agents/cache/
+.agents/state/
+
+# Python/test caches.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local environment / secrets.
+.env
+.env.*
+!.env.example
+
+# Legacy and versioned lineage key material must remain local only.
 .agents/state/identity_lineage.key
+.agents/state/lineage-keys/

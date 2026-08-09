@@ -1,28 +1,21 @@
 # AgentOS Local Governance
 
-**Current release: v0.23.1 — Adaptive Token Budget & Model Profiles**
+**Current release: v0.23.2 — Context Expansion & Compression Evaluation**
 
 [🇻🇳 Tiếng Việt](README.vi.md) | [🇬🇧 English](README.en.md)
 
-v0.23.1 extends the v0.23.0 Requirement-Preserving Context Compression pipeline with a deterministic, local-only **Model Profile Registry** and **Adaptive Token Budget**. The release keeps the v0.23.0 Control Plane fully lossless and changes only how the safe input budget is reserved and allocated.
+v0.23.2 extends the v0.23.0/0.23.1 requirement-preserving transport pipeline with **bounded, hash-pinned context expansion** and **deterministic compression evaluation**. The Control Plane remains 100% lossless. Expansion can reveal omitted evidence only through verified read-only handles, while evaluation checks candidate accountability, handle integrity, token-budget compliance, exact requirement preservation, compression stability, and shadow revision regressions.
 
-Key guarantees:
+Database schema: **46**. Expanded source content is never persisted in expansion telemetry. MCP exposes inspection/expansion/evaluation reads only; evaluation persistence and transport mutation remain operator/CLI-only.
 
-- model profiles are data-only, hash-pinned, and never discovered from provider/network APIs; exact tokenizer assets are local-cache-only;
-- adaptive calibration stores numeric token counts/hashes plus bounded identifiers only, never prompt/response content;
-- calibration may increase output reserve or safety headroom, but cannot reduce Control Plane protection;
-- AgentOS does not gain authority to switch provider/model; a profile is only a budget contract;
-- fixed budgeting remains available for v0.23.0-compatible operator behavior;
-- MCP adds read-only profile/budget/calibration inspection only;
-- database schema: **45**.
+## GitHub-ready full release
+
+This repository is materialized so it can be uploaded/replaced as a complete v0.23.2 tree without running an upgrader first. GitHub Actions validates the pushed tree automatically. See [Full GitHub-Ready Materialization](.agents/docs/GITHUB_READY_FULL_RELEASE_V0232.md).
 
 ## Upgrade
-
-See [UPGRADE_FROM_0.23.0.md](UPGRADE_FROM_0.23.0.md).
+See [UPGRADE_FROM_0.23.1.md](UPGRADE_FROM_0.23.1.md).
 
 ## Node documentation
-
+- [Context Expansion & Compression Evaluation](.agents/docs/CONTEXT_EXPANSION_COMPRESSION_EVALUATION_V0232.md)
 - [Adaptive Token Budget & Model Profiles](.agents/docs/ADAPTIVE_TOKEN_BUDGET_MODEL_PROFILES_V0231.md)
 - [Requirement-Preserving Context Compression](.agents/docs/REQUIREMENT_PRESERVING_CONTEXT_COMPRESSION_V0230.md)
-- [Vietnamese developer guide](huong_dan.vi.md)
-- [English developer guide](huong_dan.en.md)

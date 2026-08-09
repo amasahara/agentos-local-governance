@@ -170,3 +170,10 @@ Added Primary-Project Consolidation as a directed, plan-hashed workflow:
 - **Control Plane invariant:** protected request/instruction/scope/plan content remains lossless and budgeted before evidence; control overflow fails closed.
 - **MCP boundary:** added read-only profile/history/calibration inspection only; observation/profile/budget/model mutation is not exposed.
 - **Compatibility:** SOURCE/TARGET, signed-audit, privacy, secret/key and v0.23.0 transport invariants remain unchanged.
+
+
+## v0.23.2 — Context Expansion & Compression Evaluation
+
+- **User requirement:** add bounded read-only evidence expansion and deterministic compression evaluation.
+- **Enforcement:** schema 46, source/transport hash pins, ephemeral expanded content, evaluation hard gates, read-only MCP, and shadow comparison without activation authority.
+- **Compatibility:** lossless Control Plane, adaptive budgeting, privacy, secret/key, SOURCE/TARGET, signed-audit and unified-runtime boundaries remain unchanged.

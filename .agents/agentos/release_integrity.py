@@ -23,6 +23,7 @@ from .schema_version import CURRENT_SCHEMA_VERSION
 CORE_FILES = (
     ".agents/agentos/core.py",
     ".agents/agentos/cli.py",
+    ".agents/agentos/cli_runtime.py",
     ".agents/agentos/db.py",
     ".agents/agentos/policy.py",
     ".agents/agentos/workflow.py",
@@ -32,21 +33,26 @@ CORE_FILES = (
     ".agents/agentos/external_audit.py",
     ".agents/agentos/memory.py",
     ".agents/agentos/mcp_server.py",
+    ".agents/agentos/mcp_runtime.py",
+    ".agents/agentos/mcp_catalog.py",
     ".agents/tests/test_agentos.py",
     ".agents/bin/agentos",
     ".agents/bin/agentos-mcp",
     ".agents/bin/agentos.cmd",
-    ".agents/bin/agentos.v0224",
+    ".agents/bin/agentos-mcp.cmd",
 )
 RELEASE_FILES = (
     ".agents/bin/hooks/pre-commit",
     "tools/apply_v0223.py",
     "tools/apply_v0224.py",
+    "tools/apply_v0225.py",
     "tools/build_manifest.py",
     "tools/verify_manifest.py",
     "tools/validate_release.py",
     ".agents/tests/test_governance_enforcement_v0224.py",
+    ".agents/tests/test_unified_runtime_v0225.py",
     "UPGRADE_FROM_0.22.3.md",
+    "UPGRADE_FROM_0.22.4.md",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -60,6 +66,7 @@ EXTENSION_FILES = (
     ".agents/agentos/reconciliation_recovery.py",
     ".agents/agentos/governance_enforcement.py",
     ".agents/agentos/governance_enforcement_cli.py",
+    ".agents/agentos/release_manifest.py",
 )
 REQUIRED_POLICY_SECTIONS = (
     "language_policy", "instruction_policy", "filesystem_policy", "claim_policy",
@@ -73,6 +80,7 @@ REQUIRED_POLICY_SECTIONS = (
     "schema_mapping_policy", "read_only_extraction_policy",
     "controlled_target_insert_policy", "identity_resolution_policy",
     "reconciliation_recovery_policy", "governance_enforcement_policy",
+    "unified_runtime_policy",
 )
 
 
@@ -127,8 +135,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     findings.extend(_db_contract_findings(root))
 
     version = (root / "VERSION").read_text(encoding="utf-8").strip() if (root / "VERSION").exists() else None
-    if version != "0.22.4":
-        findings.append(_finding("version_mismatch", f"expected VERSION 0.22.4, got {version!r}", "VERSION"))
+    if version != "0.22.5":
+        findings.append(_finding("version_mismatch", f"expected VERSION 0.22.5, got {version!r}", "VERSION"))
 
     policy_path = root / ".agents/config/governance.json"
     if not policy_path.exists():
@@ -139,8 +147,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             missing = sorted(set(REQUIRED_POLICY_SECTIONS) - set(policy))
             if missing:
                 findings.append(_finding("missing_policy_sections", f"missing policy sections: {missing}", ".agents/config/governance.json"))
-            if policy.get("version") != "0.22.4":
-                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.22.4", ".agents/config/governance.json"))
+            if policy.get("version") != "0.22.5":
+                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.22.5", ".agents/config/governance.json"))
         except Exception as exc:
             findings.append(_finding("invalid_governance", f"cannot parse governance.json: {exc}", ".agents/config/governance.json"))
 
@@ -152,6 +160,45 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             text = "\n" + path.read_text(encoding="utf-8", errors="replace").strip() + "\n"
             if forbidden in text:
                 findings.append(_finding("dead_core_compat_launcher", f"dead compatibility behavior detected: {forbidden.strip()}", rel))
+
+    runtime_wrappers = {
+        ".agents/bin/agentos": "agentos.cli_runtime",
+        ".agents/bin/agentos.cmd": "agentos.cli_runtime",
+        ".agents/bin/agentos-mcp": "agentos.mcp_runtime",
+        ".agents/bin/agentos-mcp.cmd": "agentos.mcp_runtime",
+    }
+    for rel, required_runtime in runtime_wrappers.items():
+        path = root / rel
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if required_runtime not in text:
+            findings.append(_finding("runtime_wrapper_mismatch", f"wrapper must execute {required_runtime}", rel))
+        if "agentos.v0" in text or "agentos-mcp.v0" in text or "mcp_reconciliation_recovery_gateway" in text:
+            findings.append(_finding("legacy_runtime_forwarding_active", "top-level wrapper still uses version/gateway forwarding", rel))
+
+    try:
+        from .cli_runtime import command_registry
+        commands = command_registry()
+        if len(commands) != len(set(commands)):
+            findings.append(_finding("duplicate_cli_commands", "unified CLI registry contains duplicate commands"))
+    except Exception as exc:
+        findings.append(_finding("cli_runtime_unloadable", f"cannot load unified CLI registry: {exc}", ".agents/agentos/cli_runtime.py"))
+
+    try:
+        from .mcp_runtime import ALL_TOOLS
+        tool_names = [str(item.get("name")) for item in ALL_TOOLS]
+        if len(tool_names) != len(set(tool_names)):
+            findings.append(_finding("duplicate_mcp_tools", "unified MCP catalog contains duplicate tool names"))
+        if "agentos.mcp_health" not in tool_names:
+            findings.append(_finding("missing_mcp_health", "unified MCP catalog must expose agentos.mcp_health"))
+    except Exception as exc:
+        findings.append(_finding("mcp_runtime_unloadable", f"cannot load unified MCP runtime: {exc}", ".agents/agentos/mcp_runtime.py"))
+
+    for rel in (".agents/agentos/cli_runtime.py", ".agents/agentos/mcp_runtime.py"):
+        path = root / rel
+        if path.exists() and "import subprocess" in path.read_text(encoding="utf-8", errors="replace"):
+            findings.append(_finding("runtime_subprocess_forbidden", "unified runtime must not import subprocess", rel))
 
     # Runtime caches may legitimately be created while running validation. Treat
     # them as a release-integrity failure only when they are actually committed
@@ -193,6 +240,7 @@ DOC_FILES = (
     ".agents/docs/RECONCILIATION_AND_RECOVERY.md",
     ".agents/docs/CORE_REINTEGRATION_V0223.md",
     ".agents/docs/UNIFIED_GOVERNANCE_ENFORCEMENT_V0224.md",
+    ".agents/docs/UNIFIED_CLI_MCP_RUNTIME_V0225.md",
     ".agents/docs/RULES_WORKFLOW_CHANGELOG.md",
 )
 
@@ -201,7 +249,7 @@ def docs_check_current(root: Path) -> dict[str, Any]:
     """Run the current release documentation gate without stale node-version checks.
 
     Older node-specific docs checks intentionally validate their historical release
-    numbers and therefore cannot be chained as the current-release gate. v0.22.4
+    numbers and therefore cannot be chained as the current-release gate. v0.22.5
     validates their authoritative documents are present, while the core docs checker
     validates the current VERSION/governance/package synchronization.
     """

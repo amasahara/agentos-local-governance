@@ -1,4 +1,6 @@
 #!/usr/bin/env sh
 set -eu
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-exec "$HERE/agentos.v0224" "$@"
+ROOT=$(CDPATH= cd -- "$HERE/../.." && pwd)
+export AGENTOS_PROJECT_ROOT="$ROOT"
+PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.cli_runtime --root "$ROOT" "$@"

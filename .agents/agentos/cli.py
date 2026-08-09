@@ -202,13 +202,13 @@ def _doctor(root: Path, scope: str) -> dict[str, Any]:
     return {"ok": ok, "checks": checks}
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     """Execute one AgentOS command.
 
     Returns:
         Process exit code.
     """
-    args=parser().parse_args(); root=Path(args.root).resolve(); session=normalize_session_id(args.session_id)
+    args=parser().parse_args(argv); root=Path(args.root).resolve(); session=normalize_session_id(args.session_id)
     try:
         tid=getattr(args,"task_id",None)
         task_commands={"role-assign","collaboration-readiness","message-send","message-list","job-submit","tools-discover","plan-submit","plan-show","precommit-check","context-build","context-status","context-explain","context-compare","memory-record","finding-record","approve-task","acquire-resource","heartbeat-resource","release-resource","list-resources","claim-task","handoff-task","mark-step","workflow-status","index-build","guard-tool","prepare-change","record-claim","list-claims","egress-report","cache-store","cache-lookup","report","proxy-execute","mcp-serve"}

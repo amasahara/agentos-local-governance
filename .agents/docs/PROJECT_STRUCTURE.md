@@ -183,3 +183,14 @@ Central db.py + CURRENT_SCHEMA_VERSION=40
 ```
 
 `release_integrity.py`, `tools/verify_manifest.py`, and the historical + extension test suites are release gates.
+
+## v0.22.5 unified runtime entry points
+
+```text
+.agents/bin/agentos      → agentos.cli_runtime
+.agents/bin/agentos.cmd  → agentos.cli_runtime
+.agents/bin/agentos-mcp  → agentos.mcp_runtime
+.agents/bin/agentos-mcp.cmd → agentos.mcp_runtime
+```
+
+`cli_runtime.py` owns current command registration/dispatch. `mcp_runtime.py` owns current MCP JSON-RPC serving; `mcp_catalog.py` owns the flat extension read-only tool registration. Versioned launchers and historical gateway modules are retained only as inactive compatibility/audit artifacts.

@@ -1,5 +1,5 @@
 {
-  "version": "0.22.4",
+  "version": "0.22.5",
   "language_policy": {
     "understand_user_language_directly": true,
     "preserve_original_request": true,
@@ -802,5 +802,21 @@
       "db.recovery.lineage.finalize"
     ],
     "mcp_privileged_mutation_exposed": false
+  },
+  "unified_runtime_policy": {
+    "enabled": true,
+    "single_python_cli_runtime_required": true,
+    "single_python_mcp_runtime_required": true,
+    "version_forwarding_runtime_allowed": false,
+    "mcp_subprocess_forwarding_allowed": false,
+    "windows_posix_cli_parity_required": true,
+    "windows_posix_mcp_parity_required": true,
+    "duplicate_cli_commands_allowed": false,
+    "duplicate_mcp_tools_allowed": false,
+    "unknown_cli_command_must_fail": true,
+    "unknown_mcp_method_must_return_jsonrpc_error": true,
+    "mcp_health_tool_required": true,
+    "extension_mutation_tools_exposed_over_mcp": false,
+    "legacy_launchers_may_exist_but_must_not_be_active": true
   }
 }

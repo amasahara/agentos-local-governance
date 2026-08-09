@@ -231,3 +231,20 @@ Use task/session context before privileged database commands:
 ```
 
 The task must be approved, owned by the session, workflow-approved, and free of unacknowledged governance drift. Signed-audit failure blocks the mutation.
+
+## v0.22.5 unified runtime commands
+
+```bash
+.agents/bin/agentos runtime-health
+.agents/bin/agentos commands-list
+.agents/bin/agentos release-integrity-check
+```
+
+Windows:
+
+```bat
+.agents\bin\agentos.cmd runtime-health
+.agents\bin\agentos.cmd commands-list
+```
+
+MCP clients should launch `.agents/bin/agentos-mcp` on POSIX or `.agents\bin\agentos-mcp.cmd` on Windows. Governed core proxy tools require `--task-id`, `--session-id`, and `AGENTOS_SESSION_TOKEN`; extension read-only tools and discovery/health remain non-mutating.

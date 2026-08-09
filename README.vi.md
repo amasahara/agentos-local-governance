@@ -1,69 +1,91 @@
 [🇻🇳 Tiếng Việt](README.vi.md) | [🇬🇧 English](README.en.md)
 
-# AgentOS Local Governance v0.22.4
+# AgentOS Local Governance v0.22.5
 
-## Unified Governance Enforcement & Signed Audit
+## Unified CLI/MCP & Cross-Platform Runtime
 
-v0.22.4 đưa nhánh project/database v0.20–v0.22 vào cùng enforcement boundary với lõi governance đã được khôi phục ở v0.22.3.
+v0.22.5 loại bỏ chuỗi version-forwarding khỏi **đường chạy thực tế** của CLI và MCP, đồng thời giữ nguyên enforcement boundary v0.22.4.
 
-### Luồng bắt buộc cho privileged mutation
+### Runtime mới
 
 ```text
-approved task + owner session
-        ↓
-workflow approve_task done
-        ↓
-initialized baseline + no drift
-        ↓
-approved sensitive override only
-        ↓
-one-time guard token
-        ↓
-domain transaction
-        ↓
-privacy-safe signed domain events
-        ↓
-guarded completion + signed completion
+Linux/macOS                      Windows
+.agents/bin/agentos             .agents/bin/agentos.cmd
+        \                           /
+         → agentos.cli_runtime ←
+                  ↓
+          unified command registry
+                  ↓
+      core CLI / feature CLI in-process
+
+.agents/bin/agentos-mcp         .agents/bin/agentos-mcp.cmd
+        \                           /
+         → agentos.mcp_runtime ←
+                  ↓
+          one flat MCP catalog
+                  ↓
+core governed proxy + extension read-only handlers
 ```
 
 ### Guarantee
 
-- Privileged database-domain mutation trên một AgentOS project hợp lệ bắt buộc có `task_id` và `session_id`.
-- Task phải được approve và session gọi phải là owner hiện tại.
-- Governance baseline chưa acknowledge hoặc có drift chưa acknowledge sẽ chặn mutation.
-- Mỗi business operation dùng đúng một guard token; không tạo token theo từng câu SQL nội bộ.
-- Sáu event table của database pipeline lưu `governed_operation_id` và `external_event_hash`.
-- Signed audit failure chặn operation trước khi local domain event được persist.
-- Sáu module database dùng chung `agentos.db.connect()`; SQLite foreign keys và busy timeout áp dụng nhất quán.
-- Các invariant SOURCE write/raw TARGET write/identity auto-decision/in-doubt auto-recovery được validate fail-closed và không thể bật bằng policy override.
-- MCP tiếp tục read-only đối với privileged database mutations.
+- Top-level CLI không `exec` qua `agentos.v0224 → ... → agentos.v0195`.
+- Top-level MCP không `Popen` qua chuỗi gateway/version backend.
+- POSIX và Windows gọi cùng Python runtime.
+- Registry CLI phát hiện duplicate command và fail-closed.
+- MCP catalog phát hiện duplicate tool và fail-closed.
+- Unknown CLI command trả exit code khác 0.
+- Unknown MCP method trả JSON-RPC `-32601`.
+- MCP có `agentos.mcp_health` để kiểm tra catalog/runtime mà không lộ secret.
+- 14 core proxy tools vẫn đi qua session gateway/enforcement hiện hữu.
+- 37 extension tools vẫn chỉ đọc; database/identity/recovery mutation không được expose qua MCP.
+- Privileged extension CLI mutation vẫn bắt buộc `--task-id` + `--session-id` và dùng enforcement v0.22.4.
+- Legacy `agentos.v02xx`, `agentos-mcp.v02xx` và gateway module có thể còn trong source để audit/backward reference nhưng không được top-level wrapper gọi.
 
-### CLI
+### Quy mô catalog hiện tại
 
-Privileged command dùng governance context ở trước command:
-
-```bash
-.agents/bin/agentos \
-  --task-id TASK-001 \
-  --session-id AGENT-1 \
-  db-connection-register ...
+```text
+CLI commands:                 193 unique
+MCP core proxy tools:          14
+MCP extension read-only:       37
+MCP health:                     1
+MCP total:                     52 unique
+Database schema:               41
 ```
 
-Có thể dùng `AGENTOS_TASK_ID` và `AGENTOS_SESSION_ID` thay cho prefix flags.
+### Lệnh kiểm tra
 
-### Schema
+```bash
+.agents/bin/agentos runtime-health
+.agents/bin/agentos commands-list
+.agents/bin/agentos release-integrity-check
+```
 
-Database schema: **41**
+MCP health:
 
-Schema 41 bổ sung `governed_operations` và correlation columns cho:
+```text
+agentos.mcp_health
+```
 
-- `db_boundary_events`
-- `db_schema_mapping_events`
-- `db_extraction_events`
-- `db_target_insert_events`
-- `identity_resolution_events`
-- `db_recovery_events`
+### Windows
 
-### Roadmap tiếp theo
+```bat
+.agents\bin\agentos.cmd runtime-health
+.agents\bin\agentos.cmd commands-list
+```
 
-v0.22.5 sẽ flatten CLI/MCP và hoàn thiện cross-platform runtime; v0.22.4 cố ý chưa thực hiện refactor đó.
+MCP:
+
+```bat
+.agents\bin\agentos-mcp.cmd --task-id TASK-001 --session-id AGENT-A
+```
+
+Core MCP proxy actions yêu cầu task/session binding và `AGENTOS_SESSION_TOKEN`. Extension read-only tools và health/discovery không yêu cầu mutation context.
+
+### Security boundary
+
+v0.22.5 **không nới quyền** so với v0.22.4. Unified runtime chỉ thay transport/dispatch. Task approval, session ownership, baseline/drift, one-time token và signed audit của privileged database-domain mutation vẫn giữ nguyên.
+
+## Upgrade
+
+Xem [UPGRADE_FROM_0.22.4.md](UPGRADE_FROM_0.22.4.md).

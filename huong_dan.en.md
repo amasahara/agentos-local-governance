@@ -1,20 +1,12 @@
-# AgentOS v0.22.4 Developer Guide
+# AgentOS v0.22.5 Developer Guide
 
-[🇻🇳 Vietnamese](huong_dan.vi.md) | [🇬🇧 English](huong_dan.en.md)
+English
+
+After upgrade, run `release-integrity-check`, `db-status`, `docs-check`, `instruction-check`, the complete pytest suite, and `manifest-verify`. Do not use production TARGET writes unless the integrity gate passes.
 
 Database schema: **41**
 
-## Running a privileged database command
 
-1. Create a task and complete its approval workflow.
-2. Claim the task with the session that will execute the operation.
-3. Acknowledge the governance baseline and resolve any drift.
-4. Invoke the command with governance context:
+## v0.22.5 — Unified CLI/MCP
 
-```bash
-.agents/bin/agentos --task-id TASK-001 --session-id AGENT-1 db-target-insert-execute --insert-run-id 12
-```
-
-AgentOS validates task/session, policy, workflow, and baseline/drift; issues one single-use guard token; runs the domain transaction; signs domain events; and completes the token.
-
-If signed audit cannot be persisted, the mutation fails closed.
+Use `.agents/bin/agentos` or `.agents\bin\agentos.cmd`; both enter `agentos.cli_runtime`. MCP uses `agentos.mcp_runtime`. Verify with `agentos runtime-health`. Do not use the historical `agentos.v02xx` chain as the current runtime path.

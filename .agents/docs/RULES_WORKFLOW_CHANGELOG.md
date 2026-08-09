@@ -125,3 +125,14 @@ Added Primary-Project Consolidation as a directed, plan-hashed workflow:
 - Mirrored privacy-safe domain events to the Ed25519 external audit chain.
 - Replaced six module-local SQLite connection factories with the central hardened `agentos.db.connect()` through a lazy migration registry.
 - Added fail-closed policy poisoning checks for SOURCE/TARGET/identity/recovery invariants.
+
+## v0.22.5 — Unified CLI/MCP & Cross-Platform Runtime
+
+- Replaced active version-chained CLI routing with one Python `cli_runtime` registry.
+- Replaced active subprocess MCP forwarding with one Python `mcp_runtime` and flat unique catalog.
+- Added POSIX/Windows CLI and MCP wrapper parity.
+- Added fail-loud unknown-command / JSON-RPC method-not-found behavior and `agentos.mcp_health`.
+- Kept historical version launchers/gateway modules as inactive compatibility/audit artifacts only.
+- Preserved v0.22.4 privileged mutation enforcement and kept extension mutation outside MCP.
+- Fixed stale v0.20.0/v0.20.1 CLI schema constant imports exposed by unified loading.
+- Database schema remains 41.

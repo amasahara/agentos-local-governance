@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the v0.22.4 unified-governance release tree."""
+"""Validate the v0.22.5 unified-runtime release tree."""
 from __future__ import annotations
 import argparse, json, os, subprocess, sys, tempfile
 from pathlib import Path

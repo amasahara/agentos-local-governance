@@ -1,92 +1,59 @@
 {
-  "baseline": "0.22.3",
-  "database": {
-    "current_schema_authority": 41,
-    "direct_sqlite_connect_in_pipeline_modules": false,
-    "lazy_feature_migration_registry": true,
-    "six_pipeline_modules_use_central_connect": true
-  },
+  "version": "0.22.5",
+  "release_name": "Unified CLI/MCP & Cross-Platform Runtime",
   "database_schema": 41,
-  "external_projects_touched_by_upgrade": false,
-  "governance_enforcement": {
-    "blocks_unacknowledged_governance_drift": true,
-    "central_hash_chain_domain_audit": true,
-    "domain_event_correlation": [
-      "governed_operation_id",
-      "external_event_hash"
-    ],
-    "mcp_privileged_mutation_exposed": false,
-    "one_business_operation_one_guard_token": true,
-    "requires_approve_task_workflow_step": true,
-    "requires_approved_task": true,
-    "requires_initialized_governance_baseline": true,
-    "requires_session_id": true,
-    "requires_task_id": true,
-    "requires_task_owner_session": true,
-    "signed_audit_failure_blocks_mutation": true,
-    "signed_completion_event": true,
-    "signed_denial_event": true,
-    "signed_domain_events": true,
-    "signed_request_event": true
+  "source_basis": {
+    "github_repository": "amasahara/agentos-local-governance",
+    "github_version_observed": "0.22.3",
+    "github_runtime_state_observed": "transitional: top CLI points to v0224 while VERSION remains 0.22.3",
+    "v0.22.4_baseline": "previously validated v0.22.4 full release/overlay applied over the GitHub-derived v0.22.3 baseline"
   },
-  "known_scope_boundaries": {
-    "data_subject_rights": "deferred to v0.22.7",
-    "live_external_database_integration": false,
-    "mcp_cli_flattening": "deferred to v0.22.5",
-    "secret_resolver_and_lineage_key_lifecycle": "deferred to v0.22.6",
-    "windows_full_feature_dispatch": "deferred to v0.22.5"
+  "runtime": {
+    "cli_runtime": "agentos.cli_runtime",
+    "mcp_runtime": "agentos.mcp_runtime",
+    "cli_command_count": 193,
+    "mcp_tool_count": 52,
+    "mcp_core_proxy_tools": 14,
+    "mcp_extension_readonly_tools": 37,
+    "mcp_health_tools": 1,
+    "version_forwarding_active": false,
+    "mcp_subprocess_forwarding_active": false,
+    "native_windows_execution_tested": false,
+    "windows_wrapper_static_parity_tested": true
   },
-  "negative_tests": [
-    "missing task/session blocks privileged mutation",
-    "unapproved task blocks privileged mutation",
-    "wrong owner session blocks privileged mutation",
-    "governance drift blocks mutation before state change",
-    "policy poisoning of non-overridable safety fields is rejected",
-    "signed audit sink failure blocks mutation",
-    "target insert requires governed context",
-    "CLI privileged command requires task/session context"
-  ],
-  "release": "0.22.4",
   "tests": {
-    "collected_total": 259,
-    "core_reintegration_v0223": {
-      "count": 9,
-      "passed": 9
-    },
-    "full_single_process_completed": false,
-    "full_single_process_note": "Not claimed. 259 tests were collected and verified by isolated historical/feature groups because the build tool runtime cannot sustain the full monolithic command.",
-    "historical_core": {
-      "count": 79,
-      "execution": "isolated node-id groups in this build environment",
-      "note": "The execution environment times out on the long monolithic pytest command; all 79 historical node IDs were verified through smaller pytest groups, without counting timed-out commands as passes.",
-      "passed": 79
-    },
-    "passed_total_by_isolated_groups": 259,
-    "project_database_feature_and_v0224": {
-      "breakdown": {
-        "v0.20.1_v0.20.2_v0.21.0": 62,
-        "v0.21.1": 23,
-        "v0.21.2": 25,
-        "v0.22.0": 21,
-        "v0.22.1": 10,
-        "v0.22.2": 18,
-        "v0.22.4": 12
-      },
-      "count": 171,
-      "passed": 171
-    }
+    "historical_core": 79,
+    "v0_20_1_project_selection": 17,
+    "v0_20_2_project_consolidation": 21,
+    "v0_21_0_database_boundary": 24,
+    "v0_21_1_schema_mapping": 23,
+    "v0_21_2_read_only_extraction": 25,
+    "v0_22_0_controlled_target_insert": 21,
+    "v0_22_1_identity_resolution": 10,
+    "v0_22_2_reconciliation_recovery": 18,
+    "v0_22_3_core_reintegration": 9,
+    "v0_22_4_governance_enforcement": 12,
+    "v0_22_5_unified_runtime": 11,
+    "verified_total": 270,
+    "clean_upgrade_recent_regression": 32
   },
-  "title": "Unified Governance Enforcement & Signed Audit",
-  "validation": {
-    "clean_upgrade_baseline_manifest_verified": true,
-    "clean_upgrade_from_v0_22_3": true,
-    "clean_upgrade_postflight": true,
+  "gates": {
+    "release_integrity": true,
     "docs_check": true,
-    "foreign_keys_on": true,
     "instruction_check": true,
-    "migration_versions": "1..41 contiguous",
     "policy_load": true,
-    "python_compile": true,
-    "release_integrity_check": true
-  }
+    "schema_1_to_41": true,
+    "foreign_keys_on": true,
+    "unknown_cli_fails_nonzero": true,
+    "unknown_mcp_method_returns_minus_32601": true,
+    "duplicate_cli_commands": 0,
+    "duplicate_mcp_tools": 0,
+    "privileged_extension_mcp_mutation_exposed": false,
+    "clean_upgrade_v0224_to_v0225": true
+  },
+  "limitations": [
+    "The build environment cannot execute native Windows cmd.exe, so Windows parity is verified statically and through the shared Python runtime rather than on a native Windows host.",
+    "GitHub main reported VERSION 0.22.3 during verification even though its top CLI already referenced agentos.v0224; v0.22.5 therefore uses the validated v0.22.4 release generated from that GitHub-derived baseline rather than claiming the remote was a synchronized v0.22.4 tag.",
+    "Historical gateway/version files remain in the repository for compatibility/audit evidence, but top-level v0.22.5 wrappers do not use them."
+  ]
 }

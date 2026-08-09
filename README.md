@@ -1,11 +1,11 @@
 # AgentOS Local Governance
 
-**Current release: v0.22.4 — Unified Governance Enforcement & Signed Audit**
+**Current release: v0.22.5 — Unified CLI/MCP & Cross-Platform Runtime**
 
 [🇻🇳 Tiếng Việt](README.vi.md) | [🇬🇧 English](README.en.md)
 
-Privileged v0.21–v0.22 database-domain mutations now execute through approved task/session governance, baseline/drift checks, one-time guarded execution, and Ed25519 signed audit. Database schema: **41**.
+AgentOS now uses one Python CLI registry and one Python MCP runtime on the active execution path. POSIX and Windows wrappers call the same runtimes; legacy version launchers/gateways remain historical compatibility artifacts only. Database schema remains **41**.
 
 ## Upgrade
 
-See [UPGRADE_FROM_0.22.3.md](UPGRADE_FROM_0.22.3.md).
+See [UPGRADE_FROM_0.22.4.md](UPGRADE_FROM_0.22.4.md).

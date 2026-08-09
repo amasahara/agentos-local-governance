@@ -1,62 +1,36 @@
-[🇻🇳 Vietnamese](README.vi.md) | [🇬🇧 English](README.en.md)
+[🇻🇳 Tiếng Việt](README.vi.md) | [🇬🇧 English](README.en.md)
 
-# AgentOS Local Governance v0.22.4
+# AgentOS Local Governance v0.22.5
 
-## Unified Governance Enforcement & Signed Audit
+## Unified CLI/MCP & Cross-Platform Runtime
 
-v0.22.4 places the v0.20–v0.22 project/database branch inside the same enforcement boundary as the governance core restored in v0.22.3.
+v0.22.5 removes version-forwarding chains from the **active runtime path** while preserving the v0.22.4 enforcement boundary.
 
-### Required privileged-mutation lifecycle
+### Runtime architecture
 
 ```text
-approved task + owner session
-        ↓
-workflow approve_task done
-        ↓
-initialized baseline + no drift
-        ↓
-approved sensitive override only
-        ↓
-one-time guard token
-        ↓
-domain transaction
-        ↓
-privacy-safe signed domain events
-        ↓
-guarded completion + signed completion
+POSIX agentos ─┐
+Windows .cmd ──┴→ agentos.cli_runtime → one command registry → in-process handlers
+
+POSIX MCP ─────┐
+Windows MCP.cmd┴→ agentos.mcp_runtime → one flat tool catalog → direct handlers
 ```
 
 ### Guarantees
 
-- Privileged database-domain mutations on a valid AgentOS project require `task_id` and `session_id`.
-- The task must be approved and the caller session must currently own it.
-- An uninitialized baseline or unacknowledged governance drift blocks mutation.
-- One business operation consumes one guard token; SQL statements do not receive separate tokens.
-- Six database-pipeline event tables persist `governed_operation_id` and `external_event_hash`.
-- Signed-audit failure blocks the operation before the local domain event is persisted.
-- All six database modules use the shared `agentos.db.connect()` path, giving consistent SQLite foreign-key and busy-timeout enforcement.
-- SOURCE write, raw TARGET write, automatic identity decisions, and automatic in-doubt recovery remain fail-closed non-overridable invariants.
-- MCP remains read-only for privileged database mutations.
+- No top-level CLI execution through `agentos.v0224 → ... → agentos.v0195`.
+- No MCP subprocess forwarding through historical gateway/version chains.
+- POSIX and Windows wrappers execute the same Python runtimes.
+- Duplicate CLI commands and MCP tool names fail closed.
+- Unknown CLI commands return non-zero; unknown MCP methods return JSON-RPC `-32601`.
+- `agentos.mcp_health` reports privacy-safe runtime/catalog health.
+- 14 historical core MCP proxy tools remain governed through the session gateway.
+- 37 project/database extension MCP tools remain read-only; privileged database/identity/recovery mutation is not exposed.
+- Privileged extension CLI commands still require task/session context and v0.22.4 signed governance enforcement.
+- Historical launchers/gateways may remain for audit/reference but are not active runtime dependencies.
 
-### CLI
+Current registry size: **193 CLI commands** and **52 MCP tools**. Database schema remains **41**.
 
-Privileged commands accept governance context before the command:
+## Upgrade
 
-```bash
-.agents/bin/agentos \
-  --task-id TASK-001 \
-  --session-id AGENT-1 \
-  db-connection-register ...
-```
-
-`AGENTOS_TASK_ID` and `AGENTOS_SESSION_ID` may be used instead of prefix flags.
-
-### Schema
-
-Database schema: **41**
-
-Schema 41 adds `governed_operations` plus correlation columns to the six domain event tables.
-
-### Next roadmap node
-
-v0.22.5 will flatten CLI/MCP routing and complete the cross-platform runtime. That refactor is deliberately outside v0.22.4.
+See [UPGRADE_FROM_0.22.4.md](UPGRADE_FROM_0.22.4.md).

@@ -50,7 +50,7 @@ def test_unknown_core_cli_command_fails_nonzero():
 def test_historical_test_is_release_critical():
     text=(ROOT/".agents/tests/test_agentos.py").read_text()
     assert "test_proxy_read_creates_signed_external_evidence" in text
-    assert 'load_policy(ROOT)["version"] == "0.22.4"' in text
+    assert 'load_policy(ROOT)["version"] == "0.22.5"' in text
 
 
 def test_runtime_cache_files_are_not_release_authority(tmp_path: Path):
@@ -73,5 +73,5 @@ def test_v0223_docs_check_replaces_stale_version_chain():
     assert cp.returncode == 0, cp.stderr + cp.stdout
     report=json.loads(cp.stdout)
     assert report["ok"] is True
-    assert report["version"] == "0.22.4"
+    assert report["version"] == "0.22.5"
 

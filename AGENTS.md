@@ -258,18 +258,16 @@ Database consolidation is directional and fail-closed.
 <!-- AGENTOS_V0223_CORE_REINTEGRATION_END -->
 
 
+<!-- AGENTOS_V0225_UNIFIED_RUNTIME_BEGIN -->
+## AgentOS v0.22.5 — Unified CLI/MCP & Cross-Platform Runtime
 
-<!-- AGENTOS_V0224_UNIFIED_GOVERNANCE_ENFORCEMENT_BEGIN -->
-## AgentOS v0.22.4 — Unified Governance Enforcement & Signed Audit
-
-- Every privileged v0.21-v0.22 database-domain mutation on a valid AgentOS project MUST run inside one task/session-bound governed operation.
-- The task MUST be approved, the caller session MUST own it, and the `approve_task` workflow step MUST already be complete.
-- Governance baseline MUST be initialized and unacknowledged drift MUST block mutation. Sensitive local overrides MUST already be approved.
-- One business operation MUST consume one single-use `guard_tool` execution token and MUST complete it exactly once; do not issue tokens per internal SQL statement.
-- A signed `governed_operation.request` event MUST exist before mutation. Privacy-safe domain events MUST be mirrored to Ed25519 signed audit. Completion/denial MUST also be signed.
-- Failure to write required signed audit evidence MUST fail closed.
-- Domain event rows MUST correlate to `governed_operation_id` and `external_event_hash` where schema 41 provides those fields.
-- SOURCE writes, raw/generic TARGET writes, automatic identity decisions, automatic `in_doubt` recovery, and automatic partial-target repair are non-overridable safety invariants.
-- MCP MUST remain read-only for privileged database-domain operations.
-- Database-domain modules MUST use the central AgentOS SQLite connection policy; local independent `sqlite3.connect()` state paths are forbidden.
-<!-- AGENTOS_V0224_UNIFIED_GOVERNANCE_ENFORCEMENT_END -->
+- Current CLI execution MUST enter through `agentos.cli_runtime`; top-level wrappers MUST NOT version-forward through `agentos.v02xx`.
+- Current MCP execution MUST enter through `agentos.mcp_runtime`; top-level wrappers MUST NOT subprocess-forward through historical MCP gateways/backends.
+- POSIX and Windows wrappers MUST invoke the same Python runtime and expose the same command/tool registry semantics.
+- Duplicate CLI command names or MCP tool names are release-blocking errors.
+- Unknown CLI commands MUST fail non-zero; unknown MCP methods MUST return a JSON-RPC method-not-found error.
+- Historical version launchers/gateway modules may remain for audit/backward reference but MUST NOT be referenced by top-level current-runtime wrappers.
+- Governed core MCP proxy tools retain their existing task/session/session-token enforcement.
+- Project/database extension MCP tools remain read-only; privileged database/identity/recovery mutation MUST NOT be added to MCP.
+- Privileged extension CLI mutations remain bound to v0.22.4 task/session/capability/drift/token/signed-audit enforcement.
+<!-- AGENTOS_V0225_UNIFIED_RUNTIME_END -->

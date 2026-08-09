@@ -3,5 +3,5 @@ setlocal
 set "ROOT=%~dp0\..\.."
 set "AGENTOS_PROJECT_ROOT=%ROOT%"
 set "PYTHONPATH=%ROOT%\.agents;%PYTHONPATH%"
-python -m agentos.cli_runtime --root "%ROOT%" %*
+python -m agentos.mcp_runtime --root "%ROOT%" %*
 exit /b %ERRORLEVEL%

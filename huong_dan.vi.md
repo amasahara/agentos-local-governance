@@ -1,20 +1,12 @@
-# Hướng dẫn AgentOS v0.22.4
+# Hướng dẫn AgentOS v0.22.5
 
-[🇻🇳 Tiếng Việt](huong_dan.vi.md) | [🇬🇧 English](huong_dan.en.md)
+Tiếng Việt
+
+Sau khi nâng cấp, chạy `release-integrity-check`, `db-status`, `docs-check`, `instruction-check`, toàn bộ pytest, rồi `manifest-verify`. Không triển khai TARGET write production nếu integrity gate chưa pass.
 
 Database schema: **41**
 
-## Chạy privileged database command
 
-1. Tạo task và hoàn tất approval workflow.
-2. Claim task bằng session sẽ thực thi.
-3. Acknowledge governance baseline và xử lý mọi drift trước khi mutation.
-4. Gọi lệnh với context:
+## v0.22.5 — Unified CLI/MCP
 
-```bash
-.agents/bin/agentos --task-id TASK-001 --session-id AGENT-1 db-target-insert-execute --insert-run-id 12
-```
-
-AgentOS sẽ kiểm task/session, policy, workflow, baseline/drift, cấp one-time guard token, chạy domain transaction, ký các domain event và complete token.
-
-Nếu signed audit không ghi được, mutation phải fail-closed.
+Dùng `.agents/bin/agentos` hoặc `.agents\bin\agentos.cmd`; cả hai đi vào `agentos.cli_runtime`. MCP dùng `agentos.mcp_runtime`. Kiểm tra bằng `agentos runtime-health`. Không gọi trực tiếp chuỗi `agentos.v02xx` trong vận hành mới.

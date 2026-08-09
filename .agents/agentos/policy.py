@@ -20,7 +20,7 @@ from .db import connect
 
 CLAIM_TYPES = {"business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"}
 RISK_LEVELS = {"low", "medium", "high"}
-SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy"}
+SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy"}
 SAFE_OVERRIDE_KEYS = {"source_root", "test_path", "encoding", "runtime_paths"}
 
 
@@ -74,7 +74,7 @@ def load_policy(root: Path) -> dict[str, Any]:
 
 def validate_policy(policy: dict[str, Any]) -> None:
     """Fail closed when mandatory policy sections are absent or invalid."""
-    required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy"}
+    required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy"}
     missing = sorted(required - policy.keys())
     if missing:
         raise RuntimeError(f"missing policy keys: {missing}")
@@ -109,3 +109,21 @@ def validate_policy(policy: dict[str, Any]) -> None:
     poisoned = [f"{section}.{key}" for section, key in required_false if policy[section].get(key) is not False]
     if poisoned:
         raise RuntimeError(f"non-overridable safety invariant violated: {poisoned}")
+    runtime = policy["unified_runtime_policy"]
+    runtime_required_true = (
+        "enabled", "single_python_cli_runtime_required", "single_python_mcp_runtime_required",
+        "windows_posix_cli_parity_required", "windows_posix_mcp_parity_required",
+        "unknown_cli_command_must_fail", "unknown_mcp_method_must_return_jsonrpc_error",
+        "mcp_health_tool_required", "legacy_launchers_may_exist_but_must_not_be_active",
+    )
+    runtime_disabled = [key for key in runtime_required_true if runtime.get(key) is not True]
+    if runtime_disabled:
+        raise RuntimeError(f"unified runtime invariant disabled: {runtime_disabled}")
+    runtime_required_false = (
+        "version_forwarding_runtime_allowed", "mcp_subprocess_forwarding_allowed",
+        "duplicate_cli_commands_allowed", "duplicate_mcp_tools_allowed",
+        "extension_mutation_tools_exposed_over_mcp",
+    )
+    runtime_poisoned = [key for key in runtime_required_false if runtime.get(key) is not False]
+    if runtime_poisoned:
+        raise RuntimeError(f"unified runtime fail-closed invariant violated: {runtime_poisoned}")

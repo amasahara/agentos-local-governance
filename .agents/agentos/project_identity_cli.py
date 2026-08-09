@@ -21,7 +21,7 @@ from typing import Any
 from .project_identity import (
     ProjectIdentityError,
     ROLE_VALUES,
-    SCHEMA_VERSION,
+    MIGRATION_VERSION,
     ensure_instance_id,
     ensure_project_id,
     fork_project_identity,
@@ -151,7 +151,7 @@ def docs_check_v0200(root: Path) -> dict[str, Any]:
             "consistent": version_consistent,
         },
         "required_version": "0.20.0",
-        "schema": SCHEMA_VERSION,
+        "schema": MIGRATION_VERSION,
         "missing_documents": missing,
         "landing_links": links,
         "language_switchers": language_switchers,

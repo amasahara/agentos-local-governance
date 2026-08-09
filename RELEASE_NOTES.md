@@ -1,16 +1,16 @@
-# AgentOS Local Governance v0.22.4 — Release Notes
+# AgentOS Local Governance v0.22.5 — Release Notes
 
-## Unified Governance Enforcement & Signed Audit
+## Unified CLI/MCP & Cross-Platform Runtime
 
-- Added schema 41 `governed_operations`.
-- Added `governed_operation_id` and `external_event_hash` to six database-domain event tables.
-- Added task/session-bound `governed_mutation` enforcement for privileged database mutations.
-- Reused the core `guard_tool` / `complete_tool` single-use token lifecycle.
-- Added Ed25519 signed request, domain-event, denial, and completion evidence.
-- Blocked mutations on unapproved tasks, wrong session ownership, incomplete workflow approval, uninitialized baseline, governance drift, unapproved sensitive override, and signed-audit failure.
-- Replaced six module-local SQLite connection factories with the central hardened database connection through a lazy migration registry.
-- Added non-overridable policy-poisoning checks for SOURCE/TARGET/identity/recovery safety flags.
-- Added CLI prefix context: `--task-id` and `--session-id`.
-- MCP mutation exposure remains disabled.
-
-v0.22.5 remains responsible for flattening version-chained CLI/MCP routing and completing cross-platform runtime parity.
+- Added `agentos.cli_runtime`: one in-process command registry for core and v0.20-v0.22 extension CLIs.
+- Added `agentos.mcp_runtime`: one stdio JSON-RPC MCP server with flat catalog/direct dispatch.
+- Added `agentos.mcp_catalog` for unique extension read-only tool registration.
+- Added POSIX/Windows parity wrappers for both CLI and MCP.
+- Removed version-chained launchers and subprocess gateway forwarding from the top-level execution path.
+- Historical version launchers/gateways remain as inactive compatibility/audit artifacts.
+- Added `agentos.mcp_health`, `runtime-health`, and `commands-list` diagnostics.
+- Preserved 14 governed core proxy MCP tools and 37 extension read-only MCP tools.
+- Kept privileged extension mutation outside MCP and inside v0.22.4 task/session/signed-audit enforcement.
+- Fixed stale `SCHEMA_VERSION` imports in v0.20.0/v0.20.1 CLI modules exposed by direct in-process loading.
+- Moved manifest verification logic into an AgentOS library so unified CLI verification stays in-process.
+- Database schema remains 41.

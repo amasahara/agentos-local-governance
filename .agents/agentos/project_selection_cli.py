@@ -24,7 +24,7 @@ from typing import Any
 
 from .project_selection import (
     ProjectSelectionError,
-    SCHEMA_VERSION,
+    MIGRATION_VERSION,
     confirm_conditional_compatibility,
     create_candidate_set,
     get_candidate_set,
@@ -145,7 +145,7 @@ def docs_check_v0201(root: Path) -> dict[str, Any]:
             "consistent": version_consistent,
         },
         "required_version": "0.20.1",
-        "schema": SCHEMA_VERSION,
+        "schema": MIGRATION_VERSION,
         "missing_documents": missing,
         "landing_links": links,
         "language_switchers": language_switchers,

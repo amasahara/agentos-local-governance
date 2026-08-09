@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 EXCLUDE = {"MANIFEST.json", "CHECKSUMS.sha256"}
-EXCLUDE_PREFIXES = (".git/", ".agents/runtime/", ".agents/state/", ".pytest_cache/")
+EXCLUDE_PREFIXES = (".git/", ".agents/runtime/", ".agents/state/", ".agents/cache/", ".pytest_cache/")
 EXCLUDE_PARTS = {"__pycache__"}
 
 

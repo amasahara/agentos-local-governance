@@ -41,8 +41,18 @@ from .db import connect
 from .planning import active_plan
 from .policy import load_policy
 
-MIGRATION_VERSION = 45
+MIGRATION_VERSION = 46
 TRANSPORT_VERSION = 2
+EXPANSION_VERSION = 2
+
+EXPANSION_REASON_CODES = (
+    "inspection",
+    "requirement_gap",
+    "tool_execution",
+    "test_failure",
+    "context_miss_probe",
+    "operator_review",
+)
 
 REQUIREMENT_KINDS = (
     "objective",
@@ -77,6 +87,7 @@ CRITICAL_POLICY_SECTIONS = (
     "privacy_boundary_policy",
     "context_transport_policy",
     "adaptive_token_budget_policy",
+    "context_expansion_evaluation_policy",
 )
 
 PROHIBITION_PATTERNS = (
@@ -1242,8 +1253,8 @@ def compile_transport_pack(
     return {**manifest, "pack_id": pack_id, "ok": True}
 
 
-def _pack_row(root: Path, task_id: str, revision: int | None = None, allow_shadow: bool = False) -> dict[str, Any]:
-    statuses = ("READY", "SHADOW_READY") if allow_shadow else ("READY",)
+def _pack_row(root: Path, task_id: str, revision: int | None = None, allow_shadow: bool = False, allow_historical: bool = False) -> dict[str, Any]:
+    statuses = ("READY", "SHADOW_READY", "SUPERSEDED") if allow_historical else (("READY", "SHADOW_READY") if allow_shadow else ("READY",))
     placeholders = ",".join("?" for _ in statuses)
     sql = f"SELECT * FROM context_transport_packs WHERE task_id=? AND status IN ({placeholders})"
     args: list[Any] = [task_id, *statuses]
@@ -1276,10 +1287,14 @@ def _current_authority_state(root: Path, task_id: str) -> dict[str, Any]:
     }
 
 
-def context_transport_get(root: Path, task_id: str, revision: int | None = None) -> dict[str, Any]:
-    """Return one verified READY transport package without granting mutation authority."""
+def context_transport_get(root: Path, task_id: str, revision: int | None = None, allow_historical: bool = False) -> dict[str, Any]:
+    """Return one verified transport package without granting mutation authority.
+
+    Historical SUPERSEDED revisions are readable only when explicitly requested by
+    evaluation code; expansion continues to require the current READY revision.
+    """
     root = root.resolve()
-    row = _pack_row(root, task_id, revision)
+    row = _pack_row(root, task_id, revision, allow_historical=allow_historical)
     manifest = json.loads(row["manifest_json"])
     if _nowless_transport_hash(manifest) != row["transport_hash"]:
         raise ContextTransportError("transport_integrity_hash_mismatch")
@@ -1351,6 +1366,54 @@ def _find_handle(manifest: dict[str, Any], handle_id: str) -> dict[str, Any]:
     raise ContextTransportError("expansion_handle_not_found")
 
 
+def _validate_requirement_ids(root: Path, task_id: str, context_revision: int, requirement_ids: Iterable[str] | None) -> list[str]:
+    """Validate stable Requirement Ledger IDs without accepting arbitrary query content."""
+    values = sorted({str(value) for value in (requirement_ids or []) if str(value)})
+    if not values:
+        return []
+    placeholders = ",".join("?" for _ in values)
+    with connect(root) as c:
+        rows = c.execute(
+            f"SELECT requirement_id FROM context_requirement_ledger WHERE task_id=? AND context_revision=? AND requirement_id IN ({placeholders})",
+            (task_id, context_revision, *values),
+        ).fetchall()
+    found = {str(row["requirement_id"]) for row in rows}
+    missing = [value for value in values if value not in found]
+    if missing:
+        raise ContextTransportError(f"unknown_requirement_ids:{','.join(missing)}")
+    return values
+
+
+def _expansion_policy(root: Path) -> dict[str, Any]:
+    policy = _policy(root)
+    cfg = policy.get("context_expansion_evaluation_policy", {})
+    return cfg if isinstance(cfg, dict) else {}
+
+
+def _bounded_excerpt(lines: list[str], line_start: int, max_lines: int, max_tokens: int | None, tokenizer: Tokenizer) -> tuple[str, int, int]:
+    """Return a deterministic line window that never exceeds the requested token ceiling."""
+    start = max(1, int(line_start))
+    line_limit = max(1, int(max_lines))
+    selected = lines[start - 1 : start - 1 + line_limit]
+    if max_tokens is None:
+        text = "\n".join(selected)
+        return text, start, start + max(0, len(selected) - 1)
+    token_limit = max(1, int(max_tokens))
+    if not selected:
+        return "", start, start - 1
+    low, high, best = 0, len(selected), 0
+    while low <= high:
+        mid = (low + high) // 2
+        text = "\n".join(selected[:mid])
+        if tokenizer.count(text) <= token_limit:
+            best = mid
+            low = mid + 1
+        else:
+            high = mid - 1
+    text = "\n".join(selected[:best])
+    return text, start, start + max(0, best - 1)
+
+
 def context_expand(
     root: Path,
     task_id: str,
@@ -1358,15 +1421,39 @@ def context_expand(
     revision: int | None = None,
     max_lines: int = 240,
     record_event: bool = True,
+    line_start: int = 1,
+    max_tokens: int | None = None,
+    requirement_ids: Iterable[str] | None = None,
+    reason_code: str = "inspection",
+    session_id: int | None = None,
 ) -> dict[str, Any]:
-    """Expand one omission handle read-only with source-hash verification."""
+    """Expand one omission handle read-only with source-hash and token-bound verification.
+
+    Raw expanded content is returned to the caller only. Persistent expansion telemetry
+    stores hashes, ranges, counts, reason codes, and Requirement Ledger IDs, never the
+    excerpt itself.
+    """
     root = root.resolve()
+    cfg = _expansion_policy(root)
+    allowed_reasons = tuple(cfg.get("allowed_reason_codes", EXPANSION_REASON_CODES))
+    if reason_code not in allowed_reasons:
+        raise ContextTransportError(f"unsupported_expansion_reason:{reason_code}")
+    max_policy_lines = int(cfg.get("max_lines_per_handle", 480) or 480)
+    max_policy_tokens = int(cfg.get("max_tokens_per_handle", 8192) or 8192)
+    max_lines = min(max(1, int(max_lines)), max_policy_lines)
+    if max_tokens is None:
+        max_tokens = max_policy_tokens
+    else:
+        max_tokens = min(max(1, int(max_tokens)), max_policy_tokens)
+
     pack = context_transport_get(root, task_id, revision)
     if not pack["ok"]:
         raise ContextTransportError("transport_pack_stale")
     manifest = pack["manifest"]
     handle = _find_handle(manifest, handle_id)
     context_revision = int(handle["canonical_revision"])
+    validated_requirements = _validate_requirement_ids(root, task_id, context_revision, requirement_ids)
+    tokenizer = resolve_tokenizer(str(manifest.get("model_profile") or "generic-128k"), _transport_policy(root))
     with connect(root) as c:
         row = c.execute(
             "SELECT manifest_json,content_hash FROM context_packs WHERE task_id=? AND revision=?",
@@ -1377,6 +1464,7 @@ def context_expand(
     canonical = json.loads(row["manifest_json"])
     kind = handle["kind"]
     index = int(handle["canonical_index"])
+    start_line = max(1, int(line_start))
     if kind == "source":
         src = canonical.get("sources", [])[index]
         path = root / str(src["path"])
@@ -1386,31 +1474,197 @@ def context_expand(
         if current_hash != handle["source_hash"]:
             raise ContextTransportError("expansion_source_hash_mismatch")
         lines = _file_text(path).splitlines()
-        excerpt = "\n".join(lines[: max(1, int(max_lines))])
+        excerpt, actual_start, actual_end = _bounded_excerpt(lines, start_line, max_lines, max_tokens, tokenizer)
         source_hash = current_hash
-        source = {"path": src["path"], "line_start": 1, "line_end": min(len(lines), max_lines)}
+        source = {"path": src["path"], "line_start": actual_start, "line_end": actual_end}
     else:
+        if start_line != 1:
+            raise ContextTransportError("knowledge_expansion_line_start_must_be_one")
         item = canonical.get("knowledge_sources", [])[index]
-        excerpt = str(item.get("text") or item.get("title") or "")
-        source_hash = _sha256_text(excerpt)
+        raw_excerpt = str(item.get("text") or item.get("title") or "")
+        source_hash = _sha256_text(raw_excerpt)
         if source_hash != handle["source_hash"]:
             raise ContextTransportError("expansion_knowledge_hash_mismatch")
-        source = {"kind": item.get("kind"), "id": item.get("id")}
+        lines = raw_excerpt.splitlines() or [raw_excerpt]
+        excerpt, actual_start, actual_end = _bounded_excerpt(lines, 1, max_lines, max_tokens, tokenizer)
+        source = {"kind": item.get("kind"), "id": item.get("id"), "line_start": actual_start, "line_end": actual_end}
+    returned_tokens = tokenizer.count(excerpt)
+    request_spec = {
+        "expansion_version": EXPANSION_VERSION,
+        "transport_hash": manifest.get("transport_hash"),
+        "handle_id": handle_id,
+        "line_start": start_line,
+        "max_lines": max_lines,
+        "max_tokens": max_tokens,
+        "reason_code": reason_code,
+        "requirement_ids": validated_requirements,
+    }
+    request_hash = _sha256_text(_canonical_json(request_spec))
     if record_event:
         with connect(root, immediate=True) as c:
             c.execute(
-                "INSERT INTO context_expansion_events(transport_pack_id,handle_id,task_id,outcome,source_hash) VALUES(?,?,?,?,?)",
-                (pack["pack_id"], handle_id, task_id, "expanded", source_hash),
+                """
+                INSERT INTO context_expansion_events(
+                    transport_pack_id,handle_id,task_id,outcome,source_hash,session_id,
+                    request_hash,line_start,line_end,returned_tokens,reason_code,requirement_ids_json,transport_hash
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    pack["pack_id"], handle_id, task_id, "expanded", source_hash, session_id,
+                    request_hash, source.get("line_start"), source.get("line_end"), returned_tokens,
+                    reason_code, _canonical_json(validated_requirements), manifest.get("transport_hash"),
+                ),
             )
     return {
         "ok": True,
         "task_id": task_id,
         "transport_revision": pack["transport_revision"],
+        "transport_hash": manifest.get("transport_hash"),
         "handle_id": handle_id,
+        "reason_code": reason_code,
+        "requirement_ids": validated_requirements,
+        "request_hash": request_hash,
         "source": source,
         "source_hash": source_hash,
+        "returned_tokens": returned_tokens,
+        "tokenizer_id": tokenizer.tokenizer_id,
         "excerpt": excerpt,
         "read_only": True,
+        "content_persisted": False,
+    }
+
+
+def context_expansion_explain(root: Path, task_id: str, revision: int | None = None) -> dict[str, Any]:
+    """Return omission/handle accounting without expanding or persisting content."""
+    pack = context_transport_get(root.resolve(), task_id, revision)
+    manifest = pack["manifest"]
+    evidence = manifest.get("evidence_plane", {})
+    handles = list(evidence.get("expansion_index", []))
+    return {
+        "ok": pack["ok"],
+        "task_id": task_id,
+        "transport_revision": pack["transport_revision"],
+        "transport_hash": manifest.get("transport_hash"),
+        "stale": pack["stale"],
+        "candidate_count": int(evidence.get("candidate_count", 0)),
+        "included_count": int(evidence.get("included_count", 0)),
+        "omitted_count": int(evidence.get("omitted_count", 0)),
+        "expandable_count": len(handles),
+        "handles": handles,
+        "read_only": True,
+    }
+
+
+def context_expand_batch(
+    root: Path,
+    task_id: str,
+    requests: list[dict[str, Any]],
+    revision: int | None = None,
+    max_total_tokens: int | None = None,
+    reason_code: str = "inspection",
+    requirement_ids: Iterable[str] | None = None,
+    record_event: bool = True,
+) -> dict[str, Any]:
+    """Expand multiple hash-pinned handles under one deterministic aggregate token cap."""
+    root = root.resolve()
+    cfg = _expansion_policy(root)
+    max_handles = int(cfg.get("max_handles_per_batch", 8) or 8)
+    total_cap = int(cfg.get("max_total_tokens_per_batch", 16384) or 16384)
+    if max_total_tokens is not None:
+        total_cap = min(total_cap, max(1, int(max_total_tokens)))
+    if not requests:
+        raise ContextTransportError("expansion_batch_empty")
+    if len(requests) > max_handles:
+        raise ContextTransportError("expansion_batch_handle_limit_exceeded")
+    pack = context_transport_get(root, task_id, revision)
+    manifest = pack["manifest"]
+    allowed_reasons = tuple(cfg.get("allowed_reason_codes", EXPANSION_REASON_CODES))
+    if reason_code not in allowed_reasons:
+        raise ContextTransportError(f"unsupported_expansion_reason:{reason_code}")
+    validated_common_requirements = _validate_requirement_ids(
+        root, task_id, int(manifest["context_revision"]), requirement_ids
+    )
+    request_spec = {
+        "expansion_version": EXPANSION_VERSION,
+        "task_id": task_id,
+        "transport_revision": pack["transport_revision"],
+        "transport_hash": manifest.get("transport_hash"),
+        "requests": requests,
+        "max_total_tokens": total_cap,
+        "reason_code": reason_code,
+        "requirement_ids": validated_common_requirements,
+    }
+    batch_hash = _sha256_text(_canonical_json(request_spec))
+    session_id: int | None = None
+    if record_event:
+        with connect(root, immediate=True) as c:
+            cur = c.execute(
+                """
+                INSERT INTO context_expansion_sessions(
+                    transport_pack_id,task_id,transport_hash,request_hash,reason_code,requirement_ids_json,
+                    requested_handle_count,expanded_handle_count,failed_handle_count,returned_tokens,status
+                ) VALUES(?,?,?,?,?,?,?,0,0,0,'running')
+                """,
+                (
+                    pack["pack_id"], task_id, manifest.get("transport_hash"), batch_hash, reason_code,
+                    _canonical_json(validated_common_requirements), len(requests),
+                ),
+            )
+            session_id = int(cur.lastrowid)
+    results: list[dict[str, Any]] = []
+    failures: list[dict[str, Any]] = []
+    used = 0
+    for item in requests:
+        if used >= total_cap:
+            failures.append({"handle_id": str(item.get("handle_id") or ""), "error": "expansion_batch_token_budget_exhausted"})
+            continue
+        handle_id = str(item.get("handle_id") or "")
+        if not handle_id:
+            failures.append({"handle_id": "", "error": "handle_id_required"})
+            continue
+        try:
+            result = context_expand(
+                root,
+                task_id,
+                handle_id,
+                revision,
+                int(item.get("max_lines", 240)),
+                record_event=record_event,
+                line_start=int(item.get("line_start", 1)),
+                max_tokens=min(int(item.get("max_tokens", total_cap - used)), total_cap - used),
+                requirement_ids=item.get("requirement_ids", validated_common_requirements),
+                reason_code=str(item.get("reason_code", reason_code)),
+                session_id=session_id,
+            )
+            used += int(result["returned_tokens"])
+            results.append(result)
+        except (ContextTransportError, ValueError, TypeError) as exc:
+            failures.append({"handle_id": handle_id, "error": str(exc)})
+    status = "complete" if not failures else "partial" if results else "failed"
+    if record_event and session_id is not None:
+        with connect(root, immediate=True) as c:
+            c.execute(
+                """
+                UPDATE context_expansion_sessions
+                   SET expanded_handle_count=?,failed_handle_count=?,returned_tokens=?,status=?
+                 WHERE id=?
+                """,
+                (len(results), len(failures), used, status, session_id),
+            )
+    return {
+        "ok": bool(results) and not failures,
+        "task_id": task_id,
+        "transport_revision": pack["transport_revision"],
+        "transport_hash": manifest.get("transport_hash"),
+        "session_id": session_id,
+        "request_hash": batch_hash,
+        "status": status,
+        "returned_tokens": used,
+        "max_total_tokens": total_cap,
+        "expanded": results,
+        "failures": failures,
+        "read_only": True,
+        "content_persisted": False,
     }
 
 
@@ -1531,7 +1785,7 @@ def evaluate_transport_pack(root: Path, task_id: str, revision: int | None = Non
 
 
 def sync_schema(root: Path) -> dict[str, Any]:
-    """Open the central database so migrations through schema 45 are applied via db.connect()."""
+    """Open the central database so migrations through schema 46 are applied via db.connect()."""
     with connect(root) as c:
         version = int(c.execute("SELECT COALESCE(MAX(version),0) AS v FROM schema_migrations").fetchone()["v"])
         foreign_keys = int(c.execute("PRAGMA foreign_keys").fetchone()[0])

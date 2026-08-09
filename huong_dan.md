@@ -2,6 +2,4 @@
 
 [🇻🇳 Tiếng Việt](huong_dan.vi.md) | [🇬🇧 English](huong_dan.en.md)
 
-Current version: **0.23.1**. Database schema: **45**.
-
-Build a fresh canonical Context Pack first. v0.23.1 then resolves a hash-pinned local model profile, computes an adaptive or fixed budget, preserves the entire Control Plane losslessly, and spends only the remaining token budget on deterministic Evidence Plane content. Numeric calibration may only increase protective reservations; it never authorizes truncation of protected requirements or model/provider switching.
+Current version: **0.23.2**. Database schema: **46**. Build a fresh canonical Context Pack, compile a requirement-preserving transport, expand omitted evidence only through bounded hash-pinned handles, then run deterministic Compression Evaluation v2. The lossless Control Plane remains authoritative and is never truncated to improve compression ratio.

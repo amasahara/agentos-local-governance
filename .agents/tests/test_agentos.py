@@ -220,7 +220,7 @@ def test_instruction_check_detects_modern_rule_files(tmp_path: Path) -> None:
 def test_release_docs_and_version_are_synchronized() -> None:
     assert docs_check(ROOT)["ok"] is True
     assert instruction_check(ROOT)["ok"] is True
-    assert load_policy(ROOT)["version"] == "0.22.5"
+    assert load_policy(ROOT)["version"] == (ROOT / "VERSION").read_text().strip()
 
 
 def test_prepare_change_still_enforces_write_scope(tmp_path: Path) -> None:
@@ -369,7 +369,7 @@ def test_audit_verify_accepts_empty_log(tmp_path: Path, monkeypatch: pytest.Monk
 def test_docs_check_current_release_is_consistent() -> None:
     report = docs_check(ROOT)
     assert report["content_consistency"]["ok"] is True
-    assert report["version"]["VERSION"] == "0.22.5"
+    assert report["version"]["VERSION"] == (ROOT / "VERSION").read_text().strip()
 
 
 
@@ -584,7 +584,7 @@ def test_evaluation_harness_and_export(tmp_path: Path) -> None:
     from agentos.evaluation import aggregate_metrics, export_metrics
     report=aggregate_metrics(root,agent="agent-a",model="model-x")
     assert report["metrics_schema_version"]==1
-    assert report["dimensions"]["repository_version"]=="0.22.5"
+    assert report["dimensions"]["repository_version"]==(ROOT / "VERSION").read_text().strip()
     exported=export_metrics(root,".agents/runtime/evaluation/report.json","json",agent="agent-a",model="model-x")
     assert exported["ok"] is True
     assert Path(exported["path"]).exists()

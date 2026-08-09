@@ -29,6 +29,13 @@ from .governance_enforcement import governed_mutation, mirror_domain_event
 
 MIGRATION_VERSION = 43
 ERASURE_POLICY_VERSION = 1
+ERASURE_REASON_CODES = {
+    "subject_request",
+    "consent_withdrawn",
+    "retention_expired",
+    "legal_or_policy_request",
+    "operator_privacy_action",
+}
 BLOCKING_INSERT_STATUSES = {"running", "committing", "in_doubt"}
 BLOCKING_IDENTITY_STATUSES = {"planned", "running", "awaiting_human"}
 BLOCKING_EXTRACTION_STATUSES = {"planned", "running"}
@@ -53,6 +60,61 @@ def _hash(value: Any) -> str:
     """Hash structured evidence without preserving subject values."""
     raw = value if isinstance(value, str) else _json(value)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _entity_locator_hash(entity_uuid: str) -> str:
+    """Return a domain-separated one-way locator for a pseudonymous entity reference."""
+    value = str(entity_uuid).strip()
+    if not value:
+        raise DataSubjectRightsError("canonical_entity_not_found")
+    return _hash("agentos:data-subject-erasure-locator:v1:" + value)
+
+
+def harden_privacy_schema(conn: sqlite3.Connection) -> None:
+    """Repair schema-43 privacy guarantees for fresh and already-upgraded databases.
+
+    This helper is intentionally called by both migration 43 and migration 46. Earlier
+    v0.22.7 materializations created the lifecycle tables but did not enforce all of the
+    declared immutability and one-way-locator guarantees. Migration 46 therefore repairs
+    existing databases without introducing a second privacy schema version.
+    """
+    _add_column(conn, "data_subject_erasure_requests", "entity_locator_hash", "TEXT")
+    rows = conn.execute(
+        "SELECT id,entity_uuid,entity_locator_hash FROM data_subject_erasure_requests"
+    ).fetchall()
+    for row in rows:
+        current = str(row[2] or "").strip()
+        legacy = str(row[1] or "").strip()
+        if current:
+            locator = current
+        elif legacy.startswith("locator:") and len(legacy) > len("locator:"):
+            locator = legacy.split(":", 1)[1]
+        else:
+            locator = _entity_locator_hash(legacy)
+        redacted = "locator:" + locator
+        if current != locator or legacy != redacted:
+            conn.execute(
+                "UPDATE data_subject_erasure_requests SET entity_locator_hash=?,entity_uuid=? WHERE id=?",
+                (locator, redacted, int(row[0])),
+            )
+    conn.executescript(
+        """
+        CREATE INDEX IF NOT EXISTS idx_erasure_requests_locator
+            ON data_subject_erasure_requests(entity_locator_hash,created_at);
+        CREATE TRIGGER IF NOT EXISTS trg_erasure_request_immutable_update
+        BEFORE UPDATE ON data_subject_erasure_requests
+        BEGIN SELECT RAISE(ABORT,'immutable_erasure_request'); END;
+        CREATE TRIGGER IF NOT EXISTS trg_erasure_request_immutable_delete
+        BEFORE DELETE ON data_subject_erasure_requests
+        BEGIN SELECT RAISE(ABORT,'immutable_erasure_request'); END;
+        CREATE TRIGGER IF NOT EXISTS trg_erasure_plan_immutable_update
+        BEFORE UPDATE ON data_subject_erasure_plans
+        BEGIN SELECT RAISE(ABORT,'immutable_erasure_plan'); END;
+        CREATE TRIGGER IF NOT EXISTS trg_erasure_plan_immutable_delete
+        BEFORE DELETE ON data_subject_erasure_plans
+        BEGIN SELECT RAISE(ABORT,'immutable_erasure_plan'); END;
+        """
+    )
 
 
 def _add_column(conn: sqlite3.Connection, table: str, name: str, ddl: str) -> None:
@@ -149,6 +211,7 @@ def migration_43(conn: sqlite3.Connection) -> None:
     _add_column(conn, "canonical_entities", "privacy_status", "TEXT NOT NULL DEFAULT 'active'")
     _add_column(conn, "canonical_entities", "tombstoned_at", "TEXT")
     _add_column(conn, "canonical_entities", "erasure_request_hash", "TEXT")
+    harden_privacy_schema(conn)
 
 
 def sync_schema(root: Path | str) -> dict[str, Any]:
@@ -177,9 +240,18 @@ def _safe_event(root: Path, event_type: str, *, request_id: int | None = None, p
 
 
 def _entity(root: Path, entity_uuid: str) -> sqlite3.Row:
-    """Load a canonical entity by its pseudonymous UUID."""
+    """Load an active entity directly or a tombstoned entity through a one-way locator."""
+    value = str(entity_uuid).strip()
     with connect(root) as conn:
-        row = conn.execute("SELECT * FROM canonical_entities WHERE entity_uuid=?", (str(entity_uuid).strip(),)).fetchone()
+        row = conn.execute("SELECT * FROM canonical_entities WHERE entity_uuid=?", (value,)).fetchone()
+        if row is None:
+            locator = _entity_locator_hash(value)
+            row = conn.execute(
+                """SELECT c.* FROM canonical_entities c
+                   JOIN data_subject_erasure_requests r ON r.canonical_entity_id=c.id
+                   WHERE r.entity_locator_hash=? ORDER BY r.id DESC LIMIT 1""",
+                (locator,),
+            ).fetchone()
     if not row:
         raise DataSubjectRightsError("canonical_entity_not_found")
     return row
@@ -251,62 +323,125 @@ def _affected_snapshot(conn: sqlite3.Connection, root: Path, canonical_entity_id
 
 
 def _assert_no_active_operations(conn: sqlite3.Connection, canonical_entity_id: int) -> None:
-    """Fail closed if identity/extraction/TARGET/recovery work for the subject is active or uncertain."""
-    resolution_ids = [int(r[0]) for r in conn.execute("SELECT DISTINCT resolution_run_id FROM identity_bindings WHERE canonical_entity_id=?", (canonical_entity_id,))]
-    for run_id in resolution_ids:
-        row = conn.execute("SELECT status,extraction_batch_id FROM identity_resolution_runs WHERE id=?", (run_id,)).fetchone()
-        if row and str(row[0]) in BLOCKING_IDENTITY_STATUSES:
+    """Fail closed if identity/extraction/TARGET/recovery work is active or uncertain."""
+    entity_row = conn.execute(
+        "SELECT entity_uuid FROM canonical_entities WHERE id=?", (canonical_entity_id,)
+    ).fetchone()
+    entity_uuid = str(entity_row[0]) if entity_row else ""
+
+    resolution_ids = {
+        int(r[0]) for r in conn.execute(
+            "SELECT DISTINCT resolution_run_id FROM identity_bindings WHERE canonical_entity_id=?",
+            (canonical_entity_id,),
+        )
+    }
+    if entity_uuid:
+        candidate_rows = conn.execute(
+            """SELECT DISTINCT c.resolution_run_id,c.status,r.status,r.extraction_batch_id
+                 FROM identity_candidates c
+                 LEFT JOIN identity_resolution_runs r ON r.id=c.resolution_run_id
+                WHERE c.matched_entity_uuid=?""",
+            (entity_uuid,),
+        ).fetchall()
+        for candidate in candidate_rows:
+            resolution_ids.add(int(candidate[0]))
+            if str(candidate[1] or "") in {"pending", "awaiting_human"} or str(candidate[2] or "") in BLOCKING_IDENTITY_STATUSES:
+                raise DataSubjectRightsError(f"active_identity_operation:{int(candidate[0])}:{candidate[2] or candidate[1]}")
+
+    extraction_batch_ids: set[int] = set()
+    for run_id in sorted(resolution_ids):
+        row = conn.execute(
+            "SELECT status,extraction_batch_id FROM identity_resolution_runs WHERE id=?", (run_id,)
+        ).fetchone()
+        if not row:
+            continue
+        if str(row[0]) in BLOCKING_IDENTITY_STATUSES:
             raise DataSubjectRightsError(f"active_identity_operation:{run_id}:{row[0]}")
-        if row:
-            batch = conn.execute("SELECT status FROM db_extraction_batches WHERE id=?", (int(row[1]),)).fetchone()
+        if row[1] is not None:
+            batch_id = int(row[1]); extraction_batch_ids.add(batch_id)
+            batch = conn.execute("SELECT status FROM db_extraction_batches WHERE id=?", (batch_id,)).fetchone()
             if batch and str(batch[0]) in BLOCKING_EXTRACTION_STATUSES:
-                raise DataSubjectRightsError(f"active_extraction_operation:{int(row[1])}:{batch[0]}")
-    insert_ids = [int(r[0]) for r in conn.execute("SELECT DISTINCT insert_run_id FROM target_record_lineage WHERE canonical_entity_id=?", (canonical_entity_id,))]
-    for insert_id in insert_ids:
+                raise DataSubjectRightsError(f"active_extraction_operation:{batch_id}:{batch[0]}")
+
+    insert_ids = {
+        int(r[0]) for r in conn.execute(
+            "SELECT DISTINCT insert_run_id FROM target_record_lineage WHERE canonical_entity_id=?",
+            (canonical_entity_id,),
+        ) if r[0] is not None
+    }
+    for batch_id in extraction_batch_ids:
+        for row in conn.execute(
+            "SELECT id,status FROM db_target_insert_runs WHERE extraction_batch_id=?", (batch_id,)
+        ):
+            insert_ids.add(int(row[0]))
+            if str(row[1]) in BLOCKING_INSERT_STATUSES:
+                raise DataSubjectRightsError(f"active_or_in_doubt_target_operation:{int(row[0])}:{row[1]}")
+
+    for insert_id in sorted(insert_ids):
         row = conn.execute("SELECT status FROM db_target_insert_runs WHERE id=?", (insert_id,)).fetchone()
         if row and str(row[0]) in BLOCKING_INSERT_STATUSES:
             raise DataSubjectRightsError(f"active_or_in_doubt_target_operation:{insert_id}:{row[0]}")
-        if conn.execute("SELECT COUNT(*) FROM db_recovery_cases WHERE insert_run_id=? AND status IN ('open','manual_intervention')", (insert_id,)).fetchone()[0]:
+        if conn.execute(
+            "SELECT COUNT(*) FROM db_recovery_cases WHERE insert_run_id=? AND status IN ('open','manual_intervention')",
+            (insert_id,),
+        ).fetchone()[0]:
             raise DataSubjectRightsError(f"active_recovery_case:{insert_id}")
-        if conn.execute("SELECT COUNT(*) FROM db_reconciliation_runs WHERE insert_run_id=? AND status IN ('planned','running')", (insert_id,)).fetchone()[0]:
+        if conn.execute(
+            "SELECT COUNT(*) FROM db_reconciliation_runs WHERE insert_run_id=? AND status IN ('planned','running')",
+            (insert_id,),
+        ).fetchone()[0]:
             raise DataSubjectRightsError(f"active_reconciliation:{insert_id}")
 
 
 @governed_mutation("privacy.erasure.request")
 def create_erasure_request(root: Path | str, entity_uuid: str, *, reason_code: str, requested_by: str,
                            human_confirmed: bool) -> dict[str, Any]:
-    """Create one immutable erasure request using only a canonical entity UUID."""
+    """Create one immutable erasure request while retaining only a one-way entity locator."""
     root = Path(root).resolve()
-    if not human_confirmed or not requested_by.strip() or not reason_code.strip():
+    reason = str(reason_code).strip()
+    if not human_confirmed or not requested_by.strip() or not reason:
         raise DataSubjectRightsError("human-confirmed erasure request is required")
+    if reason not in ERASURE_REASON_CODES:
+        raise DataSubjectRightsError("unsupported_erasure_reason_code")
     entity = _entity(root, entity_uuid)
+    locator_hash = _entity_locator_hash(entity_uuid)
     if str(entity["privacy_status"] or "active") == "tombstoned":
         with connect(root) as conn:
             old = conn.execute(
-                """SELECT r.id,r.request_uuid,r.request_hash FROM data_subject_erasure_requests r
-                   JOIN privacy_tombstones t ON t.request_hash=r.request_hash WHERE t.canonical_entity_id=? ORDER BY r.id DESC LIMIT 1""",
-                (int(entity["id"]),),
+                """SELECT id,request_uuid,request_hash FROM data_subject_erasure_requests
+                   WHERE canonical_entity_id=? AND entity_locator_hash=? ORDER BY id DESC LIMIT 1""",
+                (int(entity["id"]), locator_hash),
             ).fetchone()
         if old:
-            return {"ok": True, "idempotent": True, "request_id": int(old[0]), "request_uuid": old[1], "request_hash": old[2], "already_tombstoned": True}
+            return {"ok": True, "idempotent": True, "request_id": int(old[0]), "request_uuid": old[1],
+                    "request_hash": old[2], "already_tombstoned": True, "entity_locator_retained": "one_way_hash_only"}
     request_uuid = str(uuid.uuid4())
-    payload = {"request_uuid": request_uuid, "entity_uuid": str(entity_uuid), "reason_code": reason_code.strip(), "policy_version": ERASURE_POLICY_VERSION}
+    payload = {"request_uuid": request_uuid, "entity_locator_hash": locator_hash, "reason_code": reason,
+               "policy_version": ERASURE_POLICY_VERSION}
     request_hash = _hash(payload)
     with connect(root) as conn:
         conn.execute("BEGIN IMMEDIATE")
-        existing = conn.execute("SELECT id,request_uuid,request_hash FROM data_subject_erasure_requests WHERE canonical_entity_id=? ORDER BY id DESC LIMIT 1", (int(entity["id"]),)).fetchone()
+        existing = conn.execute(
+            "SELECT id,request_uuid,request_hash FROM data_subject_erasure_requests WHERE canonical_entity_id=? ORDER BY id DESC LIMIT 1",
+            (int(entity["id"]),),
+        ).fetchone()
         if existing:
             conn.commit()
-            return {"ok": True, "idempotent": True, "request_id": int(existing[0]), "request_uuid": existing[1], "request_hash": existing[2]}
+            return {"ok": True, "idempotent": True, "request_id": int(existing[0]), "request_uuid": existing[1],
+                    "request_hash": existing[2], "entity_locator_retained": "one_way_hash_only"}
         cur = conn.execute(
-            """INSERT INTO data_subject_erasure_requests(request_uuid,canonical_entity_id,entity_uuid,reason_code,request_hash,requested_by,created_at)
-               VALUES(?,?,?,?,?,?,?)""",
-            (request_uuid, int(entity["id"]), str(entity_uuid), reason_code.strip(), request_hash, requested_by.strip(), utc_now()),
+            """INSERT INTO data_subject_erasure_requests(
+                   request_uuid,canonical_entity_id,entity_uuid,entity_locator_hash,reason_code,request_hash,requested_by,created_at
+               ) VALUES(?,?,?,?,?,?,?,?)""",
+            (request_uuid, int(entity["id"]), "locator:" + locator_hash, locator_hash, reason, request_hash,
+             requested_by.strip(), utc_now()),
         )
         request_id = int(cur.lastrowid)
         conn.commit()
-    _safe_event(root, "data_subject_erasure_requested", request_id=request_id, payload={"request_hash": request_hash, "policy_version": ERASURE_POLICY_VERSION})
-    return {"ok": True, "request_id": request_id, "request_uuid": request_uuid, "request_hash": request_hash, "raw_identifier_included": False}
+    _safe_event(root, "data_subject_erasure_requested", request_id=request_id,
+                payload={"request_hash": request_hash, "policy_version": ERASURE_POLICY_VERSION})
+    return {"ok": True, "request_id": request_id, "request_uuid": request_uuid, "request_hash": request_hash,
+            "raw_identifier_included": False, "entity_locator_retained": "one_way_hash_only"}
 
 
 @governed_mutation("privacy.erasure.plan")
@@ -362,12 +497,17 @@ def _plan_public(row: sqlite3.Row) -> dict[str, Any]:
 
 
 def erasure_request_get(root: Path | str, request_id: int) -> dict[str, Any]:
-    """Read one request with pseudonymous entity UUID but no raw subject identifiers."""
+    """Read immutable request metadata without returning an entity reference or locator hash."""
     with connect(Path(root).resolve()) as conn:
-        row = conn.execute("SELECT id,request_uuid,entity_uuid,reason_code,request_hash,requested_by,created_at FROM data_subject_erasure_requests WHERE id=?", (int(request_id),)).fetchone()
+        row = conn.execute(
+            "SELECT id,request_uuid,reason_code,request_hash,requested_by,created_at FROM data_subject_erasure_requests WHERE id=?",
+            (int(request_id),),
+        ).fetchone()
     if not row:
         raise DataSubjectRightsError("erasure_request_not_found")
-    value = dict(row); value.update({"ok": True, "raw_identifier_included": False}); return value
+    value = dict(row)
+    value.update({"ok": True, "raw_identifier_included": False, "entity_locator_retained": "one_way_hash_only"})
+    return value
 
 
 def erasure_plan_get(root: Path | str, plan_id: int) -> dict[str, Any]:
@@ -440,18 +580,34 @@ def approve_erasure_plan(root: Path | str, plan_id: int, *, approved_by: str, hu
 
 
 def _resolve_artifact_path(root: Path, raw: str) -> Path | None:
-    """Resolve one stored local artifact path and reject paths outside project root."""
+    """Resolve one stored artifact only inside the dedicated data-staging subtree.
+
+    Symlink artifacts or symlinked parent components are rejected so compromised local
+    state cannot turn privacy cleanup into arbitrary project-file deletion.
+    """
     try:
-        p = Path(raw)
-        p = (root / p).resolve() if not p.is_absolute() else p.resolve()
-        p.relative_to(root)
-        return p
+        staging_root = (root / ".agents/runtime/data-staging").resolve()
+        candidate = Path(raw)
+        candidate = (root / candidate) if not candidate.is_absolute() else candidate
+        lexical = candidate.absolute()
+        current = lexical
+        while True:
+            if current.is_symlink():
+                return None
+            if current == root or current.parent == current:
+                break
+            current = current.parent
+        resolved = lexical.resolve()
+        relative = resolved.relative_to(staging_root)
+        if not relative.parts:
+            return None
+        return resolved
     except (ValueError, OSError):
         return None
 
 
 def _delete_artifacts(root: Path, paths: Iterable[str]) -> tuple[int, int]:
-    """Delete local staging artifacts and return file/directory removal counts."""
+    """Delete bounded data-staging artifacts plus the dedicated derived cache root."""
     files = 0; directories = 0
     for raw in sorted(set(paths)):
         p = _resolve_artifact_path(root, raw)
@@ -461,9 +617,8 @@ def _delete_artifacts(root: Path, paths: Iterable[str]) -> tuple[int, int]:
             shutil.rmtree(p); directories += 1
         else:
             p.unlink(); files += 1
-    # Privacy-first cache invalidation: cache is derived/rebuildable and may retain excerpts.
     cache_root = (root / ".agents/cache").resolve()
-    if cache_root.exists():
+    if cache_root.exists() and not cache_root.is_symlink():
         shutil.rmtree(cache_root); directories += 1
     return files, directories
 
@@ -521,7 +676,8 @@ def execute_erasure_plan(root: Path | str, plan_id: int, *, executed_by: str, hu
         if _json(current["counts"]) != plan["affected_counts_json"] or _json(current["artifact_hashes"]) != plan["affected_artifact_hashes_json"]:
             raise DataSubjectRightsError("erasure_plan_drift_detected_replan_required")
         artifact_paths = _artifact_paths(conn, canonical_entity_id)
-        entity_uuid = str(request["entity_uuid"])
+        entity_row = conn.execute("SELECT entity_uuid FROM canonical_entities WHERE id=?", (canonical_entity_id,)).fetchone()
+        entity_uuid = str(entity_row[0]) if entity_row else ""
         external_required = bool(plan["external_target_erasure_required"])
 
     # Remove filesystem-derived material before committing local unlinking. A rerun remains safe if a later DB step fails.
@@ -539,16 +695,19 @@ def execute_erasure_plan(root: Path | str, plan_id: int, *, executed_by: str, hu
         before = conn.total_changes; conn.execute("DELETE FROM identity_bindings WHERE canonical_entity_id=?", (canonical_entity_id,)); deleted["identity_bindings"] = conn.total_changes - before
         deleted.update(_purge_local_indexes(conn, entity_uuid, artifact_paths))
         marker = "erased:" + _hash(secrets.token_bytes(32).hex())
+        tombstone_uuid = "tombstone:" + uuid.uuid4().hex
         now = utc_now()
         conn.execute(
-            """UPDATE canonical_entities SET exact_key_fingerprint=?,key_id=NULL,privacy_status='tombstoned',tombstoned_at=?,erasure_request_hash=? WHERE id=?""",
-            (marker, now, request["request_hash"], canonical_entity_id),
+            """UPDATE canonical_entities
+                  SET entity_uuid=?,exact_key_fingerprint=?,key_id=NULL,privacy_status='tombstoned',tombstoned_at=?,erasure_request_hash=?
+                WHERE id=?""",
+            (tombstone_uuid, marker, now, request["request_hash"], canonical_entity_id),
         )
         tombstone_marker_hash = _hash(marker)
         conn.execute(
             """INSERT INTO privacy_tombstones(canonical_entity_id,tombstone_uuid,request_hash,plan_hash,tombstone_marker_hash,external_target_erasure_required,created_at)
                VALUES(?,?,?,?,?,?,?)""",
-            (canonical_entity_id, str(uuid.uuid4()), request["request_hash"], plan["plan_hash"], tombstone_marker_hash, int(external_required), now),
+            (canonical_entity_id, tombstone_uuid, request["request_hash"], plan["plan_hash"], tombstone_marker_hash, int(external_required), now),
         )
         evidence_hash = _hash({"plan_hash": plan["plan_hash"], "deleted_counts": deleted, "local_erasure_completed": True, "external_target_erasure_required": external_required})
         conn.execute(
@@ -563,21 +722,31 @@ def execute_erasure_plan(root: Path | str, plan_id: int, *, executed_by: str, hu
 
 
 def erasure_status_get(root: Path | str, entity_uuid: str) -> dict[str, Any]:
-    """Return current local erasure/tombstone state for one pseudonymous entity UUID."""
-    root = Path(root).resolve(); entity = _entity(root, entity_uuid)
+    """Return local erasure state, resolving old references only through a one-way locator."""
+    root = Path(root).resolve()
+    supplied = str(entity_uuid).strip()
+    entity = _entity(root, supplied)
+    tombstoned = str(entity["privacy_status"] or "active") == "tombstoned"
     with connect(root) as conn:
-        tomb = conn.execute("SELECT tombstone_uuid,request_hash,plan_hash,external_target_erasure_required,created_at FROM privacy_tombstones WHERE canonical_entity_id=?", (int(entity["id"]),)).fetchone()
+        tomb = conn.execute(
+            "SELECT tombstone_uuid,request_hash,plan_hash,external_target_erasure_required,created_at FROM privacy_tombstones WHERE canonical_entity_id=?",
+            (int(entity["id"]),),
+        ).fetchone()
         plan = conn.execute(
             """SELECT p.id FROM data_subject_erasure_plans p JOIN data_subject_erasure_requests r ON r.id=p.request_id
                WHERE r.canonical_entity_id=? ORDER BY p.id DESC LIMIT 1""", (int(entity["id"]),)
         ).fetchone()
-    return {
+    result = {
         "ok": True,
-        "entity_uuid": entity_uuid,
         "privacy_status": entity["privacy_status"],
         "tombstoned_at": entity["tombstoned_at"],
+        "entity_reference": "one_way_request_locator" if tombstoned and supplied != str(entity["entity_uuid"]) else "canonical_entity_uuid",
         "tombstone": dict(tomb) if tomb else None,
         "plan": erasure_plan_get(root, int(plan[0])) if plan else None,
         "target_mutation_performed": False,
         "raw_identifier_included": False,
     }
+    if not tombstoned:
+        result["entity_uuid"] = str(entity["entity_uuid"])
+    return result
+

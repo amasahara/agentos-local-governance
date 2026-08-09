@@ -326,3 +326,17 @@ Database consolidation is directional and fail-closed.
 - `fixed` mode exists only as an explicit v0.23.0 compatibility path; `adaptive` is the v0.23.1 default when policy enables it.
 - MCP may expose only read-only model-profile, budget-history and token-calibration inspection. Profile mutation, observation recording, budget mutation, transport compilation/evaluation mutation, and model switching MUST NOT be MCP tools.
 <!-- AGENTOS_V0231_ADAPTIVE_BUDGET_END -->
+
+
+<!-- AGENTOS_V0232_CONTEXT_EXPANSION_EVALUATION_BEGIN -->
+## AgentOS v0.23.2 — Context Expansion & Compression Evaluation
+
+- Context expansion MUST be read-only, hash-pinned to the Transport Pack/canonical revision/source hash, and bounded by line/token limits.
+- Expanded source/knowledge content MUST NOT be persisted in SQLite, audit logs, evaluation state, or MCP telemetry. Persist metadata only: hashes, handles, ranges, reason codes, requirement IDs, counts, and token metrics.
+- Expansion reason codes are allowlisted; arbitrary free-form LLM query text MUST NOT become persistent expansion metadata.
+- Batch expansion MUST enforce per-handle and aggregate token ceilings and MUST NOT mutate source, canonical context, Transport Pack, task scope, plan, policy, or authority.
+- Compression Evaluation v2 MUST hard-fail when requirement preservation is below 100%, any canonical evidence candidate is unaccounted, handle integrity is below 100%, transport exceeds input budget, transport integrity fails, or source freshness is not verified.
+- The 2–4x compression target is advisory for stability review only; it MUST NEVER justify truncating Control Plane protected content.
+- Shadow comparison may read explicitly requested SUPERSEDED transport revisions but MUST NOT reactivate/select a revision automatically.
+- MCP may expose read-only expansion/evaluation/compare operations only. It MUST NOT persist evaluations/comparisons, compile/mutate transport, alter requirements, or switch provider/model authority.
+<!-- AGENTOS_V0232_CONTEXT_EXPANSION_EVALUATION_END -->

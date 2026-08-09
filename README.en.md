@@ -1,28 +1,13 @@
-# AgentOS Local Governance v0.23.1 — Adaptive Token Budget & Model Profiles
+# AgentOS Local Governance v0.23.2 — Context Expansion & Compression Evaluation
 
 [README landing](README.md) | [Tiếng Việt](README.vi.md)
 
-v0.23.1 extends v0.23.0 with a deterministic local **Model Profile Registry** and **Adaptive Token Budget** while keeping the lossless Control Plane unchanged.
+v0.23.2 adds a bounded, hash-pinned expansion loop and deterministic Compression Evaluation v2 on top of v0.23.0/0.23.1. The Control Plane remains fully lossless. Expansion verifies the transport hash, canonical revision, and source hash, supports line/token bounds and Requirement Ledger bindings, and never persists expanded content. Evaluation hard-fails on any protected-requirement loss, unaccounted canonical candidate, broken omission handle, budget overflow, stale source, or transport-integrity failure. The 2–4x compression band remains an advisory stability target.
 
-A model profile is a data-only, SHA-256-pinned budget contract containing context capacity, tokenizer policy, output reservation bounds, system/tool overhead, safety floors, and a minimum evidence target. AgentOS performs no provider/network model discovery, dynamic profile code loading, or tokenizer auto-download, and it does not gain authority to switch providers or models.
+Schema: **46**. New read-only MCP operations expose expansion metadata/batch reads and evaluation/compare reads; persistence and mutation remain outside MCP authority.
 
-Adaptive mode computes:
+## Full GitHub-ready release
 
-```text
-input_budget = context_capacity
-             - reserved_output
-             - system_tool_overhead
-             - safety_margin
+The complete v0.23.2 package is materialized from the full repository rather than delivered as an overlay. Extract it, replace/upload the repository contents, and commit/push; `apply_v0232.py` is not required for the full package. The included GitHub Actions workflow runs compilation, validators, release-integrity, manifest/checksum, docs/instruction checks, and the complete test suite.
 
-evidence_budget = max(0, input_budget - control_tokens)
-```
-
-Requirement/plan complexity may increase the output reserve. Numeric runtime token observations may increase future output reserve or safety headroom. Calibration can never reduce the profile safety floor or weaken the lossless Control Plane. Fixed mode remains available for v0.23.0-compatible budgeting behavior.
-
-Schema **45** adds immutable profile snapshots, budget decisions, numeric token observations, and profile/budget provenance columns on transport packs. No prompt, response, evidence, credential, or raw source content is stored in the calibration table.
-
-New read-only MCP tools are `agentos.context_model_profiles_get`, `agentos.context_budget_history_get`, and `agentos.context_token_calibration_get`. Observation recording, profile mutation, budget mutation, compilation, evaluation mutation, and model switching are not exposed over MCP.
-
-## Calibration/tokenizer hardening
-
-Exact `tiktoken` assets are local-cache-only; cache misses never trigger downloads. Observation sources are allowlisted identifiers and one transport/source pair is write-once (identical replay is idempotent).
+See [Full GitHub-Ready Materialization](.agents/docs/GITHUB_READY_FULL_RELEASE_V0232.md).

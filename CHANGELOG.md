@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.23.2 — Context Expansion & Compression Evaluation
+
+- Added schema 46 expansion-session telemetry, enriched expansion event metadata, deterministic compression evaluation runs, and shadow comparison records.
+- Added bounded line/token expansion, Requirement Ledger bindings, allowlisted reason codes, and aggregate batch token caps.
+- Ensured expanded evidence remains ephemeral: no excerpt/raw source content is persisted in expansion/evaluation state.
+- Added Compression Evaluation v2 hard gates for 100% requirement preservation, canonical candidate accountability, handle integrity, token-budget compliance, transport integrity, and source freshness.
+- Preserved the v0.23.0 metric contract while adding candidate accountability, expansion success/failure, budget utilization, hard-failure and warning metrics.
+- Added deterministic shadow comparison for READY/SUPERSEDED revisions without activation authority.
+- Added five read-only MCP operations; no evaluation persistence, comparison persistence, or transport mutation over MCP.
+- Full GitHub-ready materialization restores historical governance sections and upgrade guides from repository Git history instead of relying on overlay-only replacement.
+- Completed v0.22.7 privacy implementation hardening (one-way locator retention, immutable request/plan triggers, canonical UUID tombstoning, bounded erasure reasons, active/in-doubt blockers, staging-only deletion) and added schema-46 repair for existing schema-45 databases.
+- Synchronized unified MCP runtime metadata to v0.23.2 and added automatic GitHub Actions release validation for upload-only workflows.
+
 ## 0.23.1 — Adaptive Token Budget & Model Profiles
 
 - Added schema 45 for hash-pinned model-profile snapshots, per-transport budget decisions and numeric/hash-only token calibration observations.

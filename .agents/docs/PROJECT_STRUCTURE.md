@@ -204,7 +204,7 @@ Central db.py + CURRENT_SCHEMA_VERSION=40
 
 ## v0.22.7 Data Subject Rights & Privacy Lifecycle
 
-Database schema: **43**.
+Database schema: **46**.
 
 - `.agents/agentos/data_subject_rights.py`: immutable erasure request/plan, review/approval, active-operation gates, local erasure and tombstones.
 - `.agents/agentos/data_subject_rights_cli.py`: governed operator commands for the privacy lifecycle.
@@ -246,3 +246,8 @@ Database schema: **43**.
 ```
 
 Schema progression for this node is `44 → 45`. The canonical Context Pack and v0.23.0 Requirement Preservation Gate remain the authority; adaptive budgeting changes allocation, not protected content.
+
+
+## v0.23.2 context expansion/evaluation
+
+`context_transport.py` owns bounded hash-pinned expansion primitives; `context_evaluation.py` owns schema 46 evaluation/accountability and shadow comparison; `context_evaluation_cli.py` is operator persistence authority; `mcp_context_evaluation.py` is read-only.

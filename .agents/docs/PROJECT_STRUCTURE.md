@@ -194,3 +194,30 @@ Central db.py + CURRENT_SCHEMA_VERSION=40
 ```
 
 `cli_runtime.py` owns current command registration/dispatch. `mcp_runtime.py` owns current MCP JSON-RPC serving; `mcp_catalog.py` owns the flat extension read-only tool registration. Versioned launchers and historical gateway modules are retained only as inactive compatibility/audit artifacts.
+
+## v0.22.6 Secret Resolver & Lineage Key Lifecycle
+
+- `.agents/agentos/secret_lineage.py`: trusted resolver registry, provider approvals, lineage keyring, rotation/rekey workflows.
+- `.agents/agentos/secret_lineage_cli.py`: operator-only secret/key lifecycle CLI.
+- `.agents/agentos/mcp_secret_lineage.py`: read-only resolver/key metadata inspection.
+- `.agents/state/lineage-keys/`: generated local key material; never release source and never MCP/LLM output.
+
+## v0.22.7 Data Subject Rights & Privacy Lifecycle
+
+Database schema: **44**.
+
+- `.agents/agentos/data_subject_rights.py`: immutable erasure request/plan, review/approval, active-operation gates, local erasure and tombstones.
+- `.agents/agentos/data_subject_rights_cli.py`: governed operator commands for the privacy lifecycle.
+- `.agents/agentos/mcp_data_subject_rights.py`: read-only request/plan/status inspection only.
+- `DATA_SUBJECT_RIGHTS.md`: authority, lifecycle, retention/tombstone and external TARGET handoff contract.
+- `.agents/docs/PRIVACY_BOUNDARY_V0227.md`: detailed local/external privacy authority boundary.
+- `.agents/tests/test_data_subject_rights_v0227.py`: idempotency, unauthorized mutation, active/in-doubt gates, key interaction and leakage regression.
+
+
+## v0.23.0 Requirement-Preserving Context Compression
+
+- `.agents/agentos/context_transport.py`: transport compiler, Requirement Ledger, token budget, preservation gate, expansion and evaluation.
+- `.agents/agentos/context_transport_cli.py`: local compile/inspect/evaluate CLI.
+- `.agents/agentos/mcp_context_transport.py`: five read-only MCP inspection/expansion tools.
+- `.agents/tests/test_context_transport_v0230.py`: preservation, budget, codec, stale-source, integrity, evaluation and MCP regression.
+- `.agents/docs/REQUIREMENT_PRESERVING_CONTEXT_COMPRESSION_V0230.md`: transport contract and invariants.

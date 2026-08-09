@@ -288,12 +288,25 @@ Database consolidation is directional and fail-closed.
 <!-- AGENTOS_V0227_DATA_SUBJECT_RIGHTS_BEGIN -->
 ## AgentOS v0.22.7 — Data Subject Rights & Privacy Lifecycle
 - Data-subject erasure MUST follow immutable request → immutable plan → human review → human approval → governed local execution → canonical tombstone → signed evidence.
-- Requests/plans MUST NOT contain raw subject identifiers, business-record values, credentials, secret material, lineage key material, or raw TARGET rows. Use the canonical pseudonymous entity UUID and privacy-safe hashes/counts only.
+- Requests/plans MUST NOT contain raw subject identifiers, business-record values, credentials, secret material, lineage key material, raw TARGET rows, or a retained plaintext canonical entity UUID. The canonical pseudonymous entity UUID may be supplied as the operator lookup input, but persistent request state stores only a one-way entity locator hash plus privacy-safe hashes/counts.
 - Erasure planning/execution MUST fail closed while related extraction, identity resolution, TARGET insert, reconciliation, or recovery is active, uncertain, or `in_doubt`.
 - Local execution MUST remove or disable relinkable identity bindings/candidates/lineage and purge related local staging/cache/memory/index material according to policy.
-- Canonical tombstones retain only the minimum pseudonymous/audit linkage required for integrity; HMAC lookup fingerprints and lineage `key_id` MUST be removed from the tombstoned canonical entity.
+- Canonical tombstones retain only the minimum audit linkage required for integrity; the original canonical entity UUID is replaced with a random tombstone UUID/marker, HMAC lookup fingerprints and lineage `key_id` are removed, and SQLite secure-delete is required for privacy state writes.
 - v0.22.7 MUST NOT add TARGET UPDATE/DELETE/UPSERT/MERGE or recovery repair authority. When external TARGET data may remain, set `local_erasure_completed=true` and `external_target_erasure_required=true`.
 - Historical signed audit evidence is not rewritten or deleted; new privacy evidence stores hashes/counts/status only and MUST NOT preserve unnecessary relinkable subject data.
 - Erasure execution MUST be idempotent. A completed plan cannot create a second tombstone or replay deletion side effects.
 - MCP may inspect erasure request/plan/status only. Request creation, review, approval, execution, identity decisions, credential resolution, TARGET mutation, and recovery mutation MUST NOT be exposed as MCP mutation tools.
 <!-- AGENTOS_V0227_DATA_SUBJECT_RIGHTS_END -->
+
+
+## v0.23.0 Requirement-Preserving Context Compression
+
+- Canonical Context Pack remains authoritative; Transport Pack is a derived LLM delivery format.
+- Preserve original user request, Requirement Ledger, AGENTS authority, approved scope, active plan constraints/prohibitions/acceptance criteria and protected policy authority without translation, paraphrase, summarization, token pruning or word-level deletion.
+- Control Plane preservation rate MUST be 100%. If protected content exceeds model budget, fail closed; never silently truncate it.
+- Compress only Evidence Plane content using the ordered deterministic ladder: exact dedup → metadata normalization → structural projection → requirement-aware ranking → omission handles → fail closed.
+- Every omitted evidence item must remain expandable through a hash-pinned read-only handle.
+- Do not use gzip/base64/minification or generative LLM summarization as semantic compression authority.
+- Token budget MUST be capacity minus reserved output, system/tool overhead and safety margin, allocating Control Plane first.
+- A Transport Pack may become READY only after request/span/scope/plan/AGENTS/policy/source-freshness/transport-integrity gates pass.
+- MCP may expose only read-only transport inspection/expansion. It MUST NOT expose compile, evaluate-persist, requirement mutation, task/scope mutation or policy mutation authority.

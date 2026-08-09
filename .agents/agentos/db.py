@@ -50,10 +50,16 @@ def connect(root: Path, immediate: bool = False) -> Iterator[sqlite3.Connection]
     connection = sqlite3.connect(_db_path(root), timeout=5.0)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
+    connection.execute("PRAGMA secure_delete = ON")
     connection.execute("PRAGMA journal_mode = WAL")
     connection.execute("PRAGMA synchronous = FULL")
     connection.execute("PRAGMA busy_timeout = 5000")
     migrate(connection)
+    # Schema migrations may open an implicit SQLite transaction on a fresh or
+    # upgrading database. Commit the migration boundary before starting the
+    # caller's explicit IMMEDIATE transaction so connect(immediate=True) works
+    # consistently for clean installs and upgrades.
+    connection.commit()
     if immediate:
         connection.execute("BEGIN IMMEDIATE")
     try:
@@ -855,7 +861,8 @@ def _feature_migrations() -> list:
     from .reconciliation_recovery import migration_40
     from .secret_lineage import migration_42
     from .data_subject_rights import migration_43
-    return [migration_32, migration_33, migration_34, migration_35, migration_36, migration_37, migration_38, migration_39, migration_40, _m41, migration_42, migration_43]
+    from .context_transport import migration_44
+    return [migration_32, migration_33, migration_34, migration_35, migration_36, migration_37, migration_38, migration_39, migration_40, _m41, migration_42, migration_43, migration_44]
 
 
 MIGRATIONS = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9, _m10, _m11, _m12, _m13, _m14, _m15, _m16, _m17, _m18, _m19, _m20, _m21, _m22, _m23, _m24, _m25, _m26, _m27, _m28, _m29, _m30, _m31]

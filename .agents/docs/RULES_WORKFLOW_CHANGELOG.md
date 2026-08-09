@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.23.0 — Requirement-Preserving Context Compression
+
+- User requirement: compress LLM transport tokens without changing user requirements, constraints, authority, safety rules, or approved scope.
+- Decision: add a lossless Control Plane and deterministic/extractive Evidence Plane derived from canonical Context Pack.
+- Enforcement: 100% Requirement Preservation Gate, source/authority/plan/scope/hash freshness, token-budget fail-closed, read-only MCP expansion.
+- Runtime: `context_transport.py`, CLI/MCP registries, schema migration 44.
+- Tests: preservation, tokenizer fallback, exact dedup, omission handles, stale-source blocking, integrity tamper, evaluation metrics, MCP no-mutation boundary.
+- Migration: 43 → 44.
+
 ## v0.20.0 — Project Identity
 
 ## v0.20.1 — Primary Project Selection & Domain Compatibility
@@ -136,3 +145,18 @@ Added Primary-Project Consolidation as a directed, plan-hashed workflow:
 - Preserved v0.22.4 privileged mutation enforcement and kept extension mutation outside MCP.
 - Fixed stale v0.20.0/v0.20.1 CLI schema constant imports exposed by unified loading.
 - Database schema remains 41.
+
+## v0.22.6 — Secret Resolver & Lineage Key Lifecycle
+
+- Added a trusted built-in resolver registry with provider identity/version/hash pins and capability-scoped human approval.
+- Replaced the single lineage-key authority with an `active/retired/revoked` keyring while preserving legacy key material and historical HMAC values.
+- Kept credential values memory-only and all secret/key mutations outside MCP.
+
+## v0.22.7 — Data Subject Rights & Privacy Lifecycle
+
+- Added schema 43 and an immutable data-subject erasure request/plan lifecycle with separate human review, approval and execution evidence.
+- Added local canonical tombstoning, relinkable derived-state purge/privacy invalidation, one-way request locator retention, and `PRAGMA secure_delete=ON`.
+- Added fail-closed blockers for active/uncertain identity, extraction, TARGET insert, reconciliation and recovery work, including `in_doubt` inserts.
+- Preserved SOURCE SELECT-only and Controlled Target Insert safety; v0.22.7 adds no TARGET UPDATE/DELETE/UPSERT/MERGE authority.
+- Added explicit `local_erasure_completed` and `external_target_erasure_required` outcomes for external TARGET handoff.
+- Added three read-only MCP inspection tools; request/review/approval/execute remain governed operator mutations.

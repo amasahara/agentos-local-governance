@@ -1,66 +1,87 @@
 {
-  "release": "0.22.7",
-  "node": "Data Subject Rights & Privacy Lifecycle",
-  "baseline": "0.22.6",
-  "schema_from": 42,
-  "schema_to": 43,
-  "verification": {
-    "github_pre_node_check": {
-      "status": "verified",
-      "remote_version_observed": "0.22.5",
-      "note": "Remote main remained v0.22.5; local predecessor is the v0.22.6 exact overlay built in the previous node."
-    },
-    "focused_feature_tests": {
-      "status": "passed",
-      "count": 7
-    },
-    "cross_node_v0226_v0227_tests": {
-      "status": "passed",
-      "count": 14
-    },
-    "migration_42_to_43": {
-      "status": "passed",
-      "foreign_keys": 1
-    },
-    "clean_upgrade_representative_v0226": {
-      "status": "passed",
-      "dry_run": true,
-      "backup": true,
-      "apply": true
-    },
-    "unified_cli_registry": {
-      "status": "passed",
-      "unique_commands": 218
-    },
-    "unified_mcp_registry": {
-      "status": "passed",
-      "unique_tools": 60,
-      "privacy_read_only_tools": 3,
-      "privileged_privacy_mutation_exposed": false
-    },
-    "python_compile": {
-      "status": "passed"
-    },
-    "historical_full_regression": {
-      "status": "not_fully_executed",
-      "reason": "The build container cannot git-clone the GitHub repository and blocks downloading raw Python test files by derived MIME type, so the exact historical suite could not be materialized. Focused and cross-node source-derived tests are reported separately; no full-suite pass claim is made."
-    },
-    "external_target_integration": {
-      "status": "not_executed",
-      "reason": "No external DB endpoint/credential was available; v0.22.7 intentionally performs no TARGET mutation."
-    },
-    "native_windows_integration": {
-      "status": "not_executed",
-      "reason": "Linux build host; registry/runtime parity only."
+  "release": "0.23.0",
+  "node": "Requirement-Preserving Context Compression",
+  "baseline": {
+    "github_verified_version": "0.22.7",
+    "github_verified_schema": 43,
+    "data_subject_rights_document_present": true,
+    "verification_date": "2026-08-09"
+  },
+  "result": "passed_with_explicit_environment_limitations",
+  "schema": {
+    "from": 43,
+    "to": 44,
+    "migration_chain_1_to_current": "passed",
+    "foreign_keys_on": true,
+    "new_tables": [
+      "context_transport_packs",
+      "context_requirement_ledger",
+      "context_expansion_events",
+      "context_transport_evaluations"
+    ]
+  },
+  "runtime": {
+    "unified_cli_unique_commands": 227,
+    "unified_mcp_unique_tools": 65,
+    "new_context_mcp_tools": 5,
+    "context_mcp_mutation_exposed": false,
+    "version_forwarding_reintroduced": false,
+    "mcp_subprocess_forwarding_reintroduced": false
+  },
+  "tests_actually_run": {
+    "focused_v0230": "12 passed",
+    "full_available_regression": "144 passed",
+    "clean_representative_v0227_to_v0230_upgrade": "144 passed",
+    "validate_v0230": "passed",
+    "docs_check": "passed",
+    "python_compile": "passed",
+    "cli_mcp_collision_checks": "passed",
+    "unknown_cli_and_mcp_protocol_regression": "passed as part of available historical suite",
+    "sensitive_data_leakage_regression": "passed as part of v0.22.6/v0.22.7 available suite",
+    "overlay_manifest_and_checksums": "passed",
+    "clean_zip_unpack": "passed",
+    "zip_integrity": "passed",
+    "wrong_baseline_version_refusal": "passed (VERSION 0.22.6 refused)",
+    "strict_release_integrity_on_representative_tree": "not passed because the locally materialized predecessor omits historical packaging/policy files; strict fail-closed validator retained for exact repository"
+  },
+  "preservation_guarantees": {
+    "original_request_verbatim": true,
+    "original_request_hash": true,
+    "stable_requirement_ledger": true,
+    "agents_authority_verbatim": true,
+    "approved_scope_lossless": true,
+    "active_plan_hash": true,
+    "policy_authority_hash": true,
+    "source_freshness_gate": true,
+    "transport_integrity_gate_before_ready": true,
+    "required_preservation_rate": 1.0,
+    "control_plane_budget_overflow": "fail_closed",
+    "generative_llm_summarization_authority": false,
+    "word_level_deletion": false,
+    "gzip_base64_minify_semantic_compression": false
+  },
+  "compression": {
+    "ladder": [
+      "exact_dedup",
+      "metadata_normalization",
+      "structural_projection",
+      "requirement_aware_ranking",
+      "omission_handles",
+      "fail_closed"
+    ],
+    "representative_shadow_benchmark": {
+      "tokenizer": "multilingual_heuristic_v1",
+      "generic_64k_ratio": 3.0296296296296297,
+      "generic_128k_ratio": 2.807219201587728,
+      "generic_200k_ratio": 2.807219201587728,
+      "requirement_preservation_rate": 1.0,
+      "interpretation": "Representative local benchmark is inside the initial 2-4x target; this is not a universal production performance claim."
     }
   },
-  "privacy_properties": [
-    "immutable request and immutable plan tables; review/approval/execution stored separately",
-    "idempotent local execution and canonical tombstone",
-    "active/in_doubt identity/extraction/TARGET/reconciliation/recovery fail-closed checks",
-    "local identity bindings/candidates/target lineage removal plus staging/cache/memory/index purge policy",
-    "external_target_erasure_required is an explicit handoff flag; no TARGET UPDATE/DELETE/UPSERT/MERGE",
-    "privacy events contain hashes/counts/status only; no raw subject record values",
-    "MCP inspection only; no review/approval/execution mutation"
+  "environment_limitations": [
+    "The build shell could not clone/download the exact GitHub repository tree because direct shell DNS resolution to github.com was unavailable; GitHub baseline version/schema were verified through the web source instead.",
+    "Clean upgrade regression used the locally materialized v0.22.7 predecessor tree created by the prior release workflow.",
+    "That representative predecessor tree omits several older packaging files/policy sections that the strict historical release-integrity checker expects. Therefore strict full-tree release-integrity is not claimed as passed in this build environment; tools/validate_release.py remains fail-closed and should be run on the user's exact repository after applying the overlay.",
+    "No exact model tokenizer package was installed in this environment; benchmark token accounting used multilingual_heuristic_v1. The runtime will prefer an exact local tokenizer when available."
   ]
 }

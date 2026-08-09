@@ -1,11 +1,45 @@
 # Changelog
 
-## 0.22.7
-- Data Subject Rights & Privacy Lifecycle (schema 43).
-- Immutable erasure request/plan; human review/approval; governed local execution.
-- Non-relinkable canonical tombstones and local derived-state purge.
-- Explicit external TARGET erasure handoff; no TARGET UPDATE/DELETE.
-- Read-only privacy MCP inspection.
+## 0.23.0 — Requirement-Preserving Context Compression
 
-## 0.22.6
-- Trusted Secret Resolver registry and versioned lineage-key lifecycle (schema 42).
+- Added schema 44 transport packs, stable Requirement Ledger persistence, expansion observability and transport evaluation metrics.
+- Added deterministic LLM Transport Compiler derived from fresh canonical Context Packs.
+- Added LOSSLESS Control Plane with verbatim original request, AGENTS authority, approved scope, active plan and protected policy authority.
+- Added 100% Requirement Preservation Gate and fail-closed behavior when protected content exceeds model budget.
+- Added deterministic Evidence Plane compression ladder: exact dedup, metadata normalization, structural projection, requirement-aware ranking, omission handles, fail-closed.
+- Added Python symbol/dependency windows, JSON policy-key projection and repetitive-log aggregation without word-level deletion.
+- Added tokenizer abstraction with exact-local preference and multilingual offline heuristic fallback.
+- Added model budget accounting for capacity, reserved output, system/tool overhead and safety margin.
+- Added five read-only MCP tools: `context_transport_get`, `context_transport_explain`, `context_expand`, `context_requirement_get`, `context_token_report`; no compile/evaluation mutation over MCP.
+- Added canonical-vs-transport evaluation/shadow metrics including compression, requirement preservation, context misses, expansion requests, task/test success, rework and tool-call counts.
+- Fixed clean/fresh `db.connect(immediate=True)` migration transaction sequencing by committing the migration boundary before `BEGIN IMMEDIATE`; foreign keys remain enabled.
+
+## 0.22.7 — Data Subject Rights & Privacy Lifecycle
+
+- Added schema 43 with immutable `data_subject_erasure_requests` and `data_subject_erasure_plans`, plus separate immutable review, approval, execution, tombstone and append-only event evidence.
+- Added database-level no-UPDATE/no-DELETE triggers for privacy request/plan/review/approval/execution/tombstone records and append-only event protection.
+- Added human-reviewed and human-approved local erasure execution inside the existing task/session/capability/baseline-drift/one-time-token/signed-audit enforcement boundary.
+- Added one-way request entity locator retention; local execution replaces the original canonical entity UUID/HMAC lookup material with non-relinkable tombstone markers and removes lineage `key_id` from the tombstoned entity.
+- Added privacy-first purge/invalidation of local identity bindings/candidates/lineage plus related staging/cache/project-memory/embedding/index artifacts according to policy.
+- Added `PRAGMA secure_delete=ON` to the unified AgentOS SQLite connection while preserving `foreign_keys=ON` and migration continuity.
+- Added active/uncertain-operation gates for identity resolution, extraction, Controlled Target Insert, reconciliation and recovery, including `in_doubt` insert detection through related extraction batches before lineage finalization.
+- Added explicit `local_erasure_completed` and `external_target_erasure_required` outcomes. No TARGET UPDATE/DELETE/UPSERT/MERGE authority was added.
+- Added three read-only MCP inspection tools for erasure request/plan/status; no privacy approval/execution mutation is exposed over MCP.
+- Added focused tests for idempotency, unauthorized erasure, DB immutability, active/in-doubt blockers, pending identity candidates, lineage-key interaction, one-way locator behavior and sensitive-data leakage.
+- Upgrader normalizes the currently committed v0.22.6 governance metadata gap only when exact v0.22.6 runtime evidence is present, then layers v0.22.7 policy without weakening earlier safety invariants.
+
+## 0.22.6 — Secret Resolver & Lineage Key Lifecycle
+
+- Added a static trusted secret-resolver registry for `env://`, `keychain://`, `vault://`, bounded `file-secret://`, and `secret://` aliases.
+- Added provider identity/version/implementation-hash pins, capability-scoped operator approval, fail-closed dependency/provider handling, and memory-only credential resolution.
+- Removed production callback-injection authority and forbade governance-config dynamic `importlib module:function` resolver loading.
+- Routed read-only extraction, Controlled Target Insert, and reconciliation through the shared trusted resolver boundary.
+- Added schema 42 with resolver approval/evidence tables, versioned lineage-key metadata, rotation/rekey plans, and `key_id` provenance on identity/lineage records.
+- Replaced the single-key authority with `active/retired/revoked` key lifecycle; new tokens use active key while retired keys remain lookup/verification capable.
+- Migrated legacy lineage key bytes without historical re-HMAC; initialization is privileged and read-only inspection cannot initialize key material.
+- Added restart-safe recovery for a single crash-left key file and fail-closed key-material path validation.
+- Added human-reviewed/approved rotation with signed domain/audit mirroring and governed SOURCE-reread rekey authorization.
+- Pinned reconciliation to the identity-resolution `key_id` so later rotation does not invalidate historical reconciliation.
+- Added five read-only MCP inspection tools; no secret/key mutation or credential authority is exposed.
+
+- Erasure `reason_code` is a bounded enum (not free-form subject text), and filesystem purge is restricted to non-symlink `.agents/runtime/data-staging` artifacts plus the dedicated derived cache root.

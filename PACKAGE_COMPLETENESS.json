@@ -1,40 +1,31 @@
 {
-  "release": "0.22.7",
-  "artifact_type": "exact upgrade overlay",
-  "baseline_required": "0.22.6",
+  "release": "0.23.0",
+  "kind": "upgrade_overlay",
+  "from": "0.22.7",
+  "to": "0.23.0",
+  "status": "complete_for_v0230_delta",
   "required_groups": {
-    "runtime": [
-      ".agents/agentos/__init__.py",
-      ".agents/agentos/cli_runtime.py",
-      ".agents/agentos/data_subject_rights.py",
-      ".agents/agentos/data_subject_rights_cli.py",
-      ".agents/agentos/db.py",
-      ".agents/agentos/mcp_catalog.py",
-      ".agents/agentos/mcp_data_subject_rights.py",
-      ".agents/agentos/mcp_runtime.py",
-      ".agents/agentos/schema_version.py"
-    ],
-    "tests": [
-      ".agents/tests/test_data_subject_rights_v0227.py"
-    ],
-    "docs": [
-      ".agents/docs/PRIVACY_BOUNDARY_V0227.md",
-      ".agents/docs/USAGE_V0227.md",
-      "AGENTS.md",
-      "CHANGELOG.md",
-      "DATA_SUBJECT_RIGHTS.md",
-      "README.en.md",
-      "README.md",
-      "README.vi.md",
-      "RELEASE_NOTES.md",
-      "UPGRADE_FROM_0.22.6.md",
-      "huong_dan.en.md",
-      "huong_dan.md",
-      "huong_dan.vi.md"
-    ],
-    "tools": [
-      "tools/apply_v0227.py",
-      "tools/validate_v0227.py"
-    ]
-  }
+    "runtime": true,
+    "schema_migration": true,
+    "governance_policy": true,
+    "AGENTS_instruction": true,
+    "README_landing": true,
+    "README_vi": true,
+    "README_en": true,
+    "developer_guide_landing": true,
+    "developer_guide_vi": true,
+    "developer_guide_en": true,
+    "release_notes": true,
+    "changelog": true,
+    "node_documentation": true,
+    "upgrade_script": true,
+    "node_validator": true,
+    "strict_release_validator": true,
+    "focused_tests": true,
+    "benchmark_evidence": true,
+    "manifest": true,
+    "checksums": true,
+    "validation_report": true
+  },
+  "note": "The overlay intentionally contains the v0.23.0 delta only; tools/apply_v0230.py preserves all untouched v0.22.7 files and rebuilds a full-target MANIFEST/CHECKSUMS after apply."
 }

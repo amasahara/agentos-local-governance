@@ -20,7 +20,7 @@ from .db import connect
 
 CLAIM_TYPES = {"business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"}
 RISK_LEVELS = {"low", "medium", "high"}
-SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy"}
+SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy"}
 SAFE_OVERRIDE_KEYS = {"source_root", "test_path", "encoding", "runtime_paths"}
 
 
@@ -74,7 +74,7 @@ def load_policy(root: Path) -> dict[str, Any]:
 
 def validate_policy(policy: dict[str, Any]) -> None:
     """Fail closed when mandatory policy sections are absent or invalid."""
-    required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy"}
+    required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy"}
     missing = sorted(required - policy.keys())
     if missing:
         raise RuntimeError(f"missing policy keys: {missing}")
@@ -127,3 +127,39 @@ def validate_policy(policy: dict[str, Any]) -> None:
     runtime_poisoned = [key for key in runtime_required_false if runtime.get(key) is not False]
     if runtime_poisoned:
         raise RuntimeError(f"unified runtime fail-closed invariant violated: {runtime_poisoned}")
+
+    transport = policy["context_transport_policy"]
+    transport_required_true = (
+        "original_user_request_verbatim_required",
+        "original_user_request_hash_required",
+        "requirement_ledger_required",
+        "stable_requirement_ids",
+        "agents_authority_verbatim_required",
+        "approved_scope_lossless_required",
+        "active_plan_hash_required",
+        "policy_authority_hash_required",
+        "source_freshness_required",
+        "transport_integrity_hash_required",
+        "fail_closed_if_control_plane_exceeds_budget",
+        "tokenizer_abstraction_required",
+        "expansion_read_only",
+        "evaluation_shadow_framework",
+    )
+    disabled_transport = [key for key in transport_required_true if transport.get(key) is not True]
+    if disabled_transport:
+        raise RuntimeError(f"context transport invariant disabled: {disabled_transport}")
+    transport_required_false = (
+        "protected_content_translation_allowed",
+        "protected_content_paraphrase_allowed",
+        "protected_content_summarization_allowed",
+        "protected_content_token_pruning_allowed",
+        "protected_content_word_level_deletion_allowed",
+        "generative_llm_summarization_allowed",
+        "gzip_base64_minify_as_semantic_compression_allowed",
+        "mcp_mutation_allowed",
+    )
+    poisoned_transport = [key for key in transport_required_false if transport.get(key) is not False]
+    if poisoned_transport:
+        raise RuntimeError(f"context transport fail-closed invariant violated: {poisoned_transport}")
+    if float(transport.get("requirement_preservation_rate_required", 0.0)) != 1.0:
+        raise RuntimeError("context transport requires 100% protected requirement preservation")

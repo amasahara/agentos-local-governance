@@ -1,7 +1,3 @@
-# AgentOS v0.22.7 Developer Guide
+# AgentOS v0.23.0 Developer Guide
 
-Current version: **0.22.7**, schema **43**.
-
-Required erasure flow: `request-create → plan-create → plan-review → plan-approve → execute`. Request and plan records are immutable; review, approval, and execution are separate records. Use the canonical `entity_uuid`, not a raw subject identifier. Resolve any related active/in-doubt operation before execution. After execution, inspect `local_erasure_completed`; when `external_target_erasure_required` is true, route the external request to the TARGET authority outside AgentOS.
-
-MCP is inspection-only for this lifecycle.
+Build and approve the task, build a fresh canonical Context Pack, then compile a Transport Pack. Only `READY` packs may be used for LLM transport. If protected Control Plane content exceeds the available model input budget, select a larger model profile or legitimate overhead reservation; never truncate the original request, AGENTS authority, approved scope, active plan, or Requirement Ledger. Use read-only expansion handles for omitted evidence.

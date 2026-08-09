@@ -248,3 +248,41 @@ Windows:
 ```
 
 MCP clients should launch `.agents/bin/agentos-mcp` on POSIX or `.agents\bin\agentos-mcp.cmd` on Windows. Governed core proxy tools require `--task-id`, `--session-id`, and `AGENTOS_SESSION_TOKEN`; extension read-only tools and discovery/health remain non-mutating.
+
+## v0.22.6 secret resolver and lineage-key lifecycle
+
+```bash
+agentos secret-provider-catalog
+agentos lineage-keyring-status
+agentos secret-lineage-db-sync
+```
+
+Provider approval, key initialization/rotation/revocation, and rekey authorization are privileged task/session-bound CLI mutations. Resolved credentials are memory-only and are not MCP outputs.
+
+## v0.22.7 data-subject rights and privacy lifecycle
+
+```bash
+agentos data-subject-erasure-request-create --entity-uuid CANONICAL-UUID --reason-code subject_request --requested-by OPERATOR --human-confirmed
+agentos data-subject-erasure-plan-create --request-id REQUEST_ID --created-by OPERATOR
+agentos data-subject-erasure-plan-review --plan-id PLAN_ID --reviewed-by REVIEWER --human-confirmed
+agentos data-subject-erasure-plan-approve --plan-id PLAN_ID --approved-by APPROVER --human-confirmed
+agentos data-subject-erasure-execute --plan-id PLAN_ID --executed-by OPERATOR --human-confirmed
+agentos data-subject-erasure-status --entity-uuid CANONICAL-UUID
+```
+
+All mutation commands require the v0.22.4+ governed task/session boundary on a real AgentOS project. MCP exposes only request/plan/status inspection. If `external_target_erasure_required=true`, route the TARGET-side request to the external authority; AgentOS does not synthesize TARGET UPDATE/DELETE.
+
+
+## v0.23.0 context transport
+
+```bash
+agentos --task-id TASK context-transport-compile --model-profile generic-128k
+agentos --task-id TASK context-transport-get
+agentos --task-id TASK context-transport-explain
+agentos --task-id TASK context-requirement-get
+agentos --task-id TASK context-token-report
+agentos --task-id TASK context-expand --handle-id EXP-...
+agentos --task-id TASK context-transport-evaluate
+```
+
+Compilation and evaluation persistence are CLI/operator functions. MCP exposes only get/explain/expand/requirement/token report.

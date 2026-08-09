@@ -22,8 +22,13 @@ import re
 import sqlite3
 from typing import Any
 import uuid
+from contextlib import contextmanager
 
-SCHEMA_VERSION = 35
+from .db import connect as central_connect
+from .governance_enforcement import governed_mutation, mirror_domain_event
+
+
+MIGRATION_VERSION = 35
 SUPPORTED_ENGINES = {"mysql", "mssql", "postgresql", "oracle"}
 ROLES = {"SOURCE", "TARGET"}
 SOURCE_ALLOWED_OPERATIONS = {"catalog_read", "select_read", "connection_metadata_read"}
@@ -52,14 +57,11 @@ def _db_path(root: Path | str) -> Path:
     return Path(root).resolve() / ".agents/state/agentos.db"
 
 
-def _connect(root: Path | str) -> sqlite3.Connection:
-    """Open the active project's AgentOS database only."""
-    path = _db_path(root)
-    if not path.exists():
-        raise DatabaseBoundaryError(f"AgentOS database is missing: {path}")
-    conn = sqlite3.connect(path)
-    conn.row_factory = sqlite3.Row
-    return conn
+@contextmanager
+def _connect(root: Path | str):
+    """Open the shared AgentOS governance database connection."""
+    with central_connect(Path(root)) as conn:
+        yield conn
 
 
 def migration_35(conn: sqlite3.Connection) -> None:
@@ -133,14 +135,15 @@ def sync_database_boundary_schema(root: Path | str) -> dict[str, Any]:
     with _connect(root) as conn:
         migration_35(conn)
         tables = {str(r[0]) for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    return {"ok": required <= tables, "schema": SCHEMA_VERSION, "tables": sorted(required)}
+    return {"ok": required <= tables, "schema": MIGRATION_VERSION, "tables": sorted(required)}
 
 
 def _event(conn: sqlite3.Connection, *, event_type: str, payload: Any, connection_id: int | None = None, consolidation_id: int | None = None) -> None:
     """Append local evidence for a boundary decision."""
+    mirror = mirror_domain_event(event_type, payload)
     conn.execute(
-        "INSERT INTO db_boundary_events(consolidation_id,connection_id,event_type,event_json,created_at) VALUES(?,?,?,?,?)",
-        (consolidation_id, connection_id, event_type, _canonical_json(payload), utc_now()),
+        "INSERT INTO db_boundary_events(consolidation_id,connection_id,event_type,event_json,created_at,governed_operation_id,external_event_hash) VALUES(?,?,?,?,?,?,?)",
+        (consolidation_id, connection_id, event_type, _canonical_json(payload), utc_now(), mirror["governed_operation_id"], mirror["external_event_hash"]),
     )
 
 
@@ -168,6 +171,7 @@ def _default_port(engine: str) -> int:
     return {"mysql": 3306, "mssql": 1433, "postgresql": 5432, "oracle": 1521}[engine]
 
 
+@governed_mutation("db.connection.register")
 def register_connection(
     root: Path | str,
     *,
@@ -233,6 +237,7 @@ def register_connection(
     return get_connection(root, connection_id)
 
 
+@governed_mutation("db.source.readonly.verify")
 def verify_source_readonly(
     root: Path | str,
     connection_id: int,
@@ -305,6 +310,7 @@ def get_connection(root: Path | str, connection_id: int) -> dict[str, Any]:
     return {"ok": True, "connection": _row_to_connection(row)}
 
 
+@governed_mutation("db.consolidation.create")
 def create_consolidation(root: Path | str, *, target_connection_id: int, created_by: str) -> dict[str, Any]:
     """Create a database consolidation with exactly one TARGET and zero initial sources."""
     if not created_by.strip():
@@ -330,6 +336,7 @@ def create_consolidation(root: Path | str, *, target_connection_id: int, created
     return get_consolidation(root, cid)
 
 
+@governed_mutation("db.consolidation.source.add")
 def add_source(root: Path | str, consolidation_id: int, source_connection_id: int, *, registered_by: str) -> dict[str, Any]:
     """Attach a verified SOURCE to a consolidation without opening or modifying the source DB."""
     if not registered_by.strip():

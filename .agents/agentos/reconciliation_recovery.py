@@ -30,6 +30,11 @@ from pathlib import Path
 import sqlite3
 from typing import Any, Callable, Iterable, Iterator
 import uuid
+from contextlib import contextmanager
+
+from .db import connect as central_connect
+from .governance_enforcement import governed_mutation, mirror_domain_event
+
 
 from .controlled_target_insert import (
     ControlledTargetInsertError,
@@ -45,7 +50,7 @@ from .identity_resolution import (
     migration_39,
 )
 
-SCHEMA_VERSION = 40
+MIGRATION_VERSION = 40
 RECONCILIATION_VERSION = 1
 SUPPORTED_INSERT_STATES = {"committed", "in_doubt", "committing"}
 RECONCILIATION_OUTCOMES = {"matched", "observed_none", "observed_partial", "mismatch"}
@@ -99,14 +104,11 @@ def _db_path(root: Path | str) -> Path:
     return Path(root).resolve() / ".agents/state/agentos.db"
 
 
-def _connect(root: Path | str) -> sqlite3.Connection:
-    """Open only the local AgentOS SQLite state database."""
-    path = _db_path(root)
-    if not path.exists():
-        raise ReconciliationRecoveryError(f"AgentOS database is missing: {path}")
-    conn = sqlite3.connect(path)
-    conn.row_factory = sqlite3.Row
-    return conn
+@contextmanager
+def _connect(root: Path | str):
+    """Open the shared AgentOS governance database connection."""
+    with central_connect(Path(root)) as conn:
+        yield conn
 
 
 def migration_40(conn: sqlite3.Connection) -> None:
@@ -206,7 +208,7 @@ def sync_reconciliation_recovery_schema(root: Path | str) -> dict[str, Any]:
     with _connect(root) as conn:
         migration_40(conn)
         tables = {str(r[0]) for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    return {"ok": required <= tables, "schema": SCHEMA_VERSION, "tables": sorted(required)}
+    return {"ok": required <= tables, "schema": MIGRATION_VERSION, "tables": sorted(required)}
 
 
 def _privacy_safe(payload: Any) -> None:
@@ -241,11 +243,12 @@ def _event(
 ) -> None:
     """Persist one privacy-safe reconciliation/recovery event."""
     _privacy_safe(payload)
+    mirror = mirror_domain_event(event_type, payload)
     conn.execute(
         """INSERT INTO db_recovery_events(
-            insert_run_id,reconciliation_run_id,recovery_case_id,event_type,event_json,created_at
-        ) VALUES(?,?,?,?,?,?)""",
-        (insert_run_id, reconciliation_run_id, recovery_case_id, event_type, _canonical_json(payload), utc_now()),
+            insert_run_id,reconciliation_run_id,recovery_case_id,event_type,event_json,created_at,governed_operation_id,external_event_hash
+        ) VALUES(?,?,?,?,?,?,?,?)""",
+        (insert_run_id, reconciliation_run_id, recovery_case_id, event_type, _canonical_json(payload), utc_now(), mirror["governed_operation_id"], mirror["external_event_hash"]),
     )
 
 
@@ -377,6 +380,7 @@ def _expected_evidence(context: dict[str, Any], key: bytes) -> tuple[list[dict[s
     return key_rows, row_fps, key_fps
 
 
+@governed_mutation("db.reconciliation.plan.create")
 def create_reconciliation_run(root: Path | str, *, insert_run_id: int, created_by: str) -> dict[str, Any]:
     """Create an immutable read-only reconciliation plan for one insert run."""
     if not str(created_by).strip():
@@ -538,6 +542,7 @@ def _rows_from_target(
     return output
 
 
+@governed_mutation("db.reconciliation.run")
 def run_reconciliation(
     root: Path | str,
     reconciliation_run_id: int,
@@ -724,6 +729,7 @@ def get_reconciliation_summary(root: Path | str, reconciliation_run_id: int) -> 
     }
 
 
+@governed_mutation("db.recovery.scan")
 def scan_recovery_cases(root: Path | str) -> dict[str, Any]:
     """Discover unresolved insert/lineage states and create idempotent local recovery cases."""
     with _connect(root) as conn:
@@ -782,6 +788,7 @@ def _latest_completed_reconciliation(conn: sqlite3.Connection, insert_run_id: in
     ).fetchone()
 
 
+@governed_mutation("db.recovery.commit.decide")
 def resolve_commit_outcome(
     root: Path | str,
     recovery_case_id: int,
@@ -872,6 +879,7 @@ def resolve_commit_outcome(
             "insert_status": "committed" if decision == "committed_verified" else "failed", "automatic_retry": False}
 
 
+@governed_mutation("db.recovery.lineage.finalize")
 def recover_pending_lineage(root: Path | str, recovery_case_id: int, *, recovered_by: str, human_confirmed: bool) -> dict[str, Any]:
     """Idempotently recover local lineage after a known committed external insert."""
     if not human_confirmed or not str(recovered_by).strip():

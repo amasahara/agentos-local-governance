@@ -1,23 +1,69 @@
 [🇻🇳 Tiếng Việt](README.vi.md) | [🇬🇧 English](README.en.md)
 
-# AgentOS Local Governance v0.22.3
+# AgentOS Local Governance v0.22.4
 
-## Core Reintegration & Release Integrity
+## Unified Governance Enforcement & Signed Audit
 
-Phiên bản này sửa lỗi toàn vẹn release phát hiện ở v0.22.2: commit v0.22.2 vẫn chứa lõi cũ trên GitHub nhưng đã thay `db.py` bằng registry migration 32–40 và ghi đè `governance.json` bằng policy nhánh mới. v0.22.3 khôi phục một runtime thống nhất.
+v0.22.4 đưa nhánh project/database v0.20–v0.22 vào cùng enforcement boundary với lõi governance đã được khôi phục ở v0.22.3.
 
-### Invariant
+### Luồng bắt buộc cho privileged mutation
 
-- Lõi governance v0.19.5 và nhánh v0.20–v0.22 phải cùng có mặt trong release.
-- `db.py` khôi phục `connect()` và migration 1→31, sau đó nối additive migration 32→40.
-- `CURRENT_SCHEMA_VERSION = 40` là nguồn chân lý duy nhất.
-- `governance.json` là phép hợp của policy lõi và policy project/database mới.
-- `agentos.v0195` và `agentos-mcp.v0195` phải gọi runtime thật; không silent success/echo stub.
-- Historical core tests và feature tests đều là release gate.
-- `MANIFEST.json`/`CHECKSUMS.sha256` được verify bằng tool chính thức.
+```text
+approved task + owner session
+        ↓
+workflow approve_task done
+        ↓
+initialized baseline + no drift
+        ↓
+approved sensitive override only
+        ↓
+one-time guard token
+        ↓
+domain transaction
+        ↓
+privacy-safe signed domain events
+        ↓
+guarded completion + signed completion
+```
 
-### Phạm vi chưa làm
+### Guarantee
 
-v0.22.3 không tuyên bố đã đưa mọi mutation database-domain qua `guard_tool`/signed audit. Việc đó thuộc v0.22.4 Unified Governance Enforcement & Signed Audit.
+- Privileged database-domain mutation trên một AgentOS project hợp lệ bắt buộc có `task_id` và `session_id`.
+- Task phải được approve và session gọi phải là owner hiện tại.
+- Governance baseline chưa acknowledge hoặc có drift chưa acknowledge sẽ chặn mutation.
+- Mỗi business operation dùng đúng một guard token; không tạo token theo từng câu SQL nội bộ.
+- Sáu event table của database pipeline lưu `governed_operation_id` và `external_event_hash`.
+- Signed audit failure chặn operation trước khi local domain event được persist.
+- Sáu module database dùng chung `agentos.db.connect()`; SQLite foreign keys và busy timeout áp dụng nhất quán.
+- Các invariant SOURCE write/raw TARGET write/identity auto-decision/in-doubt auto-recovery được validate fail-closed và không thể bật bằng policy override.
+- MCP tiếp tục read-only đối với privileged database mutations.
 
-Database schema: **40**
+### CLI
+
+Privileged command dùng governance context ở trước command:
+
+```bash
+.agents/bin/agentos \
+  --task-id TASK-001 \
+  --session-id AGENT-1 \
+  db-connection-register ...
+```
+
+Có thể dùng `AGENTOS_TASK_ID` và `AGENTOS_SESSION_ID` thay cho prefix flags.
+
+### Schema
+
+Database schema: **41**
+
+Schema 41 bổ sung `governed_operations` và correlation columns cho:
+
+- `db_boundary_events`
+- `db_schema_mapping_events`
+- `db_extraction_events`
+- `db_target_insert_events`
+- `identity_resolution_events`
+- `db_recovery_events`
+
+### Roadmap tiếp theo
+
+v0.22.5 sẽ flatten CLI/MCP và hoàn thiện cross-platform runtime; v0.22.4 cố ý chưa thực hiện refactor đó.

@@ -23,7 +23,7 @@ from typing import Any
 from .db import connect
 from .policy import load_policy
 
-LOCAL_TOOLS = {"bounded_file_read", "filesystem_read", "filesystem_write", "python", "pytest", "shell_local", "index_query", "docs_scan"}
+LOCAL_TOOLS = {"bounded_file_read", "filesystem_read", "filesystem_write", "python", "pytest", "shell_local", "index_query", "docs_scan", "governed_operation"}
 NETWORK_TOOLS = {"web", "http", "download", "api", "git_remote"}
 _SECRET_PATTERNS = [
     re.compile(r"(?i)(authorization|api[_-]?key|password|cookie|secret|token)\s*[:=]\s*([^\s,;]+)"),
@@ -77,7 +77,7 @@ def redact_value(value: Any) -> Any:
     if isinstance(value, dict):
         out = {}
         for key, item in value.items():
-            if any(token in key.lower() for token in ("authorization", "password", "secret", "token", "cookie", "api_key", "apikey")):
+            if any(token in key.lower() for token in ("authorization", "password", "secret", "token", "cookie", "api_key", "apikey", "credential", "dsn", "connection_string")):
                 out[key] = "[REDACTED]"
             else:
                 out[key] = redact_value(item)

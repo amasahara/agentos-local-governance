@@ -257,3 +257,19 @@ Database consolidation is directional and fail-closed.
 - v0.22.3 restores integrity only. Full task/session enforcement and signed audit for database-domain mutations is scheduled for v0.22.4.
 <!-- AGENTOS_V0223_CORE_REINTEGRATION_END -->
 
+
+
+<!-- AGENTOS_V0224_UNIFIED_GOVERNANCE_ENFORCEMENT_BEGIN -->
+## AgentOS v0.22.4 — Unified Governance Enforcement & Signed Audit
+
+- Every privileged v0.21-v0.22 database-domain mutation on a valid AgentOS project MUST run inside one task/session-bound governed operation.
+- The task MUST be approved, the caller session MUST own it, and the `approve_task` workflow step MUST already be complete.
+- Governance baseline MUST be initialized and unacknowledged drift MUST block mutation. Sensitive local overrides MUST already be approved.
+- One business operation MUST consume one single-use `guard_tool` execution token and MUST complete it exactly once; do not issue tokens per internal SQL statement.
+- A signed `governed_operation.request` event MUST exist before mutation. Privacy-safe domain events MUST be mirrored to Ed25519 signed audit. Completion/denial MUST also be signed.
+- Failure to write required signed audit evidence MUST fail closed.
+- Domain event rows MUST correlate to `governed_operation_id` and `external_event_hash` where schema 41 provides those fields.
+- SOURCE writes, raw/generic TARGET writes, automatic identity decisions, automatic `in_doubt` recovery, and automatic partial-target repair are non-overridable safety invariants.
+- MCP MUST remain read-only for privileged database-domain operations.
+- Database-domain modules MUST use the central AgentOS SQLite connection policy; local independent `sqlite3.connect()` state paths are forbidden.
+<!-- AGENTOS_V0224_UNIFIED_GOVERNANCE_ENFORCEMENT_END -->

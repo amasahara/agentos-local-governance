@@ -30,11 +30,16 @@ import re
 import sqlite3
 from typing import Any, Callable, Iterable, Iterator
 import uuid
+from contextlib import contextmanager
+
+from .db import connect as central_connect
+from .governance_enforcement import governed_mutation, mirror_domain_event
+
 
 from .database_boundary import DatabaseBoundaryError, authorize_operation
 from .schema_mapping import SchemaMappingError, migration_36
 
-SCHEMA_VERSION = 37
+MIGRATION_VERSION = 37
 EXTRACTION_PLAN_VERSION = 1
 BATCH_STATUSES = {"planned", "running", "validated", "completed_with_rejections", "failed", "stale"}
 SAFE_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_$#@.-]{0,127}$")
@@ -102,14 +107,11 @@ def _db_path(root: Path | str) -> Path:
     return Path(root).resolve() / ".agents/state/agentos.db"
 
 
-def _connect(root: Path | str) -> sqlite3.Connection:
-    """Open only the local AgentOS SQLite state database."""
-    path = _db_path(root)
-    if not path.exists():
-        raise ReadOnlyExtractionError(f"AgentOS database is missing: {path}")
-    conn = sqlite3.connect(path)
-    conn.row_factory = sqlite3.Row
-    return conn
+@contextmanager
+def _connect(root: Path | str):
+    """Open the shared AgentOS governance database connection."""
+    with central_connect(Path(root)) as conn:
+        yield conn
 
 
 def migration_37(conn: sqlite3.Connection) -> None:
@@ -206,7 +208,7 @@ def sync_read_only_extraction_schema(root: Path | str) -> dict[str, Any]:
     with _connect(root) as conn:
         migration_37(conn)
         tables = {str(row[0]) for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    return {"ok": required <= tables, "schema": SCHEMA_VERSION, "tables": sorted(required)}
+    return {"ok": required <= tables, "schema": MIGRATION_VERSION, "tables": sorted(required)}
 
 
 def _event(
@@ -220,9 +222,10 @@ def _event(
 ) -> None:
     """Append privacy-safe extraction evidence; payload must never contain record values."""
     _assert_no_record_values_in_event(payload)
+    mirror = mirror_domain_event(event_type, payload)
     conn.execute(
-        "INSERT INTO db_extraction_events(batch_id,consolidation_id,source_connection_id,event_type,event_json,created_at) VALUES(?,?,?,?,?,?)",
-        (batch_id, consolidation_id, source_connection_id, event_type, _canonical_json(payload), utc_now()),
+        "INSERT INTO db_extraction_events(batch_id,consolidation_id,source_connection_id,event_type,event_json,created_at,governed_operation_id,external_event_hash) VALUES(?,?,?,?,?,?,?,?)",
+        (batch_id, consolidation_id, source_connection_id, event_type, _canonical_json(payload), utc_now(), mirror["governed_operation_id"], mirror["external_event_hash"]),
     )
 
 
@@ -315,6 +318,7 @@ def _validate_transform_rule(item: dict[str, Any]) -> None:
         raise ReadOnlyExtractionError(f"mapping {item['mapping_id']} requires an explicit transform")
 
 
+@governed_mutation("db.extraction.batch.create")
 def create_extraction_batch(
     root: Path | str,
     *,
@@ -917,6 +921,7 @@ def _flush_findings(root: Path, findings: list[tuple[Any, ...]]) -> None:
         )
     findings.clear()
 
+@governed_mutation("db.extraction.run")
 def run_extraction_validation(
     root: Path | str,
     batch_id: int,

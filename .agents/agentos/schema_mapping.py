@@ -25,10 +25,15 @@ import re
 import sqlite3
 from typing import Any, Iterable
 import uuid
+from contextlib import contextmanager
+
+from .db import connect as central_connect
+from .governance_enforcement import governed_mutation, mirror_domain_event
+
 
 from .database_boundary import DatabaseBoundaryError, migration_35
 
-SCHEMA_VERSION = 36
+MIGRATION_VERSION = 36
 SNAPSHOT_SCHEMA_VERSION = 1
 TARGET_CONTRACT_SCHEMA_VERSION = 1
 CANONICAL_TYPES = {
@@ -73,14 +78,11 @@ def _db_path(root: Path | str) -> Path:
     return Path(root).resolve() / ".agents/state/agentos.db"
 
 
-def _connect(root: Path | str) -> sqlite3.Connection:
-    """Open only the active project's AgentOS SQLite state."""
-    path = _db_path(root)
-    if not path.exists():
-        raise SchemaMappingError(f"AgentOS database is missing: {path}")
-    conn = sqlite3.connect(path)
-    conn.row_factory = sqlite3.Row
-    return conn
+@contextmanager
+def _connect(root: Path | str):
+    """Open the shared AgentOS governance database connection."""
+    with central_connect(Path(root)) as conn:
+        yield conn
 
 
 def migration_36(conn: sqlite3.Connection) -> None:
@@ -191,7 +193,7 @@ def sync_schema_mapping_schema(root: Path | str) -> dict[str, Any]:
     with _connect(root) as conn:
         migration_36(conn)
         tables = {str(row[0]) for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    return {"ok": required <= tables, "schema": SCHEMA_VERSION, "tables": sorted(required)}
+    return {"ok": required <= tables, "schema": MIGRATION_VERSION, "tables": sorted(required)}
 
 
 def _event(
@@ -205,11 +207,12 @@ def _event(
     mapping_id: int | None = None,
 ) -> None:
     """Append local evidence for v0.21.1 state changes."""
+    mirror = mirror_domain_event(event_type, payload)
     conn.execute(
         """INSERT INTO db_schema_mapping_events(
-            consolidation_id,snapshot_id,contract_id,mapping_id,event_type,event_json,created_at
-        ) VALUES(?,?,?,?,?,?,?)""",
-        (consolidation_id, snapshot_id, contract_id, mapping_id, event_type, _canonical_json(payload), utc_now()),
+            consolidation_id,snapshot_id,contract_id,mapping_id,event_type,event_json,created_at,governed_operation_id,external_event_hash
+        ) VALUES(?,?,?,?,?,?,?,?,?)""",
+        (consolidation_id, snapshot_id, contract_id, mapping_id, event_type, _canonical_json(payload), utc_now(), mirror["governed_operation_id"], mirror["external_event_hash"]),
     )
 
 
@@ -322,6 +325,7 @@ def _column_index(table: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {c["name"].lower(): c for c in table.get("columns", [])}
 
 
+@governed_mutation("db.schema.snapshot.register")
 def register_schema_snapshot(
     root: Path | str,
     *,
@@ -485,6 +489,7 @@ def _validate_contract_against_snapshot(contract: dict[str, Any], snapshot: dict
                 )
 
 
+@governed_mutation("db.target_contract.create")
 def create_target_contract(
     root: Path | str,
     *,
@@ -532,6 +537,7 @@ def create_target_contract(
     return get_target_contract(root, cid)
 
 
+@governed_mutation("db.target_contract.review")
 def review_target_contract(root: Path | str, contract_id: int, *, reviewed_by: str, human_confirmed: bool) -> dict[str, Any]:
     """Record human review of a draft target schema contract."""
     if not human_confirmed or not reviewed_by.strip():
@@ -552,6 +558,7 @@ def review_target_contract(root: Path | str, contract_id: int, *, reviewed_by: s
     return get_target_contract(root, int(contract_id))
 
 
+@governed_mutation("db.target_contract.approve")
 def approve_target_contract(root: Path | str, contract_id: int, *, approved_by: str, human_confirmed: bool) -> dict[str, Any]:
     """Approve one reviewed target contract and supersede older approved contracts for the consolidation."""
     if not human_confirmed or not approved_by.strip():
@@ -624,6 +631,7 @@ def _find_target_column(contract: dict[str, Any], schema: str, table: str, colum
     return col
 
 
+@governed_mutation("db.field_mapping.add")
 def add_field_mapping(
     root: Path | str,
     *,
@@ -744,6 +752,7 @@ def _mapping_is_current(conn: sqlite3.Connection, row: sqlite3.Row) -> bool:
     )
 
 
+@governed_mutation("db.field_mapping.confirm")
 def confirm_field_mapping(root: Path | str, mapping_id: int, *, confirmed_by: str, human_confirmed: bool) -> dict[str, Any]:
     """Human-confirm one proposed field mapping after re-verifying snapshot/contract hashes."""
     if not human_confirmed or not confirmed_by.strip():
@@ -764,6 +773,7 @@ def confirm_field_mapping(root: Path | str, mapping_id: int, *, confirmed_by: st
     return get_field_mapping(root, int(mapping_id))
 
 
+@governed_mutation("db.field_mapping.reject")
 def reject_field_mapping(root: Path | str, mapping_id: int, *, rejected_by: str, human_confirmed: bool) -> dict[str, Any]:
     """Human-reject a proposed field mapping."""
     if not human_confirmed or not rejected_by.strip():

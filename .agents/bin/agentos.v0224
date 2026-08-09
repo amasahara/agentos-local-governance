@@ -1,0 +1,38 @@
+#!/usr/bin/env sh
+set -eu
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ROOT=$(CDPATH= cd -- "$HERE/../.." && pwd)
+
+# v0.22.4 accepts governance context as prefix flags:
+#   agentos --task-id TASK --session-id SESSION <privileged-command> ...
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --task-id)
+      [ "$#" -ge 2 ] || { echo "--task-id requires a value" >&2; exit 2; }
+      AGENTOS_TASK_ID=$2; export AGENTOS_TASK_ID; shift 2 ;;
+    --session-id)
+      [ "$#" -ge 2 ] || { echo "--session-id requires a value" >&2; exit 2; }
+      AGENTOS_SESSION_ID=$2; export AGENTOS_SESSION_ID; shift 2 ;;
+    *) break ;;
+  esac
+done
+
+CMD="${1:-}"
+case "$CMD" in
+  governed-operation-show)
+    shift
+    PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.governance_enforcement_cli --root "$ROOT" governed-operation-show "$@"
+    ;;
+  db-connection-register|db-source-verify-readonly|db-consolidation-create|db-consolidation-add-source|\
+  db-schema-snapshot-register|db-target-contract-create|db-target-contract-review|db-target-contract-approve|db-field-mapping-add|db-field-mapping-confirm|db-field-mapping-reject|\
+  db-extraction-batch-create|db-extraction-run|\
+  db-target-insert-plan-create|db-target-insert-plan-review|db-target-insert-plan-approve|db-target-insert-execute|\
+  db-identity-policy-create|db-identity-policy-review|db-identity-policy-approve|db-identity-resolution-create|db-identity-resolution-run|db-identity-candidate-decide|\
+  db-reconciliation-create|db-reconciliation-run|db-recovery-scan|db-recovery-commit-decide|db-recovery-lineage-finalize)
+    if [ -z "${AGENTOS_TASK_ID:-}" ] || [ -z "${AGENTOS_SESSION_ID:-}" ]; then
+      echo "v0.22.4 privileged command requires --task-id and --session-id (or AGENTOS_TASK_ID/AGENTOS_SESSION_ID)" >&2
+      exit 2
+    fi
+    ;;
+esac
+exec "$HERE/agentos.v0223" "$@"

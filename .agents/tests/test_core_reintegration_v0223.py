@@ -12,17 +12,17 @@ from agentos.schema_version import CURRENT_SCHEMA_VERSION
 from agentos.policy import load_policy
 
 
-def test_schema_source_of_truth_is_40():
-    assert CURRENT_SCHEMA_VERSION == 40 == SCHEMA_VERSION
+def test_schema_source_of_truth_is_current():
+    assert CURRENT_SCHEMA_VERSION == 41 == SCHEMA_VERSION
 
 
-def test_fresh_database_runs_contiguous_migrations_1_to_40(tmp_path: Path):
+def test_fresh_database_runs_contiguous_migrations_1_to_current(tmp_path: Path):
     root=tmp_path/"project"; (root/".agents/state").mkdir(parents=True); (root/".agents/config").mkdir(parents=True)
     with connect(root) as c:
         versions=[r["version"] for r in c.execute("SELECT version FROM schema_migrations ORDER BY version")]
         assert c.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         tables={r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert versions == list(range(1,41))
+    assert versions == list(range(1,42))
     assert {"tasks","guarded_executions","audit_events","project_identity","db_connections","db_reconciliation_runs"} <= tables
 
 
@@ -50,7 +50,7 @@ def test_unknown_core_cli_command_fails_nonzero():
 def test_historical_test_is_release_critical():
     text=(ROOT/".agents/tests/test_agentos.py").read_text()
     assert "test_proxy_read_creates_signed_external_evidence" in text
-    assert 'load_policy(ROOT)["version"] == "0.22.3"' in text
+    assert 'load_policy(ROOT)["version"] == "0.22.4"' in text
 
 
 def test_runtime_cache_files_are_not_release_authority(tmp_path: Path):
@@ -73,5 +73,5 @@ def test_v0223_docs_check_replaces_stale_version_chain():
     assert cp.returncode == 0, cp.stderr + cp.stdout
     report=json.loads(cp.stdout)
     assert report["ok"] is True
-    assert report["version"] == "0.22.3"
+    assert report["version"] == "0.22.4"
 

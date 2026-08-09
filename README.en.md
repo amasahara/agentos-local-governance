@@ -1,23 +1,62 @@
 [🇻🇳 Vietnamese](README.vi.md) | [🇬🇧 English](README.en.md)
 
-# AgentOS Local Governance v0.22.3
+# AgentOS Local Governance v0.22.4
 
-## Core Reintegration & Release Integrity
+## Unified Governance Enforcement & Signed Audit
 
-This release repairs the v0.22.2 integrity break: the GitHub tree still contains the historical core, but v0.22.2 replaced `db.py` with only migrations 32–40 and replaced `governance.json` with only the extension-policy branch. v0.22.3 restores one coherent runtime.
+v0.22.4 places the v0.20–v0.22 project/database branch inside the same enforcement boundary as the governance core restored in v0.22.3.
 
-### Invariants
+### Required privileged-mutation lifecycle
 
-- The v0.19.5 governance core and v0.20-v0.22 extension branch must ship together.
-- `db.py` restores `connect()` and migrations 1→31, then appends migrations 32→40.
-- `CURRENT_SCHEMA_VERSION = 40` is the single schema-version authority.
-- `governance.json` is the union of core policy and project/database extension policy.
-- `agentos.v0195` and `agentos-mcp.v0195` invoke real core runtime paths; silent-success/echo stubs are forbidden.
-- Historical core tests and current feature tests are both release gates.
-- `MANIFEST.json`/`CHECKSUMS.sha256` are verified by a first-party tool.
+```text
+approved task + owner session
+        ↓
+workflow approve_task done
+        ↓
+initialized baseline + no drift
+        ↓
+approved sensitive override only
+        ↓
+one-time guard token
+        ↓
+domain transaction
+        ↓
+privacy-safe signed domain events
+        ↓
+guarded completion + signed completion
+```
 
-### Deliberate non-goal
+### Guarantees
 
-v0.22.3 does not claim that every database-domain mutation is already routed through `guard_tool`/signed audit. That remains v0.22.4 Unified Governance Enforcement & Signed Audit.
+- Privileged database-domain mutations on a valid AgentOS project require `task_id` and `session_id`.
+- The task must be approved and the caller session must currently own it.
+- An uninitialized baseline or unacknowledged governance drift blocks mutation.
+- One business operation consumes one guard token; SQL statements do not receive separate tokens.
+- Six database-pipeline event tables persist `governed_operation_id` and `external_event_hash`.
+- Signed-audit failure blocks the operation before the local domain event is persisted.
+- All six database modules use the shared `agentos.db.connect()` path, giving consistent SQLite foreign-key and busy-timeout enforcement.
+- SOURCE write, raw TARGET write, automatic identity decisions, and automatic in-doubt recovery remain fail-closed non-overridable invariants.
+- MCP remains read-only for privileged database mutations.
 
-Database schema: **40**
+### CLI
+
+Privileged commands accept governance context before the command:
+
+```bash
+.agents/bin/agentos \
+  --task-id TASK-001 \
+  --session-id AGENT-1 \
+  db-connection-register ...
+```
+
+`AGENTOS_TASK_ID` and `AGENTOS_SESSION_ID` may be used instead of prefix flags.
+
+### Schema
+
+Database schema: **41**
+
+Schema 41 adds `governed_operations` plus correlation columns to the six domain event tables.
+
+### Next roadmap node
+
+v0.22.5 will flatten CLI/MCP routing and complete the cross-platform runtime. That refactor is deliberately outside v0.22.4.

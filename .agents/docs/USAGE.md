@@ -221,3 +221,13 @@ python3 tools/verify_manifest.py .
 ```
 
 The current release must preserve both the historical governance core and the v0.20-v0.22 extension branch.
+
+## v0.22.4 privileged database operations
+
+Use task/session context before privileged database commands:
+
+```bash
+.agents/bin/agentos --task-id TASK-001 --session-id AGENT-1 db-target-insert-execute --insert-run-id 12
+```
+
+The task must be approved, owned by the session, workflow-approved, and free of unacknowledged governance drift. Signed-audit failure blocks the mutation.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the v0.22.3 core-reintegrated release tree."""
+"""Validate the v0.22.4 unified-governance release tree."""
 from __future__ import annotations
 import argparse, json, os, subprocess, sys, tempfile
 from pathlib import Path
@@ -26,7 +26,7 @@ def main():
         report["migration_versions"]=versions; report["foreign_keys_on"]=fk==1
         report["core_tables_present"]={"tasks","tool_calls","audit_events"} <= tables
         report["extension_tables_present"]={"project_identity","db_connections","db_reconciliation_runs"} <= tables
-        report["ok"] &= versions==list(range(1,41)) and fk==1 and report["core_tables_present"] and report["extension_tables_present"]
+        report["ok"] &= versions==list(range(1,42)) and fk==1 and report["core_tables_present"] and report["extension_tables_present"]
     if not args.skip_manifest:
         cp=subprocess.run([sys.executable,str(root/"tools/verify_manifest.py"),str(root)],capture_output=True,text=True)
         report["manifest_verify_rc"]=cp.returncode; report["manifest_verify_output"]=cp.stdout.strip(); report["ok"] &= cp.returncode==0

@@ -107,3 +107,21 @@ Added Primary-Project Consolidation as a directed, plan-hashed workflow:
 - Partial/mismatched target state requires manual intervention; AgentOS does not auto UPDATE/DELETE/UPSERT/MERGE repair.
 - Known-commit pending lineage can be rebuilt locally/idempotently without repeating TARGET INSERT.
 - MCP remains read-only for reconciliation/recovery.
+
+## v0.22.3 — Core Reintegration & Release Integrity
+
+- Restored central SQLite persistence and migration continuity 1→40.
+- Merged core governance policy with v0.20-v0.22 policy blocks.
+- Repaired v0.19.5 compatibility launchers.
+- Added release-integrity and manifest verification gates.
+- Reintroduced historical core regression as a mandatory release gate.
+
+
+## v0.22.4 — Unified Governance Enforcement & Signed Audit
+
+- Added schema 41 `governed_operations` and signed-domain-event correlation.
+- Routed privileged v0.21-v0.22 domain mutations through approved task/session, workflow, baseline and drift gates.
+- Reused one-time `guard_tool` / `complete_tool` lifecycle instead of creating per-SQL tokens.
+- Mirrored privacy-safe domain events to the Ed25519 external audit chain.
+- Replaced six module-local SQLite connection factories with the central hardened `agentos.db.connect()` through a lazy migration registry.
+- Added fail-closed policy poisoning checks for SOURCE/TARGET/identity/recovery invariants.

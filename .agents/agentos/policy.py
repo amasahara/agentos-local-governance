@@ -20,7 +20,7 @@ from .db import connect
 
 CLAIM_TYPES = {"business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"}
 RISK_LEVELS = {"low", "medium", "high"}
-SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy"}
+SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy"}
 SAFE_OVERRIDE_KEYS = {"source_root", "test_path", "encoding", "runtime_paths"}
 
 
@@ -74,10 +74,38 @@ def load_policy(root: Path) -> dict[str, Any]:
 
 def validate_policy(policy: dict[str, Any]) -> None:
     """Fail closed when mandatory policy sections are absent or invalid."""
-    required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy"}
+    required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy"}
     missing = sorted(required - policy.keys())
     if missing:
         raise RuntimeError(f"missing policy keys: {missing}")
     claim = policy["claim_policy"]
     if set(claim.get("claim_types", [])) != CLAIM_TYPES or set(claim.get("risk_levels", [])) != RISK_LEVELS:
         raise RuntimeError("claim policy allowlists are invalid")
+    enforcement = policy["governance_enforcement_policy"]
+    required_true = (
+        "enabled", "valid_project_root_requires_governed_mutations", "require_task_id", "require_session_id",
+        "require_task_approval", "require_task_owner_session", "require_workflow_approval_step",
+        "require_initialized_baseline", "block_on_drift", "sensitive_override_requires_approval",
+        "one_time_execution_token_required", "signed_request_event_required", "signed_domain_event_required",
+        "signed_completion_event_required", "denied_operations_signed", "signed_audit_failure_blocks_mutation",
+    )
+    disabled = [key for key in required_true if enforcement.get(key) is not True]
+    if disabled:
+        raise RuntimeError(f"unified governance enforcement invariant disabled: {disabled}")
+    required_false = [
+        ("database_boundary_policy", "source_insert_allowed"),
+        ("database_boundary_policy", "source_update_allowed"),
+        ("database_boundary_policy", "source_delete_allowed"),
+        ("controlled_target_insert_policy", "raw_target_insert_allowed"),
+        ("controlled_target_insert_policy", "source_write_allowed"),
+        ("controlled_target_insert_policy", "update_allowed"),
+        ("controlled_target_insert_policy", "upsert_allowed"),
+        ("controlled_target_insert_policy", "delete_allowed"),
+        ("identity_resolution_policy", "llm_may_decide_identity"),
+        ("reconciliation_recovery_policy", "in_doubt_auto_retry_allowed"),
+        ("reconciliation_recovery_policy", "in_doubt_auto_resolution_allowed"),
+        ("reconciliation_recovery_policy", "partial_target_auto_repair_allowed"),
+    ]
+    poisoned = [f"{section}.{key}" for section, key in required_false if policy[section].get(key) is not False]
+    if poisoned:
+        raise RuntimeError(f"non-overridable safety invariant violated: {poisoned}")

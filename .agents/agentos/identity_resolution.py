@@ -24,10 +24,15 @@ from datetime import date, datetime, time, timezone
 from decimal import Decimal
 from typing import Any, Iterable
 import uuid
+from contextlib import contextmanager
+
+from .db import connect as central_connect
+from .governance_enforcement import governed_mutation, mirror_domain_event
+
 
 from .controlled_target_insert import migration_38
 
-SCHEMA_VERSION = 39
+MIGRATION_VERSION = 39
 POLICY_VERSION = 1
 RESOLUTION_VERSION = 1
 KEY_FILE = ".agents/state/identity_lineage.key"
@@ -80,14 +85,11 @@ def _db_path(root: Path | str) -> Path:
     return Path(root).resolve() / ".agents/state/agentos.db"
 
 
-def _connect(root: Path | str) -> sqlite3.Connection:
-    """Open local AgentOS state only."""
-    path = _db_path(root)
-    if not path.exists():
-        raise IdentityResolutionError(f"AgentOS database is missing: {path}")
-    conn = sqlite3.connect(path)
-    conn.row_factory = sqlite3.Row
-    return conn
+@contextmanager
+def _connect(root: Path | str):
+    """Open the shared AgentOS governance database connection."""
+    with central_connect(Path(root)) as conn:
+        yield conn
 
 
 def migration_39(conn: sqlite3.Connection) -> None:
@@ -236,7 +238,7 @@ def sync_identity_resolution_schema(root: Path | str) -> dict[str, Any]:
     with _connect(root) as conn:
         migration_39(conn)
         tables = {str(r[0]) for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    return {"ok": required <= tables, "schema": SCHEMA_VERSION, "tables": sorted(required)}
+    return {"ok": required <= tables, "schema": MIGRATION_VERSION, "tables": sorted(required)}
 
 
 def _privacy_safe(payload: Any) -> None:
@@ -257,9 +259,10 @@ def _privacy_safe(payload: Any) -> None:
 def _event(conn: sqlite3.Connection, event_type: str, payload: dict[str, Any], *, policy_id: int | None = None, run_id: int | None = None) -> None:
     """Persist privacy-safe identity evidence."""
     _privacy_safe(payload)
+    mirror = mirror_domain_event(event_type, payload)
     conn.execute(
-        "INSERT INTO identity_resolution_events(policy_id,resolution_run_id,event_type,event_json,created_at) VALUES(?,?,?,?,?)",
-        (policy_id, run_id, event_type, _canonical_json(payload), utc_now()),
+        "INSERT INTO identity_resolution_events(policy_id,resolution_run_id,event_type,event_json,created_at,governed_operation_id,external_event_hash) VALUES(?,?,?,?,?,?,?)",
+        (policy_id, run_id, event_type, _canonical_json(payload), utc_now(), mirror["governed_operation_id"], mirror["external_event_hash"]),
     )
 
 
@@ -326,6 +329,7 @@ def _field_fingerprint(key: bytes, namespace: str, values: dict[str, Any], field
     return _token(key, namespace, payload)
 
 
+@governed_mutation("db.identity.policy.create")
 def create_identity_policy(
     root: Path | str,
     *,
@@ -390,6 +394,7 @@ def create_identity_policy(
     return get_identity_policy(root, pid)
 
 
+@governed_mutation("db.identity.policy.review")
 def review_identity_policy(root: Path | str, policy_id: int, *, reviewed_by: str, human_confirmed: bool) -> dict[str, Any]:
     """Record explicit human review of a deterministic identity policy."""
     if not human_confirmed or not str(reviewed_by).strip():
@@ -404,6 +409,7 @@ def review_identity_policy(root: Path | str, policy_id: int, *, reviewed_by: str
     return get_identity_policy(root, int(policy_id))
 
 
+@governed_mutation("db.identity.policy.approve")
 def approve_identity_policy(root: Path | str, policy_id: int, *, approved_by: str, human_confirmed: bool) -> dict[str, Any]:
     """Approve one reviewed identity policy; LLM/MCP cannot call this mutation."""
     if not human_confirmed or not str(approved_by).strip():
@@ -478,6 +484,7 @@ def _existing_entity_for_strong(conn: sqlite3.Connection, strong_fp: str) -> lis
     ).fetchall()
 
 
+@governed_mutation("db.identity.run.create")
 def create_identity_resolution_run(root: Path | str, *, extraction_batch_id: int, policy_id: int, created_by: str) -> dict[str, Any]:
     """Create an immutable identity-resolution run for one validated extraction batch."""
     if not str(created_by).strip():
@@ -544,6 +551,7 @@ def _write_atomic(path: Path, data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+@governed_mutation("db.identity.run.execute")
 def run_identity_resolution(root: Path | str, resolution_run_id: int) -> dict[str, Any]:
     """Resolve exact identities, surface strong candidates, and build deduplicated local staging.
 
@@ -740,6 +748,7 @@ def run_identity_resolution(root: Path | str, resolution_run_id: int) -> dict[st
     return get_identity_resolution_run(root_path, int(resolution_run_id))
 
 
+@governed_mutation("db.identity.candidate.decide")
 def decide_identity_candidate(root: Path | str, candidate_id: int, *, decision: str, decided_by: str, human_confirmed: bool) -> dict[str, Any]:
     """Confirm or reject one strong-match candidate through an explicit human-only mutation."""
     if not human_confirmed or decision not in {"confirm", "reject"} or not str(decided_by).strip():
@@ -823,6 +832,7 @@ def get_identity_insert_artifact(root: Path | str, extraction_batch_id: int) -> 
     }
 
 
+@governed_mutation("db.identity.lineage.finalize")
 def finalize_insert_lineage(root: Path | str, insert_run_id: int) -> dict[str, Any]:
     """Attach committed TARGET receipt evidence to every source binding in the resolved batch."""
     root_path = Path(root).resolve()

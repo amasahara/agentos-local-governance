@@ -1,40 +1,92 @@
 {
-  "version": "0.22.3",
-  "release_name": "Core Reintegration & Release Integrity",
-  "database_schema": 40,
-  "baseline": {
-    "repository": "amasahara/agentos-local-governance",
-    "branch": "main",
-    "verified_version": "0.22.2",
-    "critical_files_verified_from_github": true
+  "baseline": "0.22.3",
+  "database": {
+    "current_schema_authority": 41,
+    "direct_sqlite_connect_in_pipeline_modules": false,
+    "lazy_feature_migration_registry": true,
+    "six_pipeline_modules_use_central_connect": true
   },
-  "validation": {
-    "historical_core_tests": {
-      "passed": 79,
-      "failed": 0
-    },
-    "extension_and_v0223_tests": {
-      "passed": 168,
-      "failed": 0
-    },
-    "full_single_process_tests": {
-      "passed": 247,
-      "failed": 0
-    },
-    "contiguous_migrations": "1-40",
-    "sqlite_foreign_keys": true,
-    "release_integrity_check": true,
-    "aggregate_docs_check": true,
-    "instruction_check": true,
-    "unknown_cli_command_nonzero": true,
-    "clean_overlay_upgrade": true
+  "database_schema": 41,
+  "external_projects_touched_by_upgrade": false,
+  "governance_enforcement": {
+    "blocks_unacknowledged_governance_drift": true,
+    "central_hash_chain_domain_audit": true,
+    "domain_event_correlation": [
+      "governed_operation_id",
+      "external_event_hash"
+    ],
+    "mcp_privileged_mutation_exposed": false,
+    "one_business_operation_one_guard_token": true,
+    "requires_approve_task_workflow_step": true,
+    "requires_approved_task": true,
+    "requires_initialized_governance_baseline": true,
+    "requires_session_id": true,
+    "requires_task_id": true,
+    "requires_task_owner_session": true,
+    "signed_audit_failure_blocks_mutation": true,
+    "signed_completion_event": true,
+    "signed_denial_event": true,
+    "signed_domain_events": true,
+    "signed_request_event": true
   },
-  "scope_notes": [
-    "v0.22.3 restores core/release integrity; it does not claim full task/session guard_tool and signed-audit integration for database-domain mutations.",
-    "Unified database-domain enforcement remains planned for v0.22.4.",
-    "MCP/CLI flattening and full cross-platform feature dispatch remain planned for v0.22.5.",
-    "The build environment verified current GitHub VERSION/tree/critical raw files; a codeload archive was not available to the runtime, so the working baseline was materialized from verified GitHub core files plus the v0.22.2 feature release tree."
+  "known_scope_boundaries": {
+    "data_subject_rights": "deferred to v0.22.7",
+    "live_external_database_integration": false,
+    "mcp_cli_flattening": "deferred to v0.22.5",
+    "secret_resolver_and_lineage_key_lifecycle": "deferred to v0.22.6",
+    "windows_full_feature_dispatch": "deferred to v0.22.5"
+  },
+  "negative_tests": [
+    "missing task/session blocks privileged mutation",
+    "unapproved task blocks privileged mutation",
+    "wrong owner session blocks privileged mutation",
+    "governance drift blocks mutation before state change",
+    "policy poisoning of non-overridable safety fields is rejected",
+    "signed audit sink failure blocks mutation",
+    "target insert requires governed context",
+    "CLI privileged command requires task/session context"
   ],
-  "artifact_kind": "upgrade-overlay",
-  "upgrade_from": "0.22.2"
+  "release": "0.22.4",
+  "tests": {
+    "collected_total": 259,
+    "core_reintegration_v0223": {
+      "count": 9,
+      "passed": 9
+    },
+    "full_single_process_completed": false,
+    "full_single_process_note": "Not claimed. 259 tests were collected and verified by isolated historical/feature groups because the build tool runtime cannot sustain the full monolithic command.",
+    "historical_core": {
+      "count": 79,
+      "execution": "isolated node-id groups in this build environment",
+      "note": "The execution environment times out on the long monolithic pytest command; all 79 historical node IDs were verified through smaller pytest groups, without counting timed-out commands as passes.",
+      "passed": 79
+    },
+    "passed_total_by_isolated_groups": 259,
+    "project_database_feature_and_v0224": {
+      "breakdown": {
+        "v0.20.1_v0.20.2_v0.21.0": 62,
+        "v0.21.1": 23,
+        "v0.21.2": 25,
+        "v0.22.0": 21,
+        "v0.22.1": 10,
+        "v0.22.2": 18,
+        "v0.22.4": 12
+      },
+      "count": 171,
+      "passed": 171
+    }
+  },
+  "title": "Unified Governance Enforcement & Signed Audit",
+  "validation": {
+    "clean_upgrade_baseline_manifest_verified": true,
+    "clean_upgrade_from_v0_22_3": true,
+    "clean_upgrade_postflight": true,
+    "docs_check": true,
+    "foreign_keys_on": true,
+    "instruction_check": true,
+    "migration_versions": "1..41 contiguous",
+    "policy_load": true,
+    "python_compile": true,
+    "release_integrity_check": true
+  }
 }

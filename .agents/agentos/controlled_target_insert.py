@@ -29,6 +29,11 @@ import re
 import sqlite3
 from typing import Any, Callable, Iterable, Iterator
 import uuid
+from contextlib import contextmanager
+
+from .db import connect as central_connect
+from .governance_enforcement import governed_mutation, mirror_domain_event
+
 
 from .database_boundary import DatabaseBoundaryError, authorize_operation
 from .read_only_extraction import (
@@ -38,7 +43,7 @@ from .read_only_extraction import (
     verify_staging_artifact,
 )
 
-SCHEMA_VERSION = 38
+MIGRATION_VERSION = 38
 INSERT_PLAN_VERSION = 1
 RUN_STATUSES = {
     "draft", "reviewed", "approved", "running", "committing", "committed",
@@ -96,14 +101,11 @@ def _db_path(root: Path | str) -> Path:
     return Path(root).resolve() / ".agents/state/agentos.db"
 
 
-def _connect(root: Path | str) -> sqlite3.Connection:
-    """Open only the local AgentOS SQLite state database."""
-    path = _db_path(root)
-    if not path.exists():
-        raise ControlledTargetInsertError(f"AgentOS database is missing: {path}")
-    conn = sqlite3.connect(path)
-    conn.row_factory = sqlite3.Row
-    return conn
+@contextmanager
+def _connect(root: Path | str):
+    """Open the shared AgentOS governance database connection."""
+    with central_connect(Path(root)) as conn:
+        yield conn
 
 
 def migration_38(conn: sqlite3.Connection) -> None:
@@ -179,7 +181,7 @@ def sync_controlled_target_insert_schema(root: Path | str) -> dict[str, Any]:
     with _connect(root) as conn:
         migration_38(conn)
         tables = {str(r[0]) for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    return {"ok": required <= tables, "schema": SCHEMA_VERSION, "tables": sorted(required)}
+    return {"ok": required <= tables, "schema": MIGRATION_VERSION, "tables": sorted(required)}
 
 
 def _assert_privacy_safe_event(payload: Any) -> None:
@@ -214,13 +216,14 @@ def _event(
 ) -> None:
     """Append privacy-safe controlled-write evidence to local AgentOS state."""
     _assert_privacy_safe_event(payload)
+    mirror = mirror_domain_event(event_type, payload)
     conn.execute(
         """INSERT INTO db_target_insert_events(
-            insert_run_id,extraction_batch_id,consolidation_id,target_connection_id,event_type,event_json,created_at
-        ) VALUES(?,?,?,?,?,?,?)""",
+            insert_run_id,extraction_batch_id,consolidation_id,target_connection_id,event_type,event_json,created_at,governed_operation_id,external_event_hash
+        ) VALUES(?,?,?,?,?,?,?,?,?)""",
         (
             insert_run_id, extraction_batch_id, consolidation_id, target_connection_id,
-            event_type, _canonical_json(payload), utc_now(),
+            event_type, _canonical_json(payload), utc_now(), mirror["governed_operation_id"], mirror["external_event_hash"],
         ),
     )
 
@@ -365,6 +368,7 @@ def _build_plan_from_batch(conn: sqlite3.Connection, batch: sqlite3.Row, chunk_s
     return plan, target, contract, target_snapshot
 
 
+@governed_mutation("db.target_insert.plan.create")
 def create_target_insert_plan(
     root: Path | str,
     *,
@@ -548,6 +552,7 @@ def _revalidate_run(conn: sqlite3.Connection, row: sqlite3.Row, root: Path) -> t
     return True, None
 
 
+@governed_mutation("db.target_insert.review")
 def review_target_insert_plan(root: Path | str, insert_run_id: int, *, reviewed_by: str, human_confirmed: bool) -> dict[str, Any]:
     """Record explicit human review of one immutable draft INSERT plan."""
     if not human_confirmed or not str(reviewed_by).strip():
@@ -570,6 +575,7 @@ def review_target_insert_plan(root: Path | str, insert_run_id: int, *, reviewed_
     return get_target_insert_plan(root_path, int(insert_run_id))
 
 
+@governed_mutation("db.target_insert.approve")
 def approve_target_insert_plan(root: Path | str, insert_run_id: int, *, approved_by: str, human_confirmed: bool) -> dict[str, Any]:
     """Approve one reviewed plan, binding approval to its immutable plan/staging hashes."""
     if not human_confirmed or not str(approved_by).strip():
@@ -745,6 +751,7 @@ def _chunks(rows: Iterable[tuple[Any, ...]], size: int) -> Iterator[list[tuple[A
         yield chunk
 
 
+@governed_mutation("db.target_insert.execute")
 def execute_target_insert(
     root: Path | str,
     insert_run_id: int,

@@ -1,5 +1,5 @@
 {
-  "version": "0.22.3",
+  "version": "0.22.4",
   "language_policy": {
     "understand_user_language_directly": true,
     "preserve_original_request": true,
@@ -264,7 +264,7 @@
       "huong_dan.md",
       "AGENTS.md"
     ],
-    "current_schema": 40,
+    "current_schema": 41,
     "history_begin": "AGENTOS_VERSION_HISTORY_BEGIN",
     "history_end": "AGENTOS_VERSION_HISTORY_END"
   },
@@ -750,5 +750,57 @@
     "mcp_mutation_tools_exposed": false,
     "mcp_reconciliation_execution_exposed": false,
     "mcp_recovery_decision_exposed": false
+  },
+  "governance_enforcement_policy": {
+    "enforcement_version": 1,
+    "database_schema": 41,
+    "enabled": true,
+    "valid_project_root_requires_governed_mutations": true,
+    "require_task_id": true,
+    "require_session_id": true,
+    "require_task_approval": true,
+    "require_task_owner_session": true,
+    "require_workflow_approval_step": true,
+    "require_initialized_baseline": true,
+    "block_on_drift": true,
+    "sensitive_override_requires_approval": true,
+    "one_time_execution_token_required": true,
+    "signed_request_event_required": true,
+    "signed_domain_event_required": true,
+    "signed_completion_event_required": true,
+    "denied_operations_signed": true,
+    "signed_audit_failure_blocks_mutation": true,
+    "privileged_capabilities": [
+      "db.connection.register",
+      "db.source.readonly.verify",
+      "db.consolidation.create",
+      "db.consolidation.source.add",
+      "db.schema.snapshot.register",
+      "db.target_contract.create",
+      "db.target_contract.review",
+      "db.target_contract.approve",
+      "db.field_mapping.add",
+      "db.field_mapping.confirm",
+      "db.field_mapping.reject",
+      "db.extraction.batch.create",
+      "db.extraction.run",
+      "db.target_insert.plan.create",
+      "db.target_insert.review",
+      "db.target_insert.approve",
+      "db.target_insert.execute",
+      "db.identity.policy.create",
+      "db.identity.policy.review",
+      "db.identity.policy.approve",
+      "db.identity.run.create",
+      "db.identity.run.execute",
+      "db.identity.candidate.decide",
+      "db.identity.lineage.finalize",
+      "db.reconciliation.plan.create",
+      "db.reconciliation.run",
+      "db.recovery.scan",
+      "db.recovery.commit.decide",
+      "db.recovery.lineage.finalize"
+    ],
+    "mcp_privileged_mutation_exposed": false
   }
 }

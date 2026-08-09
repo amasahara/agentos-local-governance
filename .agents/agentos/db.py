@@ -16,15 +16,6 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-from .project_identity import migration_32 as _m32
-from .project_selection import migration_33 as _m33
-from .project_consolidation import migration_34 as _m34
-from .database_boundary import migration_35 as _m35
-from .schema_mapping import migration_36 as _m36
-from .read_only_extraction import migration_37 as _m37
-from .controlled_target_insert import migration_38 as _m38
-from .identity_resolution import migration_39 as _m39
-from .reconciliation_recovery import migration_40 as _m40
 
 from .schema_version import CURRENT_SCHEMA_VERSION
 
@@ -86,7 +77,7 @@ def migrate(connection: sqlite3.Connection) -> None:
     """
     connection.execute("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY)")
     current = connection.execute("SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations").fetchone()["v"]
-    migrations = MIGRATIONS
+    migrations = _all_migrations()
     for version, fn in enumerate(migrations, start=1):
         if version > current:
             fn(connection)
@@ -813,4 +804,61 @@ def _m31(c: sqlite3.Connection) -> None:
     """)
 
 
-MIGRATIONS = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9, _m10, _m11, _m12, _m13, _m14, _m15, _m16, _m17, _m18, _m19, _m20, _m21, _m22, _m23, _m24, _m25, _m26, _m27, _m28, _m29, _m30, _m31, _m32, _m33, _m34, _m35, _m36, _m37, _m38, _m39, _m40]
+def _m41(c: sqlite3.Connection) -> None:
+    """Add unified governed-operation and signed-domain-event correlation for v0.22.4."""
+    c.executescript("""
+    CREATE TABLE governed_operations(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        operation_id TEXT NOT NULL UNIQUE,
+        task_id TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        capability TEXT NOT NULL,
+        intent_hash TEXT NOT NULL,
+        execution_token_hash TEXT NOT NULL,
+        status TEXT NOT NULL,
+        denial_reason TEXT,
+        external_request_hash TEXT,
+        external_completion_hash TEXT,
+        success INTEGER,
+        started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        completed_at TEXT,
+        FOREIGN KEY(task_id) REFERENCES tasks(id)
+    );
+    CREATE INDEX idx_governed_operations_task ON governed_operations(task_id,session_id,status,started_at);
+    """)
+    event_tables = (
+        "db_boundary_events",
+        "db_schema_mapping_events",
+        "db_extraction_events",
+        "db_target_insert_events",
+        "identity_resolution_events",
+        "db_recovery_events",
+    )
+    for table in event_tables:
+        columns = {str(row[1]) for row in c.execute(f"PRAGMA table_info({table})")}
+        if "governed_operation_id" not in columns:
+            c.execute(f"ALTER TABLE {table} ADD COLUMN governed_operation_id TEXT")
+        if "external_event_hash" not in columns:
+            c.execute(f"ALTER TABLE {table} ADD COLUMN external_event_hash TEXT")
+
+
+def _feature_migrations() -> list:
+    """Load feature migrations lazily so feature modules may use central db.connect()."""
+    from .project_identity import migration_32
+    from .project_selection import migration_33
+    from .project_consolidation import migration_34
+    from .database_boundary import migration_35
+    from .schema_mapping import migration_36
+    from .read_only_extraction import migration_37
+    from .controlled_target_insert import migration_38
+    from .identity_resolution import migration_39
+    from .reconciliation_recovery import migration_40
+    return [migration_32, migration_33, migration_34, migration_35, migration_36, migration_37, migration_38, migration_39, migration_40, _m41]
+
+
+MIGRATIONS = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9, _m10, _m11, _m12, _m13, _m14, _m15, _m16, _m17, _m18, _m19, _m20, _m21, _m22, _m23, _m24, _m25, _m26, _m27, _m28, _m29, _m30, _m31]
+
+
+def _all_migrations() -> list:
+    """Return the complete ordered migration chain through the current schema."""
+    return [*MIGRATIONS, *_feature_migrations()]

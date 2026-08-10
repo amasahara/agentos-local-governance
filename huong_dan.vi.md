@@ -1,4 +1,4 @@
-# Hướng dẫn AgentOS v0.23.3
+# Hướng dẫn AgentOS v0.23.4
 
 1. Dùng `consolidation-status` để đọc snapshot toàn pipeline mà không mutate state.
 2. Chạy `performance-baseline-run --repeats 5` trên repository đã materialize và xác nhận `performance-baseline-check`.

@@ -864,7 +864,8 @@ def _feature_migrations() -> list:
     from .context_transport import migration_44
     from .adaptive_budget import migration_45
     from .context_evaluation import migration_46
-    return [migration_32, migration_33, migration_34, migration_35, migration_36, migration_37, migration_38, migration_39, migration_40, _m41, migration_42, migration_43, migration_44, migration_45, migration_46]
+    from .indexing import migration_47
+    return [migration_32, migration_33, migration_34, migration_35, migration_36, migration_37, migration_38, migration_39, migration_40, _m41, migration_42, migration_43, migration_44, migration_45, migration_46, migration_47]
 
 
 MIGRATIONS = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9, _m10, _m11, _m12, _m13, _m14, _m15, _m16, _m17, _m18, _m19, _m20, _m21, _m22, _m23, _m24, _m25, _m26, _m27, _m28, _m29, _m30, _m31]

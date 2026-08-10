@@ -26,7 +26,7 @@ from .release_integrity import check_release_integrity, docs_check_current
 from .release_manifest import verify_manifest
 from .schema_version import CURRENT_SCHEMA_VERSION
 
-VERSION = "0.23.3"
+VERSION = "0.23.4"
 
 FEATURE_CLI_MODULES = (
     "project_identity_cli",
@@ -266,7 +266,7 @@ def _dispatch_special(command: str, root: Path, args: list[str]) -> int:
 
 def _help() -> None:
     registry = command_registry()
-    print("AgentOS Local Governance v0.23.3 — unified CLI runtime")
+    print("AgentOS Local Governance v0.23.4 — unified CLI runtime")
     print("Usage: agentos [--root PATH] [--task-id ID] [--session-id ID] COMMAND [ARGS]")
     print("Commands:")
     for command in sorted(registry):

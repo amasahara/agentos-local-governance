@@ -34,7 +34,8 @@ from .concurrency import acquire_resource, claim_task, handoff_task, heartbeat_r
 from .core import approve_task, db_status, docs_check, instruction_check, list_claims, prepare_change, project_status, record_claim, record_tool_execution, show_claim, start_task
 from .documentation import documentation_scan
 from .drift import ack_baseline, drift_check, drift_diff
-from .indexing import duplicate_report, index_build, index_query
+from .indexing import duplicate_report, index_build, index_query, index_status
+from .incremental_index_benchmark import DEFAULT_BENCHMARK_FILE, check_incremental_index_benchmark, run_incremental_index_benchmark
 from .policy import approve_local_override, local_override_status, load_policy
 from .proxy import proxy_execute
 from .external_audit import rotate_signing_key, verify_external_log
@@ -86,7 +87,10 @@ def parser() -> argparse.ArgumentParser:
     a=s.add_parser("handoff-task"); _task_arg(a); a.add_argument("--to-session",required=True); a.add_argument("--note",required=True)
     a=s.add_parser("mark-step"); _task_arg(a); a.add_argument("--step",required=True); a.add_argument("--status",required=True,choices=["done","skipped"]); a.add_argument("--note",required=True)
     a=s.add_parser("workflow-status"); _task_arg(a)
-    a=s.add_parser("index-build"); a.add_argument("source",nargs="?",default="src"); _task_arg(a)
+    a=s.add_parser("index-build"); a.add_argument("source",nargs="?",default="src"); a.add_argument("--full",action="store_true"); _task_arg(a)
+    s.add_parser("index-status")
+    a=s.add_parser("index-benchmark-run"); a.add_argument("--repeats",type=int,default=3); a.add_argument("--output",default=DEFAULT_BENCHMARK_FILE)
+    a=s.add_parser("index-benchmark-check"); a.add_argument("--path",default=DEFAULT_BENCHMARK_FILE)
     a=s.add_parser("index-query"); a.add_argument("query"); a.add_argument("--limit",type=int,default=10)
     s.add_parser("duplicate-scan")
     a=s.add_parser("guard-tool"); _task_arg(a); a.add_argument("--tool",required=True); a.add_argument("--args",default="{}"); a.add_argument("--reason-code"); a.add_argument("--justification"); a.add_argument("--target")
@@ -228,7 +232,16 @@ def main(argv: list[str] | None = None) -> int:
         elif args.cmd=="handoff-task": result=proxy_execute(root,tid,session,"agentos.handoff_task",{"to_session":args.to_session,"note":args.note})
         elif args.cmd=="mark-step": result=mark_step(root,tid,args.step,args.status,args.note)
         elif args.cmd=="workflow-status": result=workflow_status(root,tid)
-        elif args.cmd=="index-build": result=index_build(root,args.source); complete_automated_step(root,tid,"build_or_update_local_index","index-build",result)
+        elif args.cmd=="index-build": result=index_build(root,args.source,force_full=args.full); complete_automated_step(root,tid,"build_or_update_local_index","index-build",result)
+        elif args.cmd=="index-status": result=index_status(root)
+        elif args.cmd=="index-benchmark-run":
+            result=run_incremental_index_benchmark(root,args.repeats)
+            output=(root/args.output).resolve()
+            try: output.relative_to(root)
+            except ValueError as exc: raise RuntimeError("index benchmark output must stay inside project root") from exc
+            output.write_text(json.dumps(result,ensure_ascii=False,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+            result={**result,"output":output.relative_to(root).as_posix()}
+        elif args.cmd=="index-benchmark-check": result=check_incremental_index_benchmark(root,args.path)
         elif args.cmd=="index-query": result=index_query(root,args.query,args.limit)
         elif args.cmd=="duplicate-scan": result=duplicate_report(root)
         elif args.cmd in {"guard-tool", "complete-tool"}:

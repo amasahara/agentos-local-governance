@@ -27,7 +27,7 @@ from .mcp_catalog import FEATURE_HANDLERS, FEATURE_TOOLS
 from .mcp_server import TOOLS as CORE_TOOLS
 from .schema_version import CURRENT_SCHEMA_VERSION
 
-VERSION = "0.23.3"
+VERSION = "0.23.4"
 HEALTH_TOOL = {
     "name": "agentos.mcp_health",
     "description": "Read unified MCP runtime/catalog health without secrets or mutation.",

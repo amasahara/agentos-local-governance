@@ -1,6 +1,10 @@
-# AgentOS Local Governance v0.23.3 — Consolidation Cockpit & Performance Baseline
+# AgentOS Local Governance v0.23.4 — Incremental Symbol Index
 
 [README landing](README.md) | [English](README.en.md)
+
+## v0.23.4
+
+v0.23.4 chuyển `index-build` sang incremental mặc định: file không đổi vẫn được SHA-256 để bảo đảm correctness nhưng không AST-parse; file mới/đổi chỉ thay symbol rows của chính file đó; file xóa loại stale rows. Lần đầu sau migration 47 bootstrap full rebuild để seed metadata.
 
 ## v0.23.3
 

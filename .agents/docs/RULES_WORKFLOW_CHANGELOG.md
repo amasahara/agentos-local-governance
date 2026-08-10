@@ -1,4 +1,10 @@
 # Changelog
+## v0.23.4 — Incremental Symbol Index
+- **Decision:** persist content hashes for indexed Python files and parse only new/changed bytes.
+- **Safety:** first post-upgrade run bootstraps metadata with a full rebuild; parse failure rolls back the transaction; source path escape is blocked.
+- **Performance contract:** no-change parse count is zero; one-file change parses one file; deleted files remove stale rows. Timing remains advisory until environment-pinned.
+- **Authority:** no MCP mutation is added and database/privacy/context governance boundaries are unchanged.
+
 ## v0.23.3 — Consolidation Cockpit & Performance Baseline
 - **User requirement:** aggregate the complete consolidation pipeline status and establish a measurable performance baseline before concurrency/index optimizations.
 - **Decision:** add a SQLite read-only cockpit spanning candidate/primary selection, project consolidation, DB boundary, schema/mapping, extraction, identity, controlled insert, reconciliation and recovery.

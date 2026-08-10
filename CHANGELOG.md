@@ -1,4 +1,10 @@
 # Changelog
+## 0.23.4 — Incremental Symbol Index
+- Replaced repeated full symbol-index rebuilds with deterministic per-file content-hash incremental updates.
+- Added schema 47 file-state metadata, bootstrap full rebuild, deletion cleanup and atomic parse-failure rollback.
+- Added no-change/change/delete benchmark contracts against the measured v0.23.3 full-rebuild baseline.
+- Preserved all SOURCE/TARGET, privacy, signed-audit, human approval and lossless Context Control Plane invariants.
+
 ## 0.23.3 — Consolidation Cockpit & Performance Baseline
 - Added a read-only end-to-end consolidation cockpit from project selection through reconciliation/recovery.
 - Added isolated fresh-migration and full-rebuild symbol-index timing plus read-only cockpit latency measurement.

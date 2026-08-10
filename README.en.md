@@ -1,6 +1,10 @@
-# AgentOS Local Governance v0.23.3 — Consolidation Cockpit & Performance Baseline
+# AgentOS Local Governance v0.23.4 — Incremental Symbol Index
 
 [README landing](README.md) | [Tiếng Việt](README.vi.md)
+
+v0.23.4 adds a deterministic content-hash incremental Python symbol index. Unchanged files are not AST-parsed; changed/new files replace only their own rows and deleted files remove stale rows. Schema is **47**.
+
+## v0.23.3 foundation
 
 v0.23.3 adds a read-only end-to-end consolidation cockpit and non-destructive performance baselines for fresh schema migration, the current full-rebuild symbol index, and cockpit latency. Schema remains **46**. MCP can read status/baseline artifacts but cannot execute benchmarks or mutate consolidation state.
 

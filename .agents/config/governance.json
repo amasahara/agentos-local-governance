@@ -398,7 +398,7 @@
     "source_update_allowed": false
   },
   "documentation_policy": {
-    "current_schema": 46
+    "current_schema": 47
   },
   "drift_policy": {
     "agent_must_not_ack_for_user": true,
@@ -580,6 +580,20 @@
     "rekey_source_select_governance_required": true,
     "retired_key_lookup_allowed": true,
     "revoked_key_lookup_allowed": false
+  },
+  "incremental_symbol_index_policy": {
+    "bootstrap_after_migration": "full_rebuild_required",
+    "changed_file_replace_scope": "same_file_only",
+    "deleted_file_stale_symbol_cleanup": "required",
+    "force_full_rebuild": "operator_cli_only",
+    "mcp_mutation": "forbidden",
+    "mode": "content_hash_incremental",
+    "parse_failure": "transaction_rollback_fail_closed",
+    "source_path_escape": "forbidden",
+    "symlink_file_indexing": "skipped",
+    "timing_threshold": "advisory_until_environment_pinned",
+    "unchanged_file_ast_parse": "forbidden",
+    "unchanged_file_hash_check": "required"
   },
   "installation_policy": {
     "automatic_baseline_acknowledgement": false,
@@ -958,7 +972,7 @@
     "windows_posix_cli_parity_required": true,
     "windows_posix_mcp_parity_required": true
   },
-  "version": "0.23.3",
+  "version": "0.23.4",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,

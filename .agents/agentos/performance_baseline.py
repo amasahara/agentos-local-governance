@@ -31,6 +31,7 @@ from .consolidation_cockpit import consolidation_status
 from .schema_version import CURRENT_SCHEMA_VERSION
 
 VERSION = "0.23.3"
+BASELINE_SCHEMA_VERSION = 46
 DEFAULT_BASELINE_FILE = "PERFORMANCE_BASELINE_V0233.json"
 
 
@@ -191,6 +192,8 @@ def run_performance_baseline(root: Path, repeats: int = 3) -> dict[str, Any]:
         Structured baseline. All write-heavy measurements run only in temporary
         roots; the governed project database is read only via the cockpit.
     """
+    if CURRENT_SCHEMA_VERSION != BASELINE_SCHEMA_VERSION:
+        raise RuntimeError("PERFORMANCE_BASELINE_V0233 is frozen at schema 46; use index-benchmark-run for v0.23.4+")
     root = root.resolve()
     repeats = max(1, int(repeats))
     workload = _python_workload(root)
@@ -281,7 +284,7 @@ def check_performance_baseline(root: Path, path: str | None = None) -> dict[str,
     findings: list[str] = []
     if baseline.get("version") != VERSION:
         findings.append("baseline_version_mismatch")
-    if int(baseline.get("schema_version", -1)) != CURRENT_SCHEMA_VERSION:
+    if int(baseline.get("schema_version", -1)) != BASELINE_SCHEMA_VERSION:
         findings.append("baseline_schema_mismatch")
     if baseline.get("measurement_status") != "measured":
         findings.append("baseline_not_measured")
@@ -289,7 +292,7 @@ def check_performance_baseline(root: Path, path: str | None = None) -> dict[str,
     if contract.get("project_state_mutation_allowed") is not False:
         findings.append("baseline_must_be_non_destructive")
     migration = baseline.get("migration") or {}
-    if migration.get("chain_length") not in (None, CURRENT_SCHEMA_VERSION):
+    if migration.get("chain_length") not in (None, BASELINE_SCHEMA_VERSION):
         findings.append("migration_chain_length_mismatch")
     fresh = migration.get("fresh_database") or {}
     if not isinstance(fresh.get("median_ms"), (int, float)) or not isinstance(fresh.get("p95_ms"), (int, float)):

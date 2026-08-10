@@ -446,18 +446,27 @@ def _key_path(root: Path, key_id: str) -> Path:
 
 
 def _write_key(path: Path, material: bytes) -> None:
-    """Atomically create a key file with owner-only permissions."""
+    """Create exact binary key material and verify the persisted bytes."""
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
         path.parent.chmod(0o700)
     except OSError:
         pass
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with path.open("xb") as handle:
+        handle.write(material)
+        handle.flush()
+        os.fsync(handle.fileno())
     try:
-        os.write(fd, material)
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+        path.chmod(0o600)
+    except OSError:
+        pass
+    persisted = path.read_bytes()
+    if persisted != material or hashlib.sha256(persisted).digest() != hashlib.sha256(material).digest():
+        try:
+            path.unlink()
+        except OSError:
+            pass
+        raise SecretLineageError("lineage key bytes changed during persistence")
 
 
 def _new_key_id(material: bytes) -> str:

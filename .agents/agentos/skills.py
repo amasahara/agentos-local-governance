@@ -60,9 +60,10 @@ def promote_skill_candidate(root: Path, memory_id: int, promoted_by: str) -> dic
               f"evidence_hashes: {json.dumps([memory.get('evidence_hash')] if memory.get('evidence_hash') else [])}\n"
               "inputs: []\noutputs: []\npreconditions: []\nvalidation: []\nlimitations: []\n---\n\n"
               f"## Procedure\n\n{memory['statement']}\n")
-        digest=hashlib.sha256(body.encode()).hexdigest()
+        payload=body.encode("utf-8")
+        digest=hashlib.sha256(payload).hexdigest()
         rel=Path('.agents/runtime/skills/candidates')/f"{key}-v{version}.md"
-        target=root/rel; target.parent.mkdir(parents=True,exist_ok=True); target.write_text(body,encoding='utf-8')
+        target=root/rel; target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(payload)
         cur=c.execute("INSERT INTO promoted_skills(skill_key,version,memory_id,title,description,candidate_path,status,content_hash,promoted_by) VALUES(?,?,?,?,?,?, 'candidate',?,?)",(key,version,memory_id,title,memory["statement"],rel.as_posix(),digest,promoted_by))
         sid=cur.lastrowid
     return {"ok":True,"skill_id":sid,"skill_key":key,"version":version,"status":"candidate","path":rel.as_posix(),"content_hash":digest}

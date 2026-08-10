@@ -30,6 +30,16 @@ from agentos.project_consolidation import (
 )
 
 
+def _symlink_or_skip(link: Path, target: Path) -> None:
+    """Create a symlink or skip when Windows has no symlink privilege."""
+    try:
+        link.symlink_to(target)
+    except OSError as exc:
+        if getattr(exc, "winerror", None) == 1314:
+            pytest.skip("Windows symlink privilege is unavailable for this test")
+        raise
+
+
 def _digest(path: Path) -> str:
     h = hashlib.sha256()
     h.update(path.read_bytes())
@@ -269,7 +279,7 @@ def test_reuse_records_provenance_without_writing_target(tmp_path: Path) -> None
 
 def test_rollback_restores_replaced_target(tmp_path: Path) -> None:
     primary, _source, cid, mid = _approved_move(tmp_path, target_exists=True)
-    old = b"VALUE = 'old'\n"
+    old = (primary / "src/adapter.py").read_bytes()
     execute_mapping(primary, cid, mid, executed_by="operator")
     assert (primary / "src/adapter.py").read_bytes() != old
     state = rollback_mapping(primary, cid, mid, confirmed_by="owner", reason="Rollback verified consolidation component", human_confirmed=True)
@@ -305,7 +315,7 @@ def test_path_traversal_and_source_symlink_are_blocked(tmp_path: Path) -> None:
     primary, source, set_id, source_uuid = _selected_pair(tmp_path)
     outside = tmp_path / "outside.py"
     outside.write_text("x=1\n", encoding="utf-8")
-    (source / "src/link.py").symlink_to(outside)
+    _symlink_or_skip(source / "src/link.py", outside)
     c = create_consolidation(primary, set_id, created_by="operator")
     cid = int(c["consolidation"]["id"])
     with pytest.raises(ProjectConsolidationError, match="symlink"):
@@ -350,6 +360,6 @@ def test_adapt_rejects_symlink_prepared_content(tmp_path: Path) -> None:
     real.parent.mkdir(parents=True)
     real.write_text("a=2\n", encoding="utf-8")
     link = primary / ".agents/runtime/task-workspaces/T/link.py"
-    link.symlink_to(real)
+    _symlink_or_skip(link, real)
     with pytest.raises(ProjectConsolidationError, match="symlink"):
         execute_mapping(primary, cid, mid, executed_by="operator", prepared_content_file=link)

@@ -179,10 +179,11 @@ def test_recursive_tracking_includes_nested_runtime_module(tmp_path: Path) -> No
 
 def test_drift_detects_runtime_and_hook_changes(tmp_path: Path) -> None:
     root = project(tmp_path); ack_baseline(root, "ci", force_noninteractive=True)
-    (root / ".agents" / "bin" / "agentos").write_text("changed\n")
+    launcher = ".agents/bin/agentos.cmd" if os.name == "nt" else ".agents/bin/agentos"
+    (root / launcher).write_bytes(b"changed\n")
     result = drift_check(root)
     assert result["drift_detected"] is True
-    assert any(x["file_path"] == ".agents/bin/agentos" for x in result["changes"])
+    assert any(x["file_path"] == launcher for x in result["changes"])
 
 
 def test_sensitive_override_is_staged_not_applied(tmp_path: Path) -> None:
@@ -391,8 +392,8 @@ def test_shared_read_leases_are_compatible(tmp_path: Path) -> None:
 
 def test_atomic_write_rejects_stale_expected_hash(tmp_path: Path) -> None:
     root = project(tmp_path); ready(root); claim_task(root, "T1", "S1")
-    path = root / "src" / "a.py"; path.write_text("one\n", encoding="utf-8")
-    old_hash = __import__("hashlib").sha256(b"one\n").hexdigest()
+    path = root / "src" / "a.py"; path.write_bytes(b"one\n")
+    old_hash = __import__("hashlib").sha256(path.read_bytes()).hexdigest()
     first = atomic_write(root, "T1", "S1", "src/a.py", "two\n", old_hash)
     assert first["allowed"] is True and first["atomic"] is True
     stale = atomic_write(root, "T1", "S1", "src/a.py", "three\n", old_hash)

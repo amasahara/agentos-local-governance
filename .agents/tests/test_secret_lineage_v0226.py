@@ -1,6 +1,7 @@
 """v0.22.6 focused regression for trusted secret resolution and lineage-key lifecycle."""
 from __future__ import annotations
 import json
+import os
 from pathlib import Path
 import pytest
 from agentos.db import connect
@@ -62,6 +63,8 @@ def test_file_secret_owner_only(tmp_path: Path):
     path=secret_dir/"db.json"; path.write_text(json.dumps({"user":"u","password":"p"})); path.chmod(0o600)
     approve_provider(tmp_path,"file-secret",capabilities=["db.source.select"],approved_by="operator",human_confirmed=True)
     assert resolve_secret(tmp_path,"file-secret://db.json",capability="db.source.select")["user"] == "u"
+    if os.name == "nt":
+        pytest.skip("POSIX chmod mode-bit enforcement is not a Windows security primitive")
     path.chmod(0o644)
     with pytest.raises(SecretLineageError):
         resolve_secret(tmp_path,"file-secret://db.json",capability="db.source.select")

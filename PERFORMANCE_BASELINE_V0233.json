@@ -1,0 +1,81 @@
+{
+  "cockpit": {
+    "database_present": false,
+    "median_ms": 0.209,
+    "overall_state": "not_initialized",
+    "p95_ms": 0.352,
+    "samples_ms": [
+      0.352,
+      0.209,
+      0.201
+    ]
+  },
+  "environment": {
+    "cpu_count": 12,
+    "implementation": "CPython",
+    "machine": "AMD64",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 151 Stepping 5, GenuineIntel",
+    "python": "3.12.5"
+  },
+  "errors": {},
+  "existing_context_benchmarks": {
+    "ADAPTIVE_TOKEN_BUDGET_BENCHMARK.json": true,
+    "CONTEXT_EXPANSION_EVALUATION_BENCHMARK.json": true,
+    "CONTEXT_TRANSPORT_BENCHMARK.json": true
+  },
+  "measurement_scope": "local_non_destructive",
+  "measurement_status": "measured",
+  "migration": {
+    "chain_length": 46,
+    "fresh_database": {
+      "database_bytes": 1294336,
+      "median_ms": 1156.023,
+      "p95_ms": 1287.493,
+      "samples_ms": [
+        1015.779,
+        1287.493,
+        1156.023
+      ],
+      "schema_observed": 46
+    }
+  },
+  "ok": true,
+  "regression_contract": {
+    "migration_chain_must_equal_schema": true,
+    "project_state_mutation_allowed": false,
+    "required_measurements": [
+      "migration.fresh_database",
+      "symbol_index_current_design",
+      "cockpit"
+    ],
+    "schema_must_equal": 46,
+    "symbol_index_baseline_mode": "full_rebuild",
+    "timing_thresholds_environment_pinned": false
+  },
+  "repeats": 3,
+  "repository": {
+    "authoritative_manifest_file_count": 255,
+    "python_bytes": 1446102,
+    "python_file_count": 105
+  },
+  "schema_version": 46,
+  "symbol_index_current_design": {
+    "fixture_python_files": 105,
+    "known_behavior": "DELETE symbol_index then parse all Python files in selected source tree",
+    "last_result": {
+      "files": 105,
+      "symbols": 1348
+    },
+    "median_ms": 966.16,
+    "mode": "full_rebuild",
+    "p95_ms": 2012.247,
+    "samples_ms": [
+      2012.247,
+      951.623,
+      966.16
+    ]
+  },
+  "version": "0.23.3",
+  "wall_clock_portable": false
+}

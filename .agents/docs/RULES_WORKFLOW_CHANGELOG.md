@@ -1,4 +1,11 @@
 # Changelog
+## v0.23.3 — Consolidation Cockpit & Performance Baseline
+- **User requirement:** aggregate the complete consolidation pipeline status and establish a measurable performance baseline before concurrency/index optimizations.
+- **Decision:** add a SQLite read-only cockpit spanning candidate/primary selection, project consolidation, DB boundary, schema/mapping, extraction, identity, controlled insert, reconciliation and recovery.
+- **Performance baseline:** benchmark fresh schema migration, the current full-rebuild `index_build`, and cockpit latency only in temporary/non-mutating fixtures; absolute wall-clock thresholds remain disabled until the environment is pinned.
+- **MCP boundary:** add read-only `agentos.consolidation_status_get` and `agentos.performance_baseline_get`; benchmark execution remains CLI/operator-only.
+- **Compatibility:** schema remains 46; SOURCE read-only, Controlled Target Insert, human risk gates, signed audit, privacy/secret/key and lossless Context Control Plane remain unchanged.
+
 
 ## v0.23.0 — Requirement-Preserving Context Compression
 

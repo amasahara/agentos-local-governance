@@ -1,8 +1,12 @@
-# AgentOS Local Governance v0.23.2 — Context Expansion & Compression Evaluation
+# AgentOS Local Governance v0.23.3 — Consolidation Cockpit & Performance Baseline
 
 [README landing](README.md) | [English](README.en.md)
 
-## Mục tiêu
+## v0.23.3
+
+v0.23.3 bổ sung `consolidation-status` read-only cho toàn chuỗi project/database consolidation và baseline hiệu năng non-destructive cho migration 1→46, full symbol-index rebuild hiện tại và cockpit latency. Schema vẫn là **46**; MCP chỉ đọc status/baseline, không chạy benchmark và không có quyền mutation.
+
+## Nền v0.23.2
 
 v0.23.2 hoàn thiện vòng lặp **nén → mở rộng có kiểm soát → đánh giá → so sánh shadow** trên nền Requirement-Preserving Context Compression. Control Plane vẫn giữ nguyên 100% original request, Requirement Ledger, AGENTS authority, approved scope và active plan; node này không nới quyền nén protected content.
 

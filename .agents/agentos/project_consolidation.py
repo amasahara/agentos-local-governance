@@ -827,7 +827,7 @@ def _verify_source_component(conn: sqlite3.Connection, mapping: sqlite3.Row) -> 
 def _atomic_write_bytes(path: Path, data: bytes) -> None:
     """Atomically write bytes to an approved primary-project target path."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
+    tmp = path.with_name(f".aos-{uuid.uuid4().hex[:12]}.tmp")
     try:
         with tmp.open("wb") as handle:
             handle.write(data)

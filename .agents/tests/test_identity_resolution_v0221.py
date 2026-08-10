@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import os
 import json
 from pathlib import Path
 import sqlite3
@@ -169,7 +170,7 @@ def test_lineage_key_is_local_owner_only(tmp_path):
     key = root / ".agents/state/lineage-keys" / f"{key_id}.key"
     assert key.exists() and key.read_bytes() == material and len(material) >= 32
     assert not (root / ".agents/state/identity_lineage.key").exists()
-    if hasattr(key.stat(), "st_mode"):
+    if os.name != "nt" and hasattr(key.stat(), "st_mode"):
         assert key.stat().st_mode & 0o077 == 0
 
 

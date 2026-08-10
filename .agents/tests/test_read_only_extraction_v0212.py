@@ -221,9 +221,10 @@ def test_findings_return_hash_not_value(tmp_path):
 def test_artifacts_owner_only_and_hash_verified(tmp_path):
     root = make_root(tmp_path); state = setup_plan(root); batch = create_batch(root, state)
     summary = run_extraction_validation(root, batch["id"], row_provider=[{"MA_BN": "BN1", "NGAY_SINH": None}])
-    for key in ["staging_path", "quarantine_path", "manifest_path"]:
-        mode = os.stat(root / summary[key]).st_mode & 0o777
-        assert mode & 0o077 == 0
+    if os.name != "nt":
+        for key in ["staging_path", "quarantine_path", "manifest_path"]:
+            mode = os.stat(root / summary[key]).st_mode & 0o777
+            assert mode & 0o077 == 0
     assert verify_staging_artifact(root, batch["id"])["ok"] is True
 
 

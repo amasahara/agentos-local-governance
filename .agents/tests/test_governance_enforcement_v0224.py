@@ -26,6 +26,13 @@ from agentos.policy import load_policy
 from agentos.workflow import complete_automated_step, seed_workflow
 
 
+def _agentos_args(root: Path, *args: str) -> list[str]:
+    """Return the native AgentOS launcher command for the current platform."""
+    if os.name == "nt":
+        return [os.environ.get("ComSpec", "cmd.exe"), "/d", "/c", str(root / ".agents/bin/agentos.cmd"), *args]
+    return [str(root / ".agents/bin/agentos"), *args]
+
+
 def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / "project"
     shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns("agentos.db", "__pycache__", ".pytest_cache", "MANIFEST.json", "CHECKSUMS.sha256"))
@@ -163,12 +170,12 @@ def test_governance_policy_registers_privileged_capabilities(tmp_path: Path, mon
 def test_cli_prefix_context_routes_privileged_command(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root = project(tmp_path, monkeypatch)
     prepare(root)
-    cp = subprocess.run([
-        str(root / ".agents/bin/agentos"), "--task-id", "T-GOV", "--session-id", "S-GOV",
+    cp = subprocess.run(_agentos_args(
+        root, "--task-id", "T-GOV", "--session-id", "S-GOV",
         "db-connection-register", "--alias", "cli-source", "--role", "SOURCE", "--engine", "mssql",
         "--host", "source.internal", "--database", "HIS", "--domain", "healthcare",
         "--credential-ref", "env://TEST_SOURCE_DB", "--created-by", "operator",
-    ], cwd=root, text=True, capture_output=True, env=os.environ.copy())
+    ), cwd=root, text=True, capture_output=True, env=os.environ.copy())
     assert cp.returncode == 0, cp.stderr + cp.stdout
     payload = json.loads(cp.stdout)
     assert payload["ok"] is True
@@ -176,6 +183,6 @@ def test_cli_prefix_context_routes_privileged_command(tmp_path: Path, monkeypatc
 
 def test_cli_rejects_privileged_command_without_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root = project(tmp_path, monkeypatch)
-    cp = subprocess.run([str(root / ".agents/bin/agentos"), "db-connection-register", "--help"], cwd=root, text=True, capture_output=True, env=os.environ.copy())
+    cp = subprocess.run(_agentos_args(root, "db-connection-register", "--help"), cwd=root, text=True, capture_output=True, env=os.environ.copy())
     assert cp.returncode == 2
     assert "requires --task-id and --session-id" in cp.stderr

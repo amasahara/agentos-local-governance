@@ -523,20 +523,27 @@ def _artifact_paths(root: Path, resolution_uuid: str) -> tuple[Path, Path]:
 
 
 def _write_atomic(path: Path, data: bytes) -> str:
-    """Atomically write an owner-only local identity artifact and return SHA-256."""
-    tmp = path.with_name(path.name + ".tmp-" + uuid.uuid4().hex)
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    """Atomically write exact binary bytes and verify the persisted SHA-256."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".aos-{uuid.uuid4().hex[:12]}.tmp")
+    expected_hash = hashlib.sha256(data).hexdigest()
     try:
-        os.write(fd, data)
-        os.fsync(fd)
+        with tmp.open("xb") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, path)
     finally:
-        os.close(fd)
-    os.replace(tmp, path)
+        if tmp.exists():
+            tmp.unlink()
     try:
         path.chmod(0o600)
     except OSError:
         pass
-    return hashlib.sha256(data).hexdigest()
+    persisted_hash = _sha256_file(path)
+    if persisted_hash != expected_hash:
+        raise IdentityResolutionError("identity artifact bytes changed during persistence")
+    return persisted_hash
 
 
 @governed_mutation("db.identity.run.execute")

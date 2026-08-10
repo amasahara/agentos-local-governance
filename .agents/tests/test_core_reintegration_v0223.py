@@ -12,6 +12,13 @@ from agentos.schema_version import CURRENT_SCHEMA_VERSION
 from agentos.policy import load_policy
 
 
+def _agentos_args(root: Path, *args: str) -> list[str]:
+    """Return the native AgentOS launcher command for the current platform."""
+    if os.name == "nt":
+        return [os.environ.get("ComSpec", "cmd.exe"), "/d", "/c", str(root / ".agents/bin/agentos.cmd"), *args]
+    return [str(root / ".agents/bin/agentos"), *args]
+
+
 def test_schema_source_of_truth_is_current():
     assert CURRENT_SCHEMA_VERSION == SCHEMA_VERSION and CURRENT_SCHEMA_VERSION >= 41
 
@@ -43,7 +50,7 @@ def test_core_compat_launchers_are_not_dead_stubs():
 
 
 def test_unknown_core_cli_command_fails_nonzero():
-    cp=subprocess.run([str(ROOT/".agents/bin/agentos"),"definitely-not-an-agentos-command"],cwd=ROOT,capture_output=True,text=True)
+    cp=subprocess.run(_agentos_args(ROOT,"definitely-not-an-agentos-command"),cwd=ROOT,capture_output=True,text=True)
     assert cp.returncode != 0
 
 
@@ -71,7 +78,7 @@ def test_runtime_cache_files_are_not_release_authority(tmp_path: Path):
 
 
 def test_v0223_docs_check_replaces_stale_version_chain():
-    cp=subprocess.run([str(ROOT/".agents/bin/agentos"),"docs-check"],cwd=ROOT,capture_output=True,text=True)
+    cp=subprocess.run(_agentos_args(ROOT,"docs-check"),cwd=ROOT,capture_output=True,text=True)
     assert cp.returncode == 0, cp.stderr + cp.stdout
     report=json.loads(cp.stdout)
     assert report["ok"] is True

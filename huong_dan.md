@@ -2,4 +2,4 @@
 
 [🇻🇳 Tiếng Việt](huong_dan.vi.md) | [🇬🇧 English](huong_dan.en.md)
 
-Current version: **0.23.2**. Database schema: **46**. Build a fresh canonical Context Pack, compile a requirement-preserving transport, expand omitted evidence only through bounded hash-pinned handles, then run deterministic Compression Evaluation v2. The lossless Control Plane remains authoritative and is never truncated to improve compression ratio.
+Current version: **0.23.3**. Database schema: **46**. Use `consolidation-status` for a read-only end-to-end pipeline view, capture `PERFORMANCE_BASELINE_V0233.json` with `performance-baseline-run`, and keep the v0.23.2 lossless Context Control Plane and all SOURCE/TARGET/privacy/approval boundaries unchanged.

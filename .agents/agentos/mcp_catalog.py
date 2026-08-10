@@ -29,6 +29,7 @@ from . import mcp_data_subject_rights as data_subject_rights
 from . import mcp_context_transport as context_transport
 from . import mcp_adaptive_budget as adaptive_budget
 from . import mcp_context_evaluation as context_evaluation
+from . import mcp_consolidation_cockpit as consolidation_cockpit
 
 FeatureHandler = Callable[[str, dict[str, Any], Path], dict[str, Any]]
 
@@ -53,6 +54,7 @@ REGISTRATIONS: tuple[tuple[list[dict[str, Any]], FeatureHandler], ...] = (
     (context_transport.TOOLS, context_transport._local_call),
     (adaptive_budget.TOOLS, adaptive_budget._local_call),
     (context_evaluation.TOOLS, context_evaluation._local_call),
+    (consolidation_cockpit.TOOLS, consolidation_cockpit._local_call),
 )
 
 

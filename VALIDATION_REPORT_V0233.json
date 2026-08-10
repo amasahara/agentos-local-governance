@@ -1,0 +1,46 @@
+{
+  "version": "0.23.3",
+  "node": "Consolidation Cockpit & Performance Baseline",
+  "baseline": {
+    "declared_version": "0.23.2",
+    "schema": 46,
+    "source_basis": "GitHub main v0.23.2 materialized release files inspected plus exact v0.23.2 runtime/document fixtures available in this session"
+  },
+  "implementation": {
+    "schema_change": "46 -> 46",
+    "cockpit": "read_only_end_to_end_status",
+    "performance_baseline": [
+      "fresh_migration_1_to_46_in_temporary_fixture",
+      "current_full_rebuild_symbol_index_in_temporary_fixture",
+      "read_only_cockpit_latency"
+    ],
+    "mcp_tools_added": [
+      "agentos.consolidation_status_get",
+      "agentos.performance_baseline_get"
+    ],
+    "mcp_mutation_added": false,
+    "benchmark_execution_via_mcp": false
+  },
+  "validation": {
+    "upgrade_dry_run_on_v0232_fixture": "passed",
+    "upgrade_apply_on_v0232_fixture": "passed",
+    "python_compile": "passed",
+    "node_tests": {
+      "status": "passed",
+      "passed": 3
+    },
+    "structural_validator": "passed",
+    "unmeasured_template_gate": "passed_expected_fail_closed",
+    "full_historical_regression": "not_run_in_this_environment",
+    "live_repository_performance_capture": "not_run_in_this_environment"
+  },
+  "release_readiness": {
+    "overlay_structurally_ready": true,
+    "full_release_ready": false,
+    "reason": "PERFORMANCE_BASELINE_V0233.json is intentionally an unmeasured fail-closed template. Run performance-baseline-run on the materialized upgraded repository, then run release-integrity/docs/full regression."
+  },
+  "environment_limitations": [
+    "The container shell could not reliably clone GitHub, so a complete current 255-file repository tree was not materialized locally for full regression.",
+    "No production database endpoints or credentials were used; v0.23.3 does not require live external database writes."
+  ]
+}

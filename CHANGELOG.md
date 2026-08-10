@@ -1,4 +1,11 @@
 # Changelog
+## 0.23.3 — Consolidation Cockpit & Performance Baseline
+- Added a read-only end-to-end consolidation cockpit from project selection through reconciliation/recovery.
+- Added isolated fresh-migration and full-rebuild symbol-index timing plus read-only cockpit latency measurement.
+- Added a fail-closed measured-baseline release gate; environment-specific timing thresholds remain disabled until the runner is pinned.
+- Added two MCP read-only inspection tools; benchmark execution and all consolidation mutations remain outside MCP.
+- Preserved schema 46 and all SOURCE/TARGET, human approval, signed-audit, privacy/secret/key and lossless Context Control Plane invariants.
+
 
 ## 0.23.2 — Context Expansion & Compression Evaluation
 

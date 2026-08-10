@@ -83,6 +83,12 @@ RELEASE_FILES = (
     ".agents/docs/CONTEXT_EXPANSION_COMPRESSION_EVALUATION_V0232.md",
     "CONTEXT_EXPANSION_EVALUATION_BENCHMARK.json",
     ".agents/docs/GITHUB_READY_FULL_RELEASE_V0232.md",
+    "tools/apply_v0233.py",
+    "tools/validate_v0233.py",
+    ".agents/tests/test_consolidation_cockpit_v0233.py",
+    ".agents/docs/CONSOLIDATION_COCKPIT_PERFORMANCE_BASELINE_V0233.md",
+    "UPGRADE_FROM_0.23.2.md",
+    "PERFORMANCE_BASELINE_V0233.json",
     ".github/workflows/agentos-release-validation.yml",
 )
 EXTENSION_FILES = (
@@ -113,6 +119,10 @@ EXTENSION_FILES = (
     ".agents/agentos/context_evaluation.py",
     ".agents/agentos/context_evaluation_cli.py",
     ".agents/agentos/mcp_context_evaluation.py",
+    ".agents/agentos/consolidation_cockpit.py",
+    ".agents/agentos/performance_baseline.py",
+    ".agents/agentos/consolidation_cockpit_cli.py",
+    ".agents/agentos/mcp_consolidation_cockpit.py",
 )
 REQUIRED_POLICY_SECTIONS = (
     "language_policy", "instruction_policy", "filesystem_policy", "claim_policy",
@@ -132,6 +142,7 @@ REQUIRED_POLICY_SECTIONS = (
     "context_transport_policy",
     "adaptive_token_budget_policy",
     "context_expansion_evaluation_policy",
+    "consolidation_cockpit_policy",
 )
 
 
@@ -184,10 +195,17 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
         if not path.is_file() or path.stat().st_size == 0:
             findings.append(_finding("missing_required_file", "required release file is missing or empty", rel))
     findings.extend(_db_contract_findings(root))
+    try:
+        from .performance_baseline import check_performance_baseline
+        baseline_result = check_performance_baseline(root)
+        for code in baseline_result.get("findings", []):
+            findings.append(_finding("performance_baseline_invalid", str(code), "PERFORMANCE_BASELINE_V0233.json"))
+    except Exception as exc:
+        findings.append(_finding("performance_baseline_unloadable", f"cannot validate performance baseline: {exc}", "PERFORMANCE_BASELINE_V0233.json"))
 
     version = (root / "VERSION").read_text(encoding="utf-8").strip() if (root / "VERSION").exists() else None
-    if version != "0.23.2":
-        findings.append(_finding("version_mismatch", f"expected VERSION 0.23.2, got {version!r}", "VERSION"))
+    if version != "0.23.3":
+        findings.append(_finding("version_mismatch", f"expected VERSION 0.23.3, got {version!r}", "VERSION"))
 
     policy_path = root / ".agents/config/governance.json"
     if not policy_path.exists():
@@ -198,8 +216,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             missing = sorted(set(REQUIRED_POLICY_SECTIONS) - set(policy))
             if missing:
                 findings.append(_finding("missing_policy_sections", f"missing policy sections: {missing}", ".agents/config/governance.json"))
-            if policy.get("version") != "0.23.2":
-                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.23.2", ".agents/config/governance.json"))
+            if policy.get("version") != "0.23.3":
+                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.23.3", ".agents/config/governance.json"))
         except Exception as exc:
             findings.append(_finding("invalid_governance", f"cannot parse governance.json: {exc}", ".agents/config/governance.json"))
 
@@ -310,6 +328,9 @@ DOC_FILES = (
     "UPGRADE_FROM_0.23.1.md",
     ".agents/docs/CONTEXT_EXPANSION_COMPRESSION_EVALUATION_V0232.md",
     ".agents/docs/GITHUB_READY_FULL_RELEASE_V0232.md",
+    ".agents/docs/CONSOLIDATION_COCKPIT_PERFORMANCE_BASELINE_V0233.md",
+    "UPGRADE_FROM_0.23.2.md",
+    "PERFORMANCE_BASELINE_V0233.json",
 )
 
 
@@ -317,7 +338,7 @@ def docs_check_current(root: Path) -> dict[str, Any]:
     """Run the current release documentation gate without stale node-version checks.
 
     Older node-specific docs checks intentionally validate their historical release
-    numbers and therefore cannot be chained as the current-release gate. v0.23.2
+    numbers and therefore cannot be chained as the current-release gate. v0.23.3
     validates their authoritative documents are present, while the core docs checker
     validates the current VERSION/governance/package synchronization.
     """

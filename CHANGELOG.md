@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.25.0 — Schema Bootstrap Baseline
+- Fresh DB materializes schema 46 directly and then applies migrations 47→49.
+- Existing DBs retain incremental migrations from their recorded version.
+- Added deterministic bootstrap DDL/fingerprint and equivalence regression.
+- Current schema remains 49; governance/mutation authority is unchanged.
+
+
 ## 0.24.3 — MCP Feature Runtime Refactor
 - Active MCP feature handlers are detached from historical gateway modules.
 - Added runtime-native feature/core modules; schema remains 49 and tool authority is unchanged.

@@ -1,14 +1,21 @@
-# AgentOS Local Governance v0.24.3 — MCP Feature Runtime Refactor
+# AgentOS Local Governance v0.25.0 — Schema Bootstrap Baseline
 
-Database schema remains **49**; this node has no state migration.
+Database schema remains **49**; this node changes fresh initialization mechanics,
+not business-state schema.
 
-- Added `mcp_core_runtime.py` as the active owner of the 14 governed core MCP tools.
-- Added `mcp_feature_handlers.py` and migrated 37 read-only handlers out of historical `mcp_*_gateway.py` modules.
-- Added `mcp_feature_runtime.py` as the active flat feature catalog/dispatcher.
-- Converted `mcp_catalog.py` into a compatibility facade; it no longer imports legacy gateway modules.
-- `mcp_runtime.py` now imports neither `mcp_server.py` nor any `mcp_*_gateway.py`.
-- Existing modern read-only feature modules remain direct in-process handlers.
-- Public MCP surface remains 78 tools: 14 core + 63 feature + health.
-- Governed core operations still traverse `gateway_client → gatewayd`; this trusted enforcement boundary is intentionally preserved.
-- MCP feature mutation authority, SOURCE/TARGET database boundaries, human approval, privacy, signed audit and context-preservation rules are unchanged.
-- Release integrity now rejects active MCP import paths that reintroduce legacy gateway ownership or subprocess forwarding.
+- Added deterministic schema-46 bootstrap SQL + metadata/fingerprint artifacts.
+- Fresh DB records migration coverage 1..46 without invoking those migration functions.
+- Fresh DB then runs only migrations 47, 48 and 49.
+- Existing databases preserve ordinary incremental migration behavior.
+- Bootstrap schema is verified against the release-pinned fingerprint before use.
+- Added fail-closed handling for unversioned non-empty databases.
+- Generic release validation now proves the fresh bootstrap execution path.
+- Added bootstrap-vs-full-replay schema equivalence regression coverage.
+- No SOURCE/TARGET, approval, privacy, signed-audit or MCP mutation boundary changes.
+
+## R2 compatibility hardening
+
+- Route project selection/consolidation DB access through central `db.connect()`.
+- Reconcile exact legacy module-local schema 32/33/34 once while preserving rows.
+- Unknown unversioned schema remains fail-closed.
+- Fresh DB still skips migration functions 1..46 and runs only 47..49.

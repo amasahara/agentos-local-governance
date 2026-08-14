@@ -1,15 +1,17 @@
-# AgentOS v0.24.3 Developer Guide — MCP Feature Runtime Refactor
+# AgentOS v0.25.0 Developer Guide — Schema Bootstrap Baseline
 
-Current version: **0.24.3**. Database schema: **49**.
+- Fresh DB: materialize schema 46, verify its fingerprint, then run 47→49.
+- Existing DB: migrate incrementally from its recorded version.
+- Fresh startup never invokes migration functions 1→46.
+- Unversioned non-empty state fails closed.
+- Current schema remains 49.
+- SOURCE/TARGET authority, approvals, privacy, audit and MCP mutation are unchanged.
 
-Active MCP rules:
+Release validation:
 
-- `mcp_runtime` owns protocol/dispatch only.
-- `mcp_core_runtime` owns the 14 governed core tools.
-- `mcp_feature_runtime` owns the flat read-only feature runtime.
-- `mcp_feature_handlers` owns the 37 migrated legacy-embedded handlers.
-- Active modules must not import `mcp_*_gateway.py` or `mcp_server.py`.
-- Active runtime must not use subprocess/version forwarding.
-- Core governance enforcement remains `gateway_client → gatewayd`.
-
-Run manifest verification, generic release validation, and full regression before release.
+```bash
+python tools/build_manifest.py .
+python tools/verify_manifest.py .
+python tools/validate_release.py .
+PYTHONPATH=.agents python -m pytest -q .agents/tests -rs
+```

@@ -26,6 +26,8 @@ import sqlite3
 from typing import Any, Iterable
 import uuid
 
+from .db import connect as central_connect
+
 from .project_identity import (
     ProjectIdentityError,
     get_project_uuid,
@@ -293,15 +295,9 @@ def _db_path(root: Path | str) -> Path:
     return Path(root).resolve() / ".agents/state/agentos.db"
 
 
-def _connect(root: Path | str) -> sqlite3.Connection:
-    """Open only the active project's local AgentOS state database."""
-    path = _db_path(root)
-    if not path.exists():
-        raise ProjectSelectionError(f"AgentOS database is missing: {path}")
-    conn = sqlite3.connect(path)
-    conn.row_factory = sqlite3.Row
-    return conn
-
+def _connect(root: Path | str):
+    """Open the active AgentOS DB through central migration governance."""
+    return central_connect(Path(root))
 
 def migration_33(conn: sqlite3.Connection) -> None:
     """Apply additive schema 33 for candidate, compatibility, and primary state.

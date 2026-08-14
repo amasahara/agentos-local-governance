@@ -427,7 +427,7 @@
       "README.en.md",
       "RELEASE_NOTES.md"
     ],
-    "current_release_name": "MCP Feature Runtime Refactor",
+    "current_release_name": "Schema Bootstrap Baseline",
     "current_schema": 49,
     "current_schema_files": [
       "README.md",
@@ -446,7 +446,7 @@
       "README.md",
       "README.vi.md",
       "README.en.md",
-      "UPGRADE_FROM_0.24.2.md"
+      "UPGRADE_FROM_0.24.3.md"
     ]
   },
   "drift_policy": {
@@ -960,6 +960,42 @@
     "version": 1,
     "whole_plan_approval_still_required": true
   },
+  "schema_bootstrap_policy": {
+    "baseline_rotation": "explicit_release_only",
+    "bootstrap_artifact_metadata": ".agents/schema/bootstrap_v46.json",
+    "bootstrap_artifact_sql": ".agents/schema/bootstrap_v46.sql",
+    "bootstrap_schema": 46,
+    "current_database_schema": 49,
+    "existing_database_mode": "incremental_from_recorded_version",
+    "fresh_database_mode": "bootstrap_then_incremental",
+    "fresh_replay_migrations_1_to_46": false,
+    "legacy_unversioned_reconciliation": {
+      "eligible_schema_migrations": [
+        32,
+        33,
+        34
+      ],
+      "fresh_bootstrap_path_affected": false,
+      "preserve_existing_rows": true,
+      "reconciliation_mode": "full_historical_replay_once",
+      "schema_object_name_and_sql_match_required": true,
+      "unknown_schema_object_allowed": false
+    },
+    "mcp_mutation_authority_changed": false,
+    "post_baseline_migrations_at_release": [
+      47,
+      48,
+      49
+    ],
+    "schema_change": "none",
+    "schema_fingerprint_required": true,
+    "schema_migration_markers_preserved": true,
+    "source_database_write_authority_changed": false,
+    "target_database_write_authority_changed": false,
+    "transactional_savepoint_required": true,
+    "unversioned_nonempty_database": "fail_closed_except_exact_legacy_module_local_contract",
+    "version": 1
+  },
   "schema_mapping_policy": {
     "approved_contract_versioned_and_immutable": true,
     "coercible_type_requires_transform_rule": true,
@@ -1088,7 +1124,7 @@
     "windows_posix_cli_parity_required": true,
     "windows_posix_mcp_parity_required": true
   },
-  "version": "0.24.3",
+  "version": "0.25.0",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,

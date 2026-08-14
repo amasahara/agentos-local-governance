@@ -6,7 +6,7 @@ Purpose:
 
 Responsibilities:
     - Open project-local database connections.
-    - Apply ordered schema migrations.
+    - Bootstrap fresh state at schema 46, then apply ordered post-baseline migrations.
     - Preserve relational integrity for tasks, tool calls, claims, and evidence.
 """
 from __future__ import annotations
@@ -107,22 +107,173 @@ def connect_read_only(root: Path) -> Iterator[sqlite3.Connection]:
     finally:
         connection.close()
 
-def migrate(connection: sqlite3.Connection) -> None:
-    """Apply all required schema migrations.
 
-    Args:
-        connection: Open SQLite connection.
+def _normalized_schema_sql(value: object) -> str:
+    """Normalize SQLite schema SQL for exact legacy-contract comparison."""
+    return " ".join(str(value or "").split())
 
-    Returns:
-        None.
+
+def _schema_object_contract(connection: sqlite3.Connection) -> dict[str, tuple[str, str]]:
+    """Return named user schema objects with normalized SQL."""
+    rows = connection.execute(
+        """
+        SELECT type, name, sql
+        FROM sqlite_master
+        WHERE sql IS NOT NULL
+          AND name NOT LIKE 'sqlite_%'
+          AND name <> 'schema_migrations'
+          AND type IN ('table','index','trigger','view')
+        ORDER BY name
+        """
+    ).fetchall()
+    return {
+        str(row[1]): (str(row[0]), _normalized_schema_sql(row[2]))
+        for row in rows
+    }
+
+
+def _legacy_unversioned_reference_contract() -> dict[str, tuple[str, str]]:
+    """Build the only legacy direct-schema contract eligible for reconciliation."""
+    from .project_identity import migration_32
+    from .project_selection import migration_33
+    from .project_consolidation import migration_34
+
+    reference = sqlite3.connect(":memory:")
+    reference.row_factory = sqlite3.Row
+    try:
+        migration_32(reference)
+        migration_33(reference)
+        migration_34(reference)
+        return _schema_object_contract(reference)
+    finally:
+        reference.close()
+
+
+def _detect_legacy_unversioned_state(
+    connection: sqlite3.Connection,
+) -> dict[str, object]:
+    """Recognize only exact module-local schema 32/33/34 objects."""
+    actual = _schema_object_contract(connection)
+    if not actual:
+        return {
+            "recognized": False,
+            "reason": "no_legacy_objects",
+            "objects": [],
+        }
+
+    expected = _legacy_unversioned_reference_contract()
+    strong_signatures = {
+        "project_identity",
+        "project_candidate_sets",
+        "project_consolidations",
+    }
+    if not (set(actual) & strong_signatures):
+        return {
+            "recognized": False,
+            "reason": "missing_legacy_signature",
+            "objects": sorted(actual),
+        }
+
+    unknown = sorted(set(actual) - set(expected))
+    mismatched = sorted(
+        name
+        for name in set(actual) & set(expected)
+        if actual[name] != expected[name]
+    )
+    return {
+        "recognized": not unknown and not mismatched,
+        "reason": (
+            "exact_legacy_module_local_contract"
+            if not unknown and not mismatched
+            else "legacy_contract_mismatch"
+        ),
+        "objects": sorted(actual),
+        "unknown_objects": unknown,
+        "mismatched_objects": mismatched,
+    }
+
+
+def migrate_with_report(connection: sqlite3.Connection) -> dict[str, object]:
+    """Bring AgentOS state to the current schema and report the selected path.
+
+    Fresh empty DB:
+        schema-46 bootstrap, then migrations 47..49.
+
+    Existing versioned DB:
+        incremental from recorded schema version.
+
+    Exact legacy module-local unversioned DB:
+        one-time reconciliation through the historical chain. This compatibility
+        path is deliberately separate from fresh bootstrap.
     """
-    connection.execute("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY)")
-    current = connection.execute("SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations").fetchone()["v"]
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY)"
+    )
+    row = connection.execute(
+        "SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations"
+    ).fetchone()
+    current = int(row["v"] if isinstance(row, sqlite3.Row) else row[0])
     migrations = _all_migrations()
-    for version, fn in enumerate(migrations, start=1):
-        if version > current:
-            fn(connection)
-            connection.execute("INSERT INTO schema_migrations(version) VALUES(?)", (version,))
+    if len(migrations) != SCHEMA_VERSION:
+        raise RuntimeError(
+            f"migration_registry_length_mismatch:{len(migrations)}:{SCHEMA_VERSION}"
+        )
+
+    starting_version = current
+    mode = "noop" if current == SCHEMA_VERSION else "incremental"
+    bootstrap_version: int | None = None
+    applied: list[int] = []
+    bootstrap_report: dict[str, object] | None = None
+    legacy_reconcile: dict[str, object] | None = None
+
+    if current == 0:
+        from .schema_bootstrap import (
+            BASELINE_SCHEMA_VERSION,
+            apply_schema_bootstrap,
+            is_pristine_for_bootstrap,
+        )
+        if is_pristine_for_bootstrap(connection):
+            bootstrap_report = apply_schema_bootstrap(connection)
+            current = BASELINE_SCHEMA_VERSION
+            bootstrap_version = BASELINE_SCHEMA_VERSION
+            mode = "bootstrap"
+            if bootstrap_report.get("historical_migrations_invoked") != 0:
+                raise RuntimeError("schema_bootstrap_replayed_historical_migrations")
+        else:
+            legacy_reconcile = _detect_legacy_unversioned_state(connection)
+            if legacy_reconcile.get("recognized") is not True:
+                raise RuntimeError(
+                    "unversioned_nonempty_state_database:"
+                    + repr(legacy_reconcile)
+                )
+            mode = "legacy_reconcile"
+            current = 0
+
+    for version, migration in enumerate(migrations, start=1):
+        if version <= current:
+            continue
+        migration(connection)
+        connection.execute(
+            "INSERT INTO schema_migrations(version) VALUES(?)",
+            (version,),
+        )
+        applied.append(version)
+
+    return {
+        "mode": mode,
+        "starting_version": starting_version,
+        "bootstrap_version": bootstrap_version,
+        "bootstrap": bootstrap_report,
+        "legacy_reconcile": legacy_reconcile,
+        "applied_migrations": applied,
+        "current_version": SCHEMA_VERSION,
+    }
+
+
+def migrate(connection: sqlite3.Connection) -> None:
+    """Apply required migrations while preserving the historical None API."""
+    migrate_with_report(connection)
+    return None
 
 
 def _m1(c: sqlite3.Connection) -> None:

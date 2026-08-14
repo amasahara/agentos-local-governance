@@ -47,3 +47,10 @@ def test_windows_cmd_launchers_are_lf_canonical() -> None:
         data = (ROOT / rel).read_bytes()
         assert b"\r\n" not in data, rel
         assert data.endswith(b"\n"), rel
+
+def test_schema_bootstrap_sql_is_lf_canonical() -> None:
+    attrs = (ROOT / ".gitattributes").read_text(encoding="utf-8")
+    assert "*.sql text eol=lf" in attrs
+    data = (ROOT / ".agents/schema/bootstrap_v46.sql").read_bytes()
+    assert b"\r\n" not in data
+    assert data.endswith(b"\n")

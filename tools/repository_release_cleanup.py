@@ -3,7 +3,7 @@
 File: tools/repository_release_cleanup.py
 
 Purpose:
-    Normalize AgentOS v0.24.2 into a clean GitHub `main` release tree while
+    Normalize the current AgentOS release into a clean GitHub `main` tree while
     preserving historical release artifacts outside the repository.
 
 Responsibilities:
@@ -32,11 +32,17 @@ import subprocess
 import sys
 from typing import Any, Iterable
 
-VERSION = "0.24.2"
-SCHEMA = 49
-CLEANUP_ID = "v0.24.2-repository-release-cleanup-1"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+VERSION = (PROJECT_ROOT / "VERSION").read_text(encoding="utf-8").strip()
+_SCHEMA_TEXT = (PROJECT_ROOT / ".agents/agentos/schema_version.py").read_text(encoding="utf-8")
+_SCHEMA_MATCH = re.search(r"(?m)^CURRENT_SCHEMA_VERSION\s*=\s*(\d+)\s*$", _SCHEMA_TEXT)
+if _SCHEMA_MATCH is None:
+    raise RuntimeError("cannot resolve current AgentOS schema marker")
+SCHEMA = int(_SCHEMA_MATCH.group(1))
+CLEANUP_ID = f"v{VERSION}-repository-release-cleanup"
 
-LATEST_UPGRADE_GUIDE = "UPGRADE_FROM_0.24.1.md"
+_DIRECT_GUIDES = sorted(PROJECT_ROOT.glob("UPGRADE_FROM_*.md"))
+LATEST_UPGRADE_GUIDE = _DIRECT_GUIDES[0].name if len(_DIRECT_GUIDES) == 1 else ""
 
 GENERIC_TOOLS = {
     "build_manifest.py",
@@ -177,6 +183,14 @@ def _git(root: Path, *args: str, check: bool = True) -> dict[str, Any]:
 
 def _preflight(root: Path) -> dict[str, Any]:
     version = _read(root / "VERSION").strip()
+    guides = sorted(root.glob("UPGRADE_FROM_*.md"))
+    if len(guides) != 1 or not LATEST_UPGRADE_GUIDE:
+        raise CleanupError(
+            f"clean main requires exactly one direct current upgrade guide; "
+            f"found {[p.name for p in guides]}"
+        )
+    if guides[0].name != LATEST_UPGRADE_GUIDE:
+        raise CleanupError("direct current upgrade guide resolution mismatch")
     if version != VERSION:
         raise CleanupError(f"cleanup requires VERSION={VERSION}; found {version!r}")
     if "CURRENT_SCHEMA_VERSION = 49" not in _read(
@@ -185,7 +199,7 @@ def _preflight(root: Path) -> dict[str, Any]:
         raise CleanupError("cleanup requires schema marker 49")
     policy = json.loads(_read(root / ".agents/config/governance.json"))
     if policy.get("version") != VERSION:
-        raise CleanupError("governance version must be 0.24.2")
+        raise CleanupError(f"governance version must be {VERSION}")
     if int((policy.get("documentation_policy") or {}).get("current_schema", -1)) != SCHEMA:
         raise CleanupError("governance documentation schema must be 49")
     if not (root / ".git").exists():
@@ -201,7 +215,7 @@ def _preflight(root: Path) -> dict[str, Any]:
         "tools/build_manifest.py",
     ):
         if not (root / rel).is_file():
-            raise CleanupError(f"required v0.24.2 file missing: {rel}")
+            raise CleanupError(f"required current-release file missing: {rel}")
     return {
         "version": version,
         "schema": SCHEMA,
@@ -218,7 +232,7 @@ def _archive_home(root: Path) -> Path:
         else (root.parent / ".agentos-release-archive").resolve()
     )
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    return base / root.name / f"v0.24.2-{stamp}"
+    return base / root.name / f"v{VERSION}-{stamp}"
 
 
 def _all_candidates(root: Path) -> list[Path]:
@@ -290,11 +304,7 @@ def _archive_candidates(
 
     for src in candidates:
         rel = _relative(root, src)
-        # Current v0.24.2 updater/validator are staged as release assets.
-        if rel in {"tools/apply_v0242.py", "tools/validate_v0242.py"}:
-            dst = current_assets / src.name
-        else:
-            dst = history / rel
+        dst = history / rel
         reports.append({"path": rel, "archive_to": str(dst)})
         if not dry_run:
             dst.parent.mkdir(parents=True, exist_ok=True)
@@ -429,107 +439,15 @@ def _clean_doc_files(existing: list[str], root: Path) -> list[str]:
 
 
 def _patch_release_integrity(root: Path) -> dict[str, Any]:
+    """Preserve the current release-integrity contract during cleanup."""
     path = root / ".agents/agentos/release_integrity.py"
     release_files, _ = _tuple_assignment(path, "RELEASE_FILES")
     doc_files, _ = _tuple_assignment(path, "DOC_FILES")
-    new_release = _clean_release_files(release_files, root)
-    new_docs = _clean_doc_files(doc_files, root)
-
-    _rewrite_tuple(path, "RELEASE_FILES", new_release)
-    _rewrite_tuple(path, "DOC_FILES", new_docs)
-
-    text = _read(path)
-
-    # Current release assertions stay current after historical packaging files are removed.
-    text = re.sub(
-        r'if version != "[0-9.]+"',
-        f'if version != "{VERSION}"',
-        text,
-        count=1,
-    )
-    text = re.sub(
-        r'expected VERSION [0-9.]+',
-        f'expected VERSION {VERSION}',
-        text,
-        count=1,
-    )
-    text = re.sub(
-        r'policy\.get\("version"\) != "[0-9.]+"',
-        f'policy.get("version") != "{VERSION}"',
-        text,
-        count=1,
-    )
-    text = re.sub(
-        r'governance\.json version must be [0-9.]+',
-        f'governance.json version must be {VERSION}',
-        text,
-        count=1,
-    )
-
-    # Versioned compatibility launchers are release history, not current main requirements.
-    start_marker = '    for rel, forbidden in ((".agents/bin/agentos.v0195"'
-    start = text.find(start_marker)
-    end = text.find("    runtime_wrappers = {", start if start >= 0 else 0)
-    if start >= 0 and end > start:
-        replacement = (
-            '    legacy_launchers = sorted(\n'
-            '        p.relative_to(root).as_posix()\n'
-            '        for pattern in (".agents/bin/agentos.v*", ".agents/bin/agentos-mcp.v*")\n'
-            '        for p in root.glob(pattern)\n'
-            '        if p.is_file()\n'
-            '    )\n'
-            '    if legacy_launchers:\n'
-            '        findings.append(_finding(\n'
-            '            "legacy_versioned_launcher_present",\n'
-            '            f"versioned compatibility launchers belong in Git tags/releases: {legacy_launchers}",\n'
-            '        ))\n'
-        )
-        text = text[:start] + replacement + text[end:]
-
-    # Add a clean-main clutter gate immediately before MANIFEST inspection.
-    clutter_marker = "    # Clean-main release packaging gate."
-    if clutter_marker not in text:
-        anchor = '    manifest_path = root / "MANIFEST.json"\n'
-        if anchor not in text:
-            raise CleanupError("release_integrity manifest anchor missing")
-        glob_literal = repr(RELEASE_CLUTTER_GLOBS)
-        block = (
-            f"{clutter_marker}\n"
-            f"    release_clutter_globs = {glob_literal}\n"
-            "    release_clutter = sorted({\n"
-            "        p.relative_to(root).as_posix()\n"
-            "        for pattern in release_clutter_globs\n"
-            "        for p in root.glob(pattern)\n"
-            "        if p.is_file()\n"
-            "    })\n"
-            "    if release_clutter:\n"
-            "        findings.append(_finding(\n"
-            '            "release_clutter_present",\n'
-            '            f"historical release packaging files must not be present on main: {release_clutter[:50]}",\n'
-            "        ))\n"
-        )
-        text = text.replace(anchor, block + anchor, 1)
-
-    text = re.sub(
-        r"Older node-specific docs checks intentionally validate their historical release\n"
-        r"\s*numbers and therefore cannot be chained as the current-release gate\. v[0-9.]+\n"
-        r"\s*validates their authoritative documents are present, while the core docs checker\n"
-        r"\s*validates the current VERSION/governance/package synchronization\.",
-        "Historical regression tests keep their version-specific assertions, while this\\n"
-        "    current-release gate validates only authoritative current docs plus clean-main\\n"
-        "    release integrity.",
-        text,
-        count=1,
-    )
-
-    _write(path, text)
     return {
-        "release_files_before": len(release_files),
-        "release_files_after": len(new_release),
-        "doc_files_before": len(doc_files),
-        "doc_files_after": len(new_docs),
+        "status": "preserved_current_release_contract",
+        "release_file_count": len(release_files),
+        "doc_file_count": len(doc_files),
     }
-
 
 def _patch_release_manifest(root: Path) -> dict[str, Any]:
     path = root / ".agents/agentos/release_manifest.py"
@@ -599,10 +517,10 @@ def _patch_gitignore(root: Path) -> dict[str, Any]:
 
 
 def _write_policy_doc(root: Path) -> None:
+    """Require the current repository-release policy without rewriting it."""
     path = root / ".agents/docs/REPOSITORY_RELEASE_POLICY.md"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text('# v0.24.2 — Repository Release Cleanup Policy\n\n## Mục tiêu\n\n`main` chỉ đại diện cho trạng thái AgentOS mới nhất có thể clone, test và phát hành trực tiếp.\n\nLịch sử phát hành không bị mất: Git commit/tag giữ snapshot source; GitHub Release giữ release notes, updater và checksum theo phiên bản.\n\n## Main phải giữ\n\n- Source runtime hiện tại trong `.agents/agentos/`.\n- Toàn bộ regression tests trong `.agents/tests/`.\n- Launcher hiện tại: `agentos`, `agentos.cmd`, `agentos-mcp`, `agentos-mcp.cmd` và hooks.\n- Governance/config và tài liệu kiến trúc còn hiệu lực.\n- `README*`, `huong_dan*`, `CHANGELOG.md`, `RELEASE_NOTES.md`.\n- `UPGRADE_FROM_0.24.1.md` cho bước nâng cấp hiện tại.\n- `MANIFEST.json`, `CHECKSUMS.sha256`.\n- Benchmark/evaluation artifacts vẫn được runtime checker hoặc regression test tham chiếu.\n- Tool generic: `build_manifest.py`, `verify_manifest.py`, `validate_release.py`,\n  `repository_release_cleanup.py`.\n\n## Main không giữ\n\n- `tools/apply_v*.py`, `tools/validate_v*.py`.\n- Recovery/finalizer/hotfix updater theo phiên bản.\n- `RELEASE_NOTES_V*.md`, `USAGE_V*.md`, `GITHUB_READY_FULL_RELEASE_V*.md`.\n- Upgrade guide cũ hơn bước trực tiếp đến current release.\n- Versioned compatibility launchers `.agents/bin/agentos.v*`,\n  `.agents/bin/agentos-mcp.v*`.\n- `VALIDATION_REPORT*.json`, `CHECKSUMS_V*.sha256`, `HOTFIX_INFO.txt`.\n- ZIP/release asset trong repository.\n- `.agents/runtime`, `.agents/state`, `.agents/cache`, test/editor caches.\n\n## GitHub Release\n\nMỗi tag/release nên chứa:\n\n- release notes;\n- updater của chính release (nếu cần);\n- updater checksum;\n- optional validation report;\n- GitHub tự cung cấp source zip/tar.gz.\n\nKhông commit release ZIP vào `main`.\n\n## Regression policy\n\nHistorical regression tests được giữ trên `main` vì chúng là contract bảo vệ backward compatibility.\nHistorical release packaging scripts không phải runtime contract và được archive ngoài repository.\n\n## Local archive\n\nCleanup mặc định lưu file được loại khỏi `main` tại sibling directory:\n\n`.agentos-release-archive/<project-name>/v0.24.2-<timestamp>/`\n\nCó thể override bằng `AGENTOS_RELEASE_ARCHIVE_HOME`.\n\nKhông có file nào thuộc nhóm cleanup bị xóa vĩnh viễn trong quá trình này.\n', encoding="utf-8", newline="\n")
-
+    if not path.is_file():
+        raise CleanupError("current repository release policy is missing")
 
 def _write_generic_validator(root: Path) -> None:
     path = root / "tools/validate_release.py"
@@ -660,7 +578,7 @@ def _patch_release_docs(root: Path) -> list[dict[str, Any]]:
                 "generic current-release validator, and runtime/state/cache Git isolation.\n"
             )
             # Put under current v0.24.2 entry if possible, otherwise top.
-            match = re.search(r"(?m)^##\s+0\.24\.2[^\n]*\n", text)
+            match = re.search(rf"(?m)^##\s+{re.escape(VERSION)}[^\n]*\n", text)
             if match:
                 text = text[: match.end()] + line + text[match.end() :]
             else:

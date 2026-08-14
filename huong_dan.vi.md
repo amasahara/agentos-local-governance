@@ -1,19 +1,13 @@
-# Hướng dẫn AgentOS v0.24.3 — MCP Feature Runtime Refactor
+# Hướng dẫn AgentOS v0.25.0 — Schema Bootstrap Baseline
 
-Current version: **0.24.3**. Database schema: **49**.
+- Fresh DB: bootstrap trực tiếp schema 46, verify fingerprint, rồi chạy 47→49.
+- Existing DB: migrate tuần tự từ version đang ghi trong `schema_migrations`.
+- Không replay migration functions 1→46 trên fresh path.
+- Unversioned DB có object lạ phải fail-closed.
+- Schema hiện tại vẫn là 49.
+- Không thay đổi SOURCE/TARGET authority, approval, privacy, audit hoặc MCP mutation.
 
-## Quy tắc active MCP
-
-- `mcp_runtime`: chỉ JSON-RPC và dispatch.
-- `mcp_core_runtime`: 14 governed core tools.
-- `mcp_feature_runtime`: flat feature catalog/dispatch.
-- `mcp_feature_handlers`: 37 handlers được tách khỏi legacy gateway.
-- Không import `mcp_*_gateway.py` hoặc `mcp_server.py` vào active path.
-- Không subprocess/version forwarding.
-- Feature mutation authority không đổi.
-- Trusted `gateway_client → gatewayd` vẫn bắt buộc cho governed core tools.
-
-## Kiểm tra
+Kiểm tra release:
 
 ```powershell
 python tools\build_manifest.py .

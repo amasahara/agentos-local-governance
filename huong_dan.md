@@ -2,30 +2,16 @@
 
 [🇻🇳 Tiếng Việt](huong_dan.vi.md) | [🇬🇧 English](huong_dan.en.md)
 
-Current version: **0.24.3**. Database schema: **49**.
+Current version: **0.25.0**. Database schema: **49**.
 
-## MCP Feature Runtime Refactor
+## Schema Bootstrap Baseline
 
-Active MCP code must follow:
+For a new empty state DB, `db.migrate()` selects the schema-46 bootstrap artifact
+and then applies only 47→49. For an existing versioned DB it remains incremental.
 
-```text
-mcp_runtime            protocol/dispatch only
-mcp_core_runtime       governed core tools
-mcp_feature_runtime    read-only feature registry/dispatcher
-mcp_feature_handlers   runtime-native migrated handlers
-```
+The baseline is immutable release data under `.agents/schema/` and must pass
+schema fingerprint equivalence against historical replay.
 
-Do not add active imports from `mcp_*_gateway.py` or `mcp_server.py`.
-Do not introduce subprocess/version forwarding into these modules.
+Never bootstrap an unversioned non-empty database; fail closed instead.
 
-Governed core tools keep the trusted `gateway_client → gatewayd` enforcement
-boundary. Feature MCP remains read-only unless a future governance node explicitly
-changes authority.
-
-## Release gate
-
-```text
-build manifest → verify manifest → validate release → full regression → tag/release
-```
-
-Versioned updater/recovery scripts remain GitHub Release assets outside clean main.
+Versioned updater/recovery files remain GitHub Release assets, not clean-main files.

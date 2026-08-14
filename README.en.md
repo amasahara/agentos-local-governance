@@ -1,19 +1,16 @@
-# AgentOS Local Governance v0.24.3 — MCP Feature Runtime Refactor
+# AgentOS Local Governance v0.25.0 — Schema Bootstrap Baseline
 
 [README landing](README.md) | [Tiếng Việt](README.vi.md)
 
-**Current release: v0.24.3 — MCP Feature Runtime Refactor**  
+**Current release: v0.25.0 — Schema Bootstrap Baseline**  
 Database schema: **49**.
 
-v0.24.3 moves active feature handlers out of historical version-forwarding MCP
-gateway modules. `mcp_runtime` now delegates read-only feature execution to
-`mcp_feature_runtime` and governed core execution to `mcp_core_runtime`.
+A brand-new AgentOS state database no longer invokes migration functions 1→46.
+It materializes the release-pinned schema-46 baseline, verifies its fingerprint,
+records migration coverage 1..46, then runs migrations 47→49.
 
-37 gateway-embedded feature handlers are now runtime-native. The public tool
-surface remains 78 tools and no extension mutation permission is added.
+Existing databases remain on the ordinary incremental migration path. Governance
+and mutation boundaries are unchanged.
 
-The trusted `gateway_client → gatewayd` boundary remains active for governed
-core operations; this is an enforcement boundary, not legacy MCP forwarding.
-
-See [Upgrade v0.24.2 → v0.24.3](UPGRADE_FROM_0.24.2.md) and
-[MCP Feature Runtime Refactor](.agents/docs/MCP_FEATURE_RUNTIME_REFACTOR_V0243.md).
+See [Upgrade v0.24.3 → v0.25.0](UPGRADE_FROM_0.24.3.md) and
+[Schema Bootstrap Baseline](.agents/docs/SCHEMA_BOOTSTRAP_BASELINE_V0250.md).

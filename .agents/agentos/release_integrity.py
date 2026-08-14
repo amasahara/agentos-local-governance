@@ -71,7 +71,10 @@ RELEASE_FILES = (
     "tools/validate_release.py",
     "tools/verify_manifest.py",
     ".agents/tests/test_mcp_feature_runtime_v0243.py",
-    "UPGRADE_FROM_0.24.2.md",
+    ".agents/tests/test_schema_bootstrap_v0250.py",
+    ".agents/schema/bootstrap_v46.sql",
+    ".agents/schema/bootstrap_v46.json",
+    "UPGRADE_FROM_0.24.3.md",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -114,6 +117,7 @@ EXTENSION_FILES = (
     ".agents/agentos/db_aware_context_projection_cli.py",
     ".agents/agentos/mcp_db_aware_context_projection.py",
     ".agents/agentos/mcp_feature_handlers.py",
+    ".agents/agentos/schema_bootstrap.py",
 )
 REQUIRED_POLICY_SECTIONS = (
     "language_policy",
@@ -161,6 +165,7 @@ REQUIRED_POLICY_SECTIONS = (
     "risk_tiered_batch_review_policy",
     "db_aware_context_projection_policy",
     "mcp_feature_runtime_policy",
+    "schema_bootstrap_policy",
 )
 
 
@@ -179,7 +184,7 @@ def _db_contract_findings(root: Path) -> list[dict[str, Any]]:
         return [_finding("invalid_db_module", f"db.py syntax error: {exc}", str(path))]
     functions = {node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
     findings: list[dict[str, Any]] = []
-    for name in ("connect", "connect_read_only", "migrate", "_m1", "_m31"):
+    for name in ("connect", "connect_read_only", "migrate", "migrate_with_report", "_m1", "_m31"):
         if name not in functions:
             findings.append(_finding("missing_db_symbol", f"db.py missing {name}", str(path)))
     if "CURRENT_SCHEMA_VERSION" not in text or "SCHEMA_VERSION = CURRENT_SCHEMA_VERSION" not in text:
@@ -213,6 +218,37 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
         if not path.is_file() or path.stat().st_size == 0:
             findings.append(_finding("missing_required_file", "required release file is missing or empty", rel))
     findings.extend(_db_contract_findings(root))
+    # v0.25.0 schema-bootstrap artifact gate.
+    try:
+        from .schema_bootstrap import (
+            BASELINE_SCHEMA_VERSION,
+            bootstrap_artifact_status,
+        )
+        bootstrap_status = bootstrap_artifact_status()
+        if BASELINE_SCHEMA_VERSION != 46:
+            findings.append(_finding(
+                "schema_bootstrap_baseline_mismatch",
+                f"expected schema bootstrap baseline 46, got {BASELINE_SCHEMA_VERSION}",
+                ".agents/agentos/schema_bootstrap.py",
+            ))
+        if bootstrap_status.get("ok") is not True:
+            findings.append(_finding(
+                "schema_bootstrap_artifact_invalid",
+                f"bootstrap artifact validation failed: {bootstrap_status}",
+                ".agents/schema/bootstrap_v46.sql",
+            ))
+        if bootstrap_status.get("historical_migrations_invoked") != 0:
+            findings.append(_finding(
+                "schema_bootstrap_replay_detected",
+                "fresh bootstrap artifact path must not invoke historical migrations",
+                ".agents/agentos/schema_bootstrap.py",
+            ))
+    except Exception as exc:
+        findings.append(_finding(
+            "schema_bootstrap_unloadable",
+            f"cannot validate schema bootstrap baseline: {exc}",
+            ".agents/agentos/schema_bootstrap.py",
+        ))
     try:
         from .performance_baseline import check_performance_baseline
         baseline_result = check_performance_baseline(root)
@@ -228,8 +264,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     except Exception as exc:
         findings.append(_finding("incremental_index_benchmark_unloadable", f"cannot validate incremental index benchmark: {exc}", "INDEX_INCREMENTAL_BENCHMARK_V0234.json"))
     version = (root / "VERSION").read_text(encoding="utf-8").strip() if (root / "VERSION").exists() else None
-    if version != "0.24.3":
-        findings.append(_finding("version_mismatch", f"expected VERSION 0.24.3, got {version!r}", "VERSION"))
+    if version != "0.25.0":
+        findings.append(_finding("version_mismatch", f"expected VERSION 0.25.0, got {version!r}", "VERSION"))
 
     policy_path = root / ".agents/config/governance.json"
     if not policy_path.exists():
@@ -240,8 +276,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             missing = sorted(set(REQUIRED_POLICY_SECTIONS) - set(policy))
             if missing:
                 findings.append(_finding("missing_policy_sections", f"missing policy sections: {missing}", ".agents/config/governance.json"))
-            if policy.get("version") != "0.24.3":
-                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.24.3", ".agents/config/governance.json"))
+            if policy.get("version") != "0.25.0":
+                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.25.0", ".agents/config/governance.json"))
         except Exception as exc:
             findings.append(_finding("invalid_governance", f"cannot parse governance.json: {exc}", ".agents/config/governance.json"))
 
@@ -378,7 +414,7 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     # them as a release-integrity failure only when they are actually committed
     # into the authoritative MANIFEST. The manifest builder excludes them.
     # Clean-main release packaging gate.
-    release_clutter_globs = ('apply_v*.py', 'apply_v*.py.sha256', 'tools/apply_v*.py', 'tools/validate_v*.py', 'CHECKSUMS_V*.sha256', 'VALIDATION_REPORT*.json', '*.zip', '*.zip.sha256', '.agents/bin/agentos.v*', '.agents/bin/agentos-mcp.v*', '.agents/docs/RELEASE_NOTES_V*.md', '.agents/docs/USAGE_V*.md', '.agents/docs/GITHUB_READY_FULL_RELEASE_V*.md', '.agents/docs/archive/*', '.agents/docs/archive/**', 'HOTFIX_INFO.txt', 'UPGRADE_FROM_0.22*.md', 'UPGRADE_FROM_0.23*.md', 'UPGRADE_FROM_0.24.0.md', 'UPGRADE_FROM_0.24.1.md')
+    release_clutter_globs = ('apply_v*.py', 'apply_v*.py.sha256', 'tools/apply_v*.py', 'tools/validate_v*.py', 'CHECKSUMS_V*.sha256', 'VALIDATION_REPORT*.json', '*.zip', '*.zip.sha256', '.agents/bin/agentos.v*', '.agents/bin/agentos-mcp.v*', '.agents/docs/RELEASE_NOTES_V*.md', '.agents/docs/USAGE_V*.md', '.agents/docs/GITHUB_READY_FULL_RELEASE_V*.md', '.agents/docs/archive/*', '.agents/docs/archive/**', 'HOTFIX_INFO.txt', 'UPGRADE_FROM_0.22*.md', 'UPGRADE_FROM_0.23*.md', 'UPGRADE_FROM_0.24.0.md', 'UPGRADE_FROM_0.24.1.md', 'UPGRADE_FROM_0.24.2.md')
     release_clutter = sorted({
         p.relative_to(root).as_posix()
         for pattern in release_clutter_globs
@@ -452,7 +488,8 @@ DOC_FILES = (
     "huong_dan.md",
     "huong_dan.vi.md",
     ".agents/docs/MCP_FEATURE_RUNTIME_REFACTOR_V0243.md",
-    "UPGRADE_FROM_0.24.2.md",
+    ".agents/docs/SCHEMA_BOOTSTRAP_BASELINE_V0250.md",
+    "UPGRADE_FROM_0.24.3.md",
 )
 
 

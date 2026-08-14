@@ -1,45 +1,19 @@
-# AgentOS Local Governance v0.24.3 — MCP Feature Runtime Refactor
+# AgentOS Local Governance v0.25.0 — Schema Bootstrap Baseline
 
 [README landing](README.md) | [English](README.en.md)
 
-**Phiên bản hiện tại: v0.24.3 — MCP Feature Runtime Refactor**  
+**Phiên bản hiện tại: v0.25.0 — Schema Bootstrap Baseline**  
 Database schema: **49**.
 
-## v0.24.3
+Fresh DB không còn gọi migration functions 1→46. Runtime tạo trực tiếp snapshot
+schema 46 đã pin trong release, kiểm tra fingerprint, ghi coverage 1..46 rồi chỉ
+chạy migrations 47→49.
 
-Active MCP feature handlers đã được tách khỏi các `mcp_*_gateway.py` lịch sử.
-Các gateway cũ có thể vẫn tồn tại để giữ historical compatibility nhưng không
-còn được import bởi active runtime.
+DB đã tồn tại vẫn nâng cấp tuần tự từ schema thực tế của nó; shortcut bootstrap
+không được dùng cho existing database.
 
-```text
-mcp_runtime
-├─ mcp_core_runtime
-│  └─ gateway_client → gatewayd
-└─ mcp_feature_runtime
-   ├─ mcp_feature_handlers
-   └─ modern read-only feature modules
-```
+Các boundary SOURCE/TARGET, human approval, privacy, signed audit, context
+preservation và MCP mutation authority không thay đổi.
 
-37 read-only handlers được chuyển sang runtime-native implementation. Tool surface
-không đổi: 14 core + 63 feature + health.
-
-## Invariant
-
-- Schema vẫn 49.
-- Không subprocess/version-forward trong active MCP runtime.
-- Governed core tools vẫn đi qua trusted enforcement gateway.
-- Không thêm mutation authority cho feature MCP.
-- SOURCE/TARGET DB boundary, approval, privacy, audit và Context Control Plane giữ nguyên.
-
-## Kiểm tra
-
-```powershell
-python tools\build_manifest.py .
-python tools\verify_manifest.py .
-python tools\validate_release.py .
-$env:PYTHONPATH = (Resolve-Path .\.agents).Path
-python -m pytest -q .agents\tests -rs
-```
-
-Xem [UPGRADE_FROM_0.24.2.md](UPGRADE_FROM_0.24.2.md) và
-[MCP Feature Runtime Refactor](.agents/docs/MCP_FEATURE_RUNTIME_REFACTOR_V0243.md).
+Xem [Upgrade v0.24.3 → v0.25.0](UPGRADE_FROM_0.24.3.md) và
+[Schema Bootstrap Baseline](.agents/docs/SCHEMA_BOOTSTRAP_BASELINE_V0250.md).

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import sys
 import tempfile
 from pathlib import Path
@@ -21,10 +22,11 @@ def validate(root: Path, *, skip_manifest: bool = False) -> dict[str, object]:
 
     from agentos.cli_runtime import command_registry
     from agentos.core import instruction_check
-    from agentos.db import SCHEMA_VERSION, connect
+    from agentos.db import SCHEMA_VERSION, connect, migrate_with_report
     from agentos.mcp_runtime import ALL_TOOLS, VERSION as MCP_VERSION
     from agentos.policy import load_policy
     from agentos.release_integrity import check_release_integrity, docs_check_current
+    from agentos.schema_bootstrap import BASELINE_SCHEMA_VERSION
     from agentos.release_manifest import verify_manifest
 
     version = (root / "VERSION").read_text(encoding="utf-8").strip()
@@ -56,6 +58,23 @@ def validate(root: Path, *, skip_manifest: bool = False) -> dict[str, object]:
             foreign_keys = int(conn.execute("PRAGMA foreign_keys").fetchone()[0])
         checks["migration_chain"] = versions == list(range(1, int(SCHEMA_VERSION) + 1))
         checks["foreign_keys_on"] = foreign_keys == 1
+
+    bootstrap_probe = sqlite3.connect(":memory:")
+    bootstrap_probe.row_factory = sqlite3.Row
+    try:
+        bootstrap_report = migrate_with_report(bootstrap_probe)
+    finally:
+        bootstrap_probe.close()
+    checks["fresh_bootstrap_path"] = (
+        bootstrap_report.get("mode") == "bootstrap"
+        and bootstrap_report.get("bootstrap_version")
+            == BASELINE_SCHEMA_VERSION
+            == 46
+        and bootstrap_report.get("applied_migrations") == [47, 48, 49]
+        and (bootstrap_report.get("bootstrap") or {}).get(
+            "historical_migrations_invoked"
+        ) == 0
+    )
 
     integrity = check_release_integrity(root)
     docs = docs_check_current(root)

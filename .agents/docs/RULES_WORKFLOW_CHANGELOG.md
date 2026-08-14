@@ -207,3 +207,10 @@ Added Primary-Project Consolidation as a directed, plan-hashed workflow:
 - **User requirement:** add bounded read-only evidence expansion and deterministic compression evaluation.
 - **Enforcement:** schema 46, source/transport hash pins, ephemeral expanded content, evaluation hard gates, read-only MCP, and shadow comparison without activation authority.
 - **Compatibility:** lossless Control Plane, adaptive budgeting, privacy, secret/key, SOURCE/TARGET, signed-audit and unified-runtime boundaries remain unchanged.
+
+## v0.25.0 — Schema Bootstrap Baseline
+- Fresh state bootstrap is pinned at schema 46.
+- Historical migrations 1..46 are coverage markers, not invoked on fresh startup.
+- Existing versioned databases remain incremental.
+- Bootstrap fingerprint mismatch or unversioned non-empty state fails closed.
+

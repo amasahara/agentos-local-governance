@@ -32,7 +32,7 @@ from .mcp_feature_runtime import (
 )
 from .schema_version import CURRENT_SCHEMA_VERSION
 
-VERSION = "0.24.3"
+VERSION = "0.25.0"
 
 HEALTH_TOOL = {
     "name": "agentos.mcp_health",
@@ -81,7 +81,7 @@ def _tool_result(value: Any, is_error: bool = False) -> dict[str, Any]:
 
 
 def _health(root: Path, task_id: str | None, session_id: str | None) -> dict[str, Any]:
-    """Return privacy-safe v0.24.3 MCP feature-runtime health."""
+    """Return privacy-safe v0.25.0 MCP feature-runtime health."""
     features = feature_runtime_health()
     return {
         "ok": bool(features["ok"]),

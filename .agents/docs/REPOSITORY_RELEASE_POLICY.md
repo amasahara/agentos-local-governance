@@ -57,3 +57,8 @@ Cleanup mặc định lưu file được loại khỏi `main` tại sibling dire
 Có thể override bằng `AGENTOS_RELEASE_ARCHIVE_HOME`.
 
 Không có file nào thuộc nhóm cleanup bị xóa vĩnh viễn trong quá trình này.
+
+## Schema bootstrap release artifacts
+
+Schema bootstrap SQL/metadata under `.agents/schema/` are current runtime release inputs, not historical packaging clutter. They remain on clean main and are protected by manifest/checksum and release-integrity gates.
+

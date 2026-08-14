@@ -29,6 +29,8 @@ import sqlite3
 from typing import Any
 import uuid
 
+from .db import connect as central_connect
+
 from .project_identity import get_project_uuid
 from .project_selection import get_candidate_set, scan_candidate_readonly
 
@@ -79,15 +81,9 @@ def _db_path(root: Path | str) -> Path:
     return Path(root).resolve() / ".agents/state/agentos.db"
 
 
-def _connect(root: Path | str) -> sqlite3.Connection:
-    """Open only the active primary project's local AgentOS database."""
-    path = _db_path(root)
-    if not path.exists():
-        raise ProjectConsolidationError(f"AgentOS database is missing: {path}")
-    conn = sqlite3.connect(path)
-    conn.row_factory = sqlite3.Row
-    return conn
-
+def _connect(root: Path | str):
+    """Open the active AgentOS DB through central migration governance."""
+    return central_connect(Path(root))
 
 def migration_34(conn: sqlite3.Connection) -> None:
     """Apply additive schema 34 for governed primary-project consolidation."""

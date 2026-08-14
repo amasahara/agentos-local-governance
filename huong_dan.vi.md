@@ -1,25 +1,31 @@
-# Hướng dẫn AgentOS v0.24.2
-
-## v0.24.2 — Risk-Tiered Batch Review
-
-1. Chạy `project-consolidation-risk-assess` để phân tier deterministic.
-2. Gom mapping `LOW` vào signed bundle; review bundle với human confirmation.
-3. Review `MEDIUM/HIGH` riêng; `BLOCKED` phải re-plan.
-4. Chỉ khi mọi mapping review current cho exact `plan_hash` thì plan thành `reviewed`; approval toàn plan vẫn bắt buộc.
-
-
-1. Dùng `consolidation-status` để đọc snapshot toàn pipeline mà không mutate state.
-2. Chạy `performance-baseline-run --repeats 5` trên repository đã materialize và xác nhận `performance-baseline-check`.
-3. Duyệt task/scope và xây canonical Context Pack không stale.
-4. Compile transport bằng model profile/adaptive budget v0.23.1.
-5. Dùng `context-expansion-explain` để xem evidence đã omit.
-6. Dùng `context-expand` hoặc `context-expand-batch` với giới hạn dòng/token và reason code allowlist.
-7. Chạy `context-compression-evaluate`; mọi hard gate phải đạt.
-8. Dùng `context-compression-compare` để shadow-compare revision mà không tự kích hoạt revision mới.
-
-Expanded content chỉ được trả ở output hiện thời và không persist vào expansion/evaluation telemetry. Mục tiêu 2–4x là advisory; không được cắt original request, AGENTS, scope, plan hoặc requirement để đạt ratio.
-
+# Hướng dẫn AgentOS v0.24.2 — DB-Aware Context Projection
 
 ## v0.24.2 — DB-Aware Context Projection
 
-Deterministic reversible schema/mapping/manifest projection is limited to the Context Evidence Plane. Control Plane authority remains lossless.
+1. Chỉ projection Evidence Plane dạng schema/mapping/manifest có strong signal.
+2. Codec phải deterministic, reversible và pin source hash.
+3. Chỉ dùng projection khi representation thực tế nhỏ hơn source.
+4. Không persist raw schema/mapping/manifest hoặc projected text.
+5. Original request, Requirement Ledger, `AGENTS.md`, approved scope, active plan
+   và governance authority luôn giữ lossless.
+6. `agentos.context_db_projection_get` chỉ đọc state DB bằng SQLite `mode=ro`;
+   không tạo DB và không chạy migration.
+
+## v0.24.1 — Risk-Tiered Batch Review
+
+1. Chạy `project-consolidation-risk-assess`.
+2. Batch chỉ mapping `LOW` vào signed bundle.
+3. Review `MEDIUM/HIGH` riêng; `BLOCKED` phải re-plan.
+4. Exact-plan whole-plan approval vẫn bắt buộc trước execution.
+
+## Kiểm tra release
+
+```powershell
+python tools\build_manifest.py .
+python tools\verify_manifest.py .
+python tools\validate_release.py .
+$env:PYTHONPATH = (Resolve-Path .\.agents).Path
+python -m pytest -q .agents\tests -rs
+```
+
+Updater theo version là GitHub Release asset và không được commit vào clean `main`.

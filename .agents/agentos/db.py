@@ -72,6 +72,41 @@ def connect(root: Path, immediate: bool = False) -> Iterator[sqlite3.Connection]
         connection.close()
 
 
+
+@contextmanager
+def connect_read_only(root: Path) -> Iterator[sqlite3.Connection]:
+    """Open current AgentOS state through a strict SQLite read-only connection.
+
+    This path never creates the state directory/database, never changes journal
+    mode, and never executes schema migrations. It fails closed if the database
+    is absent or its migration level is not the current AgentOS schema.
+    """
+    db_path = root.resolve() / ".agents" / "state" / "agentos.db"
+    if not db_path.is_file():
+        raise RuntimeError("state_database_missing")
+    connection = sqlite3.connect(
+        db_path.resolve().as_uri() + "?mode=ro",
+        timeout=5.0,
+        uri=True,
+    )
+    connection.row_factory = sqlite3.Row
+    try:
+        connection.execute("PRAGMA query_only = ON")
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute("PRAGMA busy_timeout = 5000")
+        try:
+            row = connection.execute(
+                "SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations"
+            ).fetchone()
+        except sqlite3.Error as exc:
+            raise RuntimeError("state_schema_upgrade_required") from exc
+        current = int(row["v"]) if row is not None else 0
+        if current != SCHEMA_VERSION:
+            raise RuntimeError("state_schema_upgrade_required")
+        yield connection
+    finally:
+        connection.close()
+
 def migrate(connection: sqlite3.Connection) -> None:
     """Apply all required schema migrations.
 

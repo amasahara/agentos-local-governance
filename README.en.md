@@ -1,30 +1,51 @@
-# AgentOS Local Governance v0.24.2 — Risk-Tiered Batch Review
+# AgentOS Local Governance v0.24.2 — DB-Aware Context Projection
 
 [README landing](README.md) | [Tiếng Việt](README.vi.md)
 
-## v0.24.2
-
-v0.24.1 adds deterministic component-mapping risk tiers. LOW-risk mappings may be grouped into an immutable `plan_hash`/mapping-snapshot-pinned bundle bound to the external Ed25519 audit signature; MEDIUM/HIGH remain individual human review, CONFLICT remains blocked, and whole-plan approval is still mandatory. Schema **49**.
-
-
-v0.23.4 adds a deterministic content-hash incremental Python symbol index. Unchanged files are not AST-parsed; changed/new files replace only their own rows and deleted files remove stale rows. Schema is **47**.
-
-## v0.23.3 foundation
-
-v0.23.3 adds a read-only end-to-end consolidation cockpit and non-destructive performance baselines for fresh schema migration, the current full-rebuild symbol index, and cockpit latency. Schema remains **46**. MCP can read status/baseline artifacts but cannot execute benchmarks or mutate consolidation state.
-
-## v0.23.2 foundation
-v0.23.2 adds a bounded, hash-pinned expansion loop and deterministic Compression Evaluation v2 on top of v0.23.0/0.23.1. The Control Plane remains fully lossless. Expansion verifies the transport hash, canonical revision, and source hash, supports line/token bounds and Requirement Ledger bindings, and never persists expanded content. Evaluation hard-fails on any protected-requirement loss, unaccounted canonical candidate, broken omission handle, budget overflow, stale source, or transport-integrity failure. The 2–4x compression band remains an advisory stability target.
-
-Schema: **46**. New read-only MCP operations expose expansion metadata/batch reads and evaluation/compare reads; persistence and mutation remain outside MCP authority.
-
-## Full GitHub-ready release
-
-The complete v0.23.2 package is materialized from the full repository rather than delivered as an overlay. Extract it, replace/upload the repository contents, and commit/push; `apply_v0232.py` is not required for the full package. The included GitHub Actions workflow runs compilation, validators, release-integrity, manifest/checksum, docs/instruction checks, and the complete test suite.
-
-See [Full GitHub-Ready Materialization](.agents/docs/GITHUB_READY_FULL_RELEASE_V0232.md).
-
+**Current release: v0.24.2 — DB-Aware Context Projection**  
+Database schema: **49**.
 
 ## v0.24.2 — DB-Aware Context Projection
 
-Deterministic reversible schema/mapping/manifest projection is limited to the Context Evidence Plane. Control Plane authority remains lossless.
+v0.24.2 adds deterministic reversible structural codecs for DB schema,
+field-mapping, and manifest evidence. A projection is selected only when its
+serialized representation is smaller, and decoding must reproduce the same
+canonical JSON structure.
+
+The Context Control Plane remains fully lossless: original request, Requirement
+Ledger, `AGENTS.md` authority, approved scope, active plan, and governance
+authority are never projected.
+
+Schema 49 stores only hashes, codec metadata, and byte/token counters for
+DB-aware projection telemetry; raw projected DB content is not persisted.
+
+## v0.24.1 — Risk-Tiered Batch Review
+
+LOW mappings may be reviewed in a signed exact-plan-hash bundle. MEDIUM/HIGH
+remain individual human review, BLOCKED mappings cannot be reviewed, and the
+existing whole-plan approval gate remains mandatory.
+
+## Strict read-only MCP state access
+
+`agentos.context_db_projection_get` reads projection telemetry through SQLite
+`mode=ro`; it cannot create the AgentOS state database or run schema migrations.
+
+## Release validation
+
+```bash
+python tools/build_manifest.py .
+python tools/verify_manifest.py .
+python tools/validate_release.py .
+PYTHONPATH=.agents python -m pytest -q .agents/tests -rs
+```
+
+## Upgrade
+
+See [Upgrade v0.24.1 → v0.24.2](UPGRADE_FROM_0.24.1.md). Versioned updaters are
+GitHub Release assets and are intentionally absent from clean `main`.
+
+## Documentation
+
+- [DB-Aware Context Projection](.agents/docs/DB_AWARE_CONTEXT_PROJECTION_V0242.md)
+- [Risk-Tiered Batch Review](.agents/docs/RISK_TIERED_BATCH_REVIEW_V0241.md)
+- [Repository Release Policy](.agents/docs/REPOSITORY_RELEASE_POLICY.md)

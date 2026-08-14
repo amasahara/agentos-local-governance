@@ -300,10 +300,10 @@ def persist_projection_telemetry(
 
 
 def projection_status(root: Path, task_id: str, revision: int | None = None) -> dict[str, Any]:
-    """Return hash/count-only projection telemetry for one task."""
-    from .db import connect
+    """Return hash/count-only projection telemetry through strict read-only state access."""
+    from .db import connect_read_only
     root = root.resolve()
-    with connect(root) as conn:
+    with connect_read_only(root) as conn:
         sql = """
             SELECT transport_pack_id,task_id,context_revision,transport_revision,candidate_id,
                    source_kind,codec,source_hash,source_structure_hash,projection_hash,

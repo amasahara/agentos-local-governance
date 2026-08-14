@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -318,7 +319,7 @@ def show_claim(root: Path, claim_id: int) -> dict[str, Any]:
 
 
 def docs_check(root: Path) -> dict[str, Any]:
-    """Check required documentation, current version, schema, and command status."""
+    """Check current documentation identity, schema, release name, and local links."""
     required = ["README.md", "AGENTS.md", "huong_dan.md", ".agents/docs/USAGE.md", ".agents/docs/PROJECT_STRUCTURE.md", ".agents/docs/RULES_WORKFLOW_CHANGELOG.md", "VERSION"]
     missing = [rel for rel in required if not (root / rel).exists()]
     version = (root / "VERSION").read_text(encoding="utf-8").strip() if (root / "VERSION").exists() else None
@@ -328,22 +329,28 @@ def docs_check(root: Path) -> dict[str, Any]:
     guide = (root / "huong_dan.md").read_text(encoding="utf-8") if (root / "huong_dan.md").exists() else ""
     consistent = version == policy_version == __version__
     doc_policy = policy.get("documentation_policy", {})
-    history_begin, history_end = doc_policy.get("history_begin", "AGENTOS_VERSION_HISTORY_BEGIN"), doc_policy.get("history_end", "AGENTOS_VERSION_HISTORY_END")
+    history_begin = doc_policy.get("history_begin", "AGENTOS_VERSION_HISTORY_BEGIN")
+    history_end = doc_policy.get("history_end", "AGENTOS_VERSION_HISTORY_END")
     stale: list[str] = []
     schema_mismatches: list[str] = []
-    for rel in doc_policy.get("current_version_files", ["README.md", "huong_dan.md", "AGENTS.md"]):
-        path = root / rel
+    release_identity_mismatches: list[str] = []
+    broken_local_links: list[str] = []
+
+    current_version_files = doc_policy.get("current_version_files", ["README.md", "README.vi.md", "README.en.md", "huong_dan.md", "AGENTS.md"])
+    for rel in current_version_files:
+        path = root / str(rel)
         if not path.exists() or not version:
             continue
-        text = path.read_text(encoding="utf-8")
-        while f"<!-- {history_begin} -->" in text and f"<!-- {history_end} -->" in text:
-            before, rest = text.split(f"<!-- {history_begin} -->", 1)
+        current_text = path.read_text(encoding="utf-8")
+        while f"<!-- {history_begin} -->" in current_text and f"<!-- {history_end} -->" in current_text:
+            before, rest = current_text.split(f"<!-- {history_begin} -->", 1)
             _, after = rest.split(f"<!-- {history_end} -->", 1)
-            text = before + after
+            current_text = before + after
         for marker in ("Current version:", "Current release:", "Phiên bản hiện tại:"):
-            for line in text.splitlines():
+            for line in current_text.splitlines():
                 if marker in line and version not in line:
                     stale.append(f"{rel}: {line.strip()}")
+
     expected_schema = int(doc_policy.get("current_schema", SCHEMA_VERSION))
     current_schema_files = doc_policy.get("current_schema_files", ["README.md", "huong_dan.md"])
     if not isinstance(current_schema_files, list):
@@ -355,9 +362,59 @@ def docs_check(root: Path) -> dict[str, Any]:
                 if "Database schema:" in line or "Schema database:" in line:
                     if str(expected_schema) not in line:
                         schema_mismatches.append(f"{rel}: {line.strip()}")
-    content_ok = not stale and not schema_mismatches
+
+    release_name = str(doc_policy.get("current_release_name") or "").strip()
+    identity_files = doc_policy.get("current_release_identity_files", ["README.md", "README.vi.md", "README.en.md", "RELEASE_NOTES.md"])
+    if release_name and version:
+        for rel in identity_files:
+            path = root / str(rel)
+            if not path.is_file():
+                release_identity_mismatches.append(f"{rel}: missing")
+                continue
+            current_text = path.read_text(encoding="utf-8")
+            if version not in current_text or release_name not in current_text:
+                release_identity_mismatches.append(f"{rel}: expected {version} — {release_name}")
+
+    link_files = doc_policy.get("local_link_check_files", ["README.md", "README.vi.md", "README.en.md", "UPGRADE_FROM_0.24.1.md"])
+    link_pattern = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
+    for rel in link_files:
+        doc_path = root / str(rel)
+        if not doc_path.is_file():
+            broken_local_links.append(f"{rel}: missing")
+            continue
+        current_text = doc_path.read_text(encoding="utf-8")
+        for match in link_pattern.finditer(current_text):
+            target = match.group(1).strip()
+            if not target or target.startswith(("#", "http://", "https://", "mailto:")):
+                continue
+            target = target.split()[0].strip("<>").split("#", 1)[0]
+            if not target:
+                continue
+            candidate = (doc_path.parent / target).resolve()
+            try:
+                candidate.relative_to(root.resolve())
+            except ValueError:
+                broken_local_links.append(f"{rel}: outside-root link {target}")
+                continue
+            if not candidate.exists():
+                broken_local_links.append(f"{rel}: {target}")
+
+    content_ok = not stale and not schema_mismatches and not release_identity_mismatches and not broken_local_links
     ok = not missing and consistent and bool(version and version in changelog) and "Tiếng Việt" in guide and "English" in guide and content_ok
-    return {"ok": ok, "missing_documents": missing, "version": {"VERSION": version, "governance.json": policy_version, "__init__.py": __version__, "consistent": consistent}, "bilingual_markers": {"vi": "Tiếng Việt" in guide, "en": "English" in guide}, "changelog_has_current_version": bool(version and version in changelog), "content_consistency": {"ok": content_ok, "stale_current_version_references": stale, "schema_mismatches": schema_mismatches}}
+    return {
+        "ok": ok,
+        "missing_documents": missing,
+        "version": {"VERSION": version, "governance.json": policy_version, "__init__.py": __version__, "consistent": consistent},
+        "bilingual_markers": {"vi": "Tiếng Việt" in guide, "en": "English" in guide},
+        "changelog_has_current_version": bool(version and version in changelog),
+        "content_consistency": {
+            "ok": content_ok,
+            "stale_current_version_references": stale,
+            "schema_mismatches": schema_mismatches,
+            "release_identity_mismatches": release_identity_mismatches,
+            "broken_local_links": broken_local_links,
+        },
+    }
 
 
 def instruction_check(root: Path) -> dict[str, Any]:

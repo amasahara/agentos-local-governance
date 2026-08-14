@@ -1,7 +1,7 @@
 {
   "release": "0.24.2",
   "kind": "full",
-  "file_count": 196,
+  "file_count": 197,
   "files": [
     {
       "path": ".agents/agentos/__init__.py",
@@ -95,8 +95,8 @@
     },
     {
       "path": ".agents/agentos/core.py",
-      "size": 18263,
-      "sha256": "e2c86497cfde8d4232dd91ff0bceaf70bc2e5f16dd139f4416d9a34bdb0883cd"
+      "size": 20613,
+      "sha256": "91231d05cffa49da55f08fc8f2fdebd744ebb86bd26c4fb21cbe6117d7207831"
     },
     {
       "path": ".agents/agentos/data_subject_rights.py",
@@ -120,13 +120,13 @@
     },
     {
       "path": ".agents/agentos/db.py",
-      "size": 37577,
-      "sha256": "b061853bf7fff227e73ba13914f988676236de485f79c46487499e76c4c6a6a9"
+      "size": 38965,
+      "sha256": "c7c461fe72541148bc249f6ed910dd22aa579cf33cb4711deef378266d153500"
     },
     {
       "path": ".agents/agentos/db_aware_context_projection.py",
-      "size": 13791,
-      "sha256": "1b99ec94de516ab80977d595d7723fdc0902de68f488830783a242fd0b8be049"
+      "size": 13836,
+      "sha256": "02e1f8b22b2c6a77735215783f5b860547bb4490b865f2fb3ec91f20a2be1d8a"
     },
     {
       "path": ".agents/agentos/db_aware_context_projection_cli.py",
@@ -395,8 +395,8 @@
     },
     {
       "path": ".agents/agentos/release_integrity.py",
-      "size": 17914,
-      "sha256": "6628f287238d4348c75842d0d627c8c5ede44520a2521683b2390ce1f5e24922"
+      "size": 17988,
+      "sha256": "7ef7ebcb9743eaead96318592884096ed9c50f6e9c70d2019d034eee3591b5a8"
     },
     {
       "path": ".agents/agentos/release_integrity_cli.py",
@@ -540,8 +540,8 @@
     },
     {
       "path": ".agents/config/governance.json",
-      "size": 35936,
-      "sha256": "a6e3adcc50c75837e501006052efaa3349ef01e064e7bfc210b23fe4c00d361e"
+      "size": 36526,
+      "sha256": "48f000735dfbcc731a3ffe684d9655361f7caa0792a518b6e33754f43f2e40c7"
     },
     {
       "path": ".agents/config/identity_resolution_policy.v0221.json",
@@ -605,8 +605,8 @@
     },
     {
       "path": ".agents/docs/DB_AWARE_CONTEXT_PROJECTION_V0242.md",
-      "size": 1964,
-      "sha256": "1172803969cbd8d48c86e3c1109b6d9784d94b5a8c4822647e82fc57d7148bc1"
+      "size": 2316,
+      "sha256": "897d3ada091e5f448ce50ad18d1ecaaab13156b4bb872645ad34980f61b2dab0"
     },
     {
       "path": ".agents/docs/IDENTITY_RESOLUTION_DEDUPLICATION_LINEAGE.md",
@@ -844,6 +844,11 @@
       "sha256": "a795160482c7dccc1223fae4876b1805598c31a95b65b088fe634b7ca91c5908"
     },
     {
+      "path": ".agents/tests/test_release_hardening_v0242.py",
+      "size": 3307,
+      "sha256": "1317e6ff469e19424f5cd9271bc092f5f215babba2ff74128c4550c17e01521d"
+    },
+    {
       "path": ".agents/tests/test_risk_tiered_batch_review_v0241.py",
       "size": 12122,
       "sha256": "30c1092714003b7642a2cd1963d50bc33706966d5fad27c48beae031911e0c2b"
@@ -865,8 +870,8 @@
     },
     {
       "path": ".github/workflows/agentos-release-validation.yml",
-      "size": 1472,
-      "sha256": "f8fcd51fe5daf8464913f325499e8eda132fe502daaa0c7710032c5c04b59aac"
+      "size": 1352,
+      "sha256": "3e5da83bbbdfe543e1ff5cb0c45bd9ef79ee8bcb025e7af7fa1c8229b35338ef"
     },
     {
       "path": ".gitignore",
@@ -920,28 +925,28 @@
     },
     {
       "path": "README.en.md",
-      "size": 2488,
-      "sha256": "9ec4499424bc4b0432d0d32b13b6124d7a5d8a64ea35835ff549fc1cc179a1a4"
+      "size": 1907,
+      "sha256": "0cd251f4c8aecd6a96c6e396d37c942864c04f74c1bc8ebf976c8cb770ef34ad"
     },
     {
       "path": "README.md",
-      "size": 2136,
-      "sha256": "58fd93a8369ec9c2b3f6233b0da9a02a5a8bfec6fd600e07113dd50a056955f5"
+      "size": 2087,
+      "sha256": "5f590a7e1df9e1657ffc5d7cc4b9de64b6620e10e8287533abb6c70f67b7e887"
     },
     {
       "path": "README.vi.md",
-      "size": 4990,
-      "sha256": "712286bd0822de04627d1fe75a30836ee849b56327caaeb7c3597ae51c6c48d1"
+      "size": 2013,
+      "sha256": "96062d4b3a4b127d3f366c233f7c7da3fda3acd50d3862611dd7ad5952b44635"
     },
     {
       "path": "RELEASE_NOTES.md",
-      "size": 1240,
-      "sha256": "5bc8012680ed92ca7c6466aa66a9db2edabf3ec873509b3ff3c8c9280667a28b"
+      "size": 1696,
+      "sha256": "d9dc8a7a52d6c9d0e0189c54783fc9b4ed633f3c39573dc971da6f27cf69b348"
     },
     {
       "path": "UPGRADE_FROM_0.24.1.md",
-      "size": 1277,
-      "sha256": "373292704c202ff36a195187f99feac8fd3b21377f99cb019644ff17923cf5ce"
+      "size": 1670,
+      "sha256": "73391862a52737e19b3ad0b259a297797fb6f2052fefbfadbd68e3a352ae2afa"
     },
     {
       "path": "VERSION",
@@ -950,18 +955,18 @@
     },
     {
       "path": "huong_dan.en.md",
-      "size": 966,
-      "sha256": "3f7ed919550280e163bf9cd271dac73ceebf47691146975a1e81d37bf3be963d"
+      "size": 1150,
+      "sha256": "708670b89410b11b988b1c2994794ac53a9581cc7f1e5fd3011f30c0a8141869"
     },
     {
       "path": "huong_dan.md",
-      "size": 836,
-      "sha256": "5025c19f3192ebb10408aa8d22f597c2c16cc71a1e9279549d4d9057dad5ba3e"
+      "size": 1117,
+      "sha256": "fbe2e4f38658bc921cd9f2a5b2f04f53c30c7f7e1d3749e16334bd88c0fd9756"
     },
     {
       "path": "huong_dan.vi.md",
-      "size": 1595,
-      "sha256": "77a3b366196fbb6b49b2b09f95176881cbbc49301420baf9b034c13436805bc3"
+      "size": 1261,
+      "sha256": "3f2ab31836fd46a325b2d7de3b96b692b42438e043e0e6e13a2759fb57bd83af"
     },
     {
       "path": "tools/build_manifest.py",

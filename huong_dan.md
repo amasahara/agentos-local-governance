@@ -2,13 +2,35 @@
 
 [🇻🇳 Tiếng Việt](huong_dan.vi.md) | [🇬🇧 English](huong_dan.en.md)
 
-Current version: **0.24.2**. Database schema: **49**. Use `consolidation-status` for a read-only end-to-end pipeline view, capture `PERFORMANCE_BASELINE_V0233.json` with `performance-baseline-run`, and keep the v0.23.2 lossless Context Control Plane and all SOURCE/TARGET/privacy/approval boundaries unchanged.
-
-
-## v0.24.2 Risk-Tiered Batch Review
-Use `project-consolidation-risk-assess` first. Batch only deterministic LOW mappings into a signed bundle; review MEDIUM/HIGH individually; then use the existing whole-plan approval gate.
-
+Current version: **0.24.2**. Database schema: **49**.
 
 ## v0.24.2 — DB-Aware Context Projection
 
-Deterministic reversible schema/mapping/manifest projection is limited to the Context Evidence Plane. Control Plane authority remains lossless.
+Use DB-aware projection only for structured schema/mapping/manifest evidence.
+The codec must be deterministic, reversible, source-hash pinned, and smaller
+than the source representation. Never project Control Plane authority.
+
+Read-only inspection:
+
+```text
+context-db-projection-preview
+context-db-projection-status
+agentos.context_db_projection_get
+```
+
+The MCP GET path is strict read-only state access: it must not create or migrate
+the AgentOS SQLite database.
+
+## v0.24.1 — Risk-Tiered Batch Review
+
+Assess mapping risk deterministically. Batch only LOW mappings into a signed
+bundle, review MEDIUM/HIGH individually, resolve BLOCKED mappings, and retain
+the exact-plan whole-plan approval gate.
+
+## Release workflow
+
+```text
+build manifest → verify manifest → validate release → full regression → tag/release
+```
+
+Versioned updater/recovery files belong to GitHub Releases, not clean `main`.

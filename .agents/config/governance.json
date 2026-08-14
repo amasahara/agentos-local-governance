@@ -409,6 +409,7 @@
     "llm_summarization_authority": false,
     "mcp_mutation_allowed": false,
     "mcp_raw_projection_content_allowed": false,
+    "mcp_state_database_access": "sqlite_mode_ro_no_create_no_migrate",
     "projection_only_when_smaller": true,
     "raw_projection_persistence_allowed": false,
     "reversible_codec_required": true,
@@ -420,10 +421,32 @@
     "version": 1
   },
   "documentation_policy": {
+    "current_release_identity_files": [
+      "README.md",
+      "README.vi.md",
+      "README.en.md",
+      "RELEASE_NOTES.md"
+    ],
+    "current_release_name": "DB-Aware Context Projection",
     "current_schema": 49,
     "current_schema_files": [
       "README.md",
       "huong_dan.md"
+    ],
+    "current_version_files": [
+      "README.md",
+      "README.vi.md",
+      "README.en.md",
+      "huong_dan.md",
+      "huong_dan.vi.md",
+      "huong_dan.en.md",
+      "AGENTS.md"
+    ],
+    "local_link_check_files": [
+      "README.md",
+      "README.vi.md",
+      "README.en.md",
+      "UPGRADE_FROM_0.24.1.md"
     ]
   },
   "drift_policy": {

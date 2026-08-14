@@ -53,6 +53,7 @@ RELEASE_FILES = (
     ".agents/tests/test_governance_enforcement_v0224.py",
     ".agents/tests/test_incremental_index_v0234.py",
     ".agents/tests/test_risk_tiered_batch_review_v0241.py",
+    ".agents/tests/test_release_hardening_v0242.py",
     ".agents/tests/test_secret_lineage_v0226.py",
     ".agents/tests/test_unified_runtime_v0225.py",
     ".github/workflows/agentos-release-validation.yml",
@@ -148,7 +149,7 @@ def _db_contract_findings(root: Path) -> list[dict[str, Any]]:
         return [_finding("invalid_db_module", f"db.py syntax error: {exc}", str(path))]
     functions = {node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
     findings: list[dict[str, Any]] = []
-    for name in ("connect", "migrate", "_m1", "_m31"):
+    for name in ("connect", "connect_read_only", "migrate", "_m1", "_m31"):
         if name not in functions:
             findings.append(_finding("missing_db_symbol", f"db.py missing {name}", str(path)))
     if "CURRENT_SCHEMA_VERSION" not in text or "SCHEMA_VERSION = CURRENT_SCHEMA_VERSION" not in text:

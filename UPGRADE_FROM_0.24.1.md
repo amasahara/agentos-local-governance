@@ -1,45 +1,66 @@
 # Upgrade v0.24.1 → v0.24.2
 
-Use the same one-command updater on Windows, Linux, and macOS:
+v0.24.2 upgrades schema **48 → 49** and adds DB-Aware Context Projection.
 
-```bash
-python tools/apply_v0242.py .
-```
+The clean-main repository intentionally does **not** contain
+`tools/apply_v0242.py`. The versioned updater is distributed with the GitHub
+Release `v0.24.2`.
 
-The updater requires a coherent **v0.24.1 / schema 48** baseline and converges to **v0.24.2 / schema 49**.
+## 1. Obtain release assets
 
-It performs:
+From GitHub Release `v0.24.2`, obtain:
 
 ```text
-verify v0.24.1/schema 48
-→ backup
-→ install reversible DB-aware schema/mapping/manifest codecs
-→ schema 48 → 49
-→ integrate codecs into Context Transport Evidence Plane
-→ add hash/count-only projection telemetry
-→ register read-only CLI/MCP inspection
-→ update governance/docs/release integrity
-→ compile
-→ migrate
-→ run v0.24.2 + context historical regression tests
-→ run full repository regression
-→ rebuild MANIFEST/checksums
-→ release-integrity
-→ validate v0.24.2
+apply_v0242.py
+apply_v0242.py.sha256   (or SHA256SUMS.txt)
 ```
 
-Dry run:
+Keep the updater outside the repository, for example:
+
+```text
+D:\agentos-updaters\apply_v0242.py
+```
+
+## 2. Verify checksum
+
+PowerShell example:
+
+```powershell
+Get-FileHash D:\agentos-updaters\apply_v0242.py -Algorithm SHA256
+```
+
+Compare the result with the SHA-256 published in the GitHub Release asset.
+
+## 3. Run the updater against the repository
+
+```powershell
+python D:\agentos-updaters\apply_v0242.py D:\agentos-local-governance
+```
+
+Linux/macOS example:
 
 ```bash
-python tools/apply_v0242.py . --dry-run
+python ~/agentos-updaters/apply_v0242.py ~/agentos-local-governance
 ```
 
-The Control Plane remains lossless and is never passed through DB-aware codecs.
+The updater requires a coherent **v0.24.1 / schema 48** baseline and converges
+to **v0.24.2 / schema 49**.
 
-## Windows test-fixture isolation
+## 4. Validate the materialized release
 
-Upgrade backups are runtime/recovery artifacts and are stored outside the repository
-by default under `.agentos-upgrade-backups/<project-name>/` beside the project.
-Set `AGENTOS_UPGRADE_BACKUP_HOME` to select another machine-local backup root.
+```powershell
+cd D:\agentos-local-governance
+python tools\build_manifest.py .
+python tools\verify_manifest.py .
+python tools\validate_release.py .
+$env:PYTHONPATH = (Resolve-Path .\.agents).Path
+python -m pytest -q .agents\tests -rs
+```
 
-Full-repository pytest fixtures that clone the project exclude `.agents/runtime`.
+The Control Plane remains lossless. SOURCE/TARGET mutation authority, approval,
+privacy, signed-audit, and risk-tier review boundaries are unchanged.
+
+## Windows backup location
+
+Upgrade/recovery backups are machine-local release artifacts outside clean
+`main`. `AGENTOS_UPGRADE_BACKUP_HOME` may be used to choose their location.

@@ -16,3 +16,12 @@
 - Historical versioned updater/validator/release packaging files are staged outside the repository for GitHub Release assets.
 - Historical regression tests remain on `main` as compatibility contracts.
 - Runtime/state/cache and editor/test caches remain local-only.
+
+## v0.24.2 Release Hardening
+
+- Replaced stale GitHub Actions version-pinned validation with `tools/validate_release.py`.
+- Synchronized README/developer guides with DB-Aware Context Projection.
+- Added semantic current-release identity and local-link validation.
+- Updated upgrade instructions for external GitHub Release updater assets.
+- Added strict SQLite read-only state access for DB-aware MCP telemetry: no DB creation and no migration from GET.
+

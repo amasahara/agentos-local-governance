@@ -73,3 +73,11 @@ Chỉ expose:
 `agentos.context_db_projection_get`
 
 MCP chỉ trả telemetry/hash/count; không expose projected raw content và không có mutation.
+
+## Strict read-only MCP state access
+
+`agentos.context_db_projection_get` opens `.agents/state/agentos.db` with SQLite
+URI `mode=ro` and `PRAGMA query_only=ON`. The read path never creates the state
+directory/database and never invokes migrations. Missing or stale state fails
+closed with `state_database_missing` or `state_schema_upgrade_required`.
+

@@ -42,6 +42,8 @@ CORE_FILES = (
     ".agents/bin/agentos-mcp.cmd",
 )
 RELEASE_FILES = (
+    ".agents/tests/test_release_line_endings_v0242.py",
+    ".gitattributes",
     ".agents/bin/hooks/pre-commit",
     ".agents/tests/test_adaptive_budget_v0231.py",
     ".agents/tests/test_agentos.py",

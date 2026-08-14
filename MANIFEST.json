@@ -1,7 +1,7 @@
 {
   "release": "0.24.2",
   "kind": "full",
-  "file_count": 197,
+  "file_count": 199,
   "files": [
     {
       "path": ".agents/agentos/__init__.py",
@@ -395,8 +395,8 @@
     },
     {
       "path": ".agents/agentos/release_integrity.py",
-      "size": 17988,
-      "sha256": "7ef7ebcb9743eaead96318592884096ed9c50f6e9c70d2019d034eee3591b5a8"
+      "size": 18066,
+      "sha256": "dab30ea8f9eb25bc42cc9c6e2a52cced264cd1350f032ba4a91b7484cc04f0eb"
     },
     {
       "path": ".agents/agentos/release_integrity_cli.py",
@@ -849,6 +849,11 @@
       "sha256": "1317e6ff469e19424f5cd9271bc092f5f215babba2ff74128c4550c17e01521d"
     },
     {
+      "path": ".agents/tests/test_release_line_endings_v0242.py",
+      "size": 1315,
+      "sha256": "ac6e9a881d01d74b717b6d99c7a71278e2c7ce105b2f1f4c1b81e17d0dad5fe6"
+    },
+    {
       "path": ".agents/tests/test_risk_tiered_batch_review_v0241.py",
       "size": 12122,
       "sha256": "30c1092714003b7642a2cd1963d50bc33706966d5fad27c48beae031911e0c2b"
@@ -867,6 +872,11 @@
       "path": ".agents/tests/test_unified_runtime_v0225.py",
       "size": 5911,
       "sha256": "2aa136a5bc98a71b4cbf0249167404fa1b0aae9d15338e88825eb9c4adc5815c"
+    },
+    {
+      "path": ".gitattributes",
+      "size": 606,
+      "sha256": "fbd5ffbdb8395e95beff20f7ca1d89218248b0c2cb9ec8b942d29840cca538a0"
     },
     {
       "path": ".github/workflows/agentos-release-validation.yml",
@@ -910,8 +920,8 @@
     },
     {
       "path": "INDEX_INCREMENTAL_BENCHMARK_V0234.json",
-      "size": 2445,
-      "sha256": "2b00eb1db33bd155528671c46c5b9c9697e8a5c5d27316db0e049ee3f52b29a9"
+      "size": 2348,
+      "sha256": "10dac6e9eb355ad1b2a39c4c07a0bb233f00a2f32c292078c740e7c2328e70e1"
     },
     {
       "path": "PACKAGE_COMPLETENESS.json",

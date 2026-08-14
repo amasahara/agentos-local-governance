@@ -1,41 +1,37 @@
-# AgentOS Local Governance v0.24.2 — DB-Aware Context Projection
+# AgentOS Local Governance v0.24.3 — MCP Feature Runtime Refactor
 
 [README landing](README.md) | [English](README.en.md)
 
-**Phiên bản hiện tại: v0.24.2 — DB-Aware Context Projection**  
+**Phiên bản hiện tại: v0.24.3 — MCP Feature Runtime Refactor**  
 Database schema: **49**.
 
-## v0.24.2 — DB-Aware Context Projection
+## v0.24.3
 
-v0.24.2 bổ sung codec cấu trúc deterministic và reversible cho ba nhóm Evidence
-Plane: DB schema, field mapping và manifest. Codec chỉ được chọn khi representation
-mới nhỏ hơn source và decoder phải phục hồi cùng canonical JSON structure.
+Active MCP feature handlers đã được tách khỏi các `mcp_*_gateway.py` lịch sử.
+Các gateway cũ có thể vẫn tồn tại để giữ historical compatibility nhưng không
+còn được import bởi active runtime.
 
-Control Plane vẫn giữ nguyên 100%:
+```text
+mcp_runtime
+├─ mcp_core_runtime
+│  └─ gateway_client → gatewayd
+└─ mcp_feature_runtime
+   ├─ mcp_feature_handlers
+   └─ modern read-only feature modules
+```
 
-- original user request;
-- Requirement Ledger;
-- `AGENTS.md` authority;
-- approved scope;
-- active plan;
-- governance authority.
+37 read-only handlers được chuyển sang runtime-native implementation. Tool surface
+không đổi: 14 core + 63 feature + health.
 
-Schema 49 chỉ lưu projection hash, source hash, codec và byte/token counters;
-không lưu raw schema/mapping/manifest hoặc projected text.
+## Invariant
 
-## v0.24.1 — Risk-Tiered Batch Review
+- Schema vẫn 49.
+- Không subprocess/version-forward trong active MCP runtime.
+- Governed core tools vẫn đi qua trusted enforcement gateway.
+- Không thêm mutation authority cho feature MCP.
+- SOURCE/TARGET DB boundary, approval, privacy, audit và Context Control Plane giữ nguyên.
 
-Mapping `LOW` có thể được gom vào signed review bundle pin exact `plan_hash`.
-`MEDIUM/HIGH` vẫn phải review riêng, `BLOCKED` không được review, và approval
-toàn plan vẫn bắt buộc trước execution.
-
-## MCP read-only
-
-`agentos.context_db_projection_get` chỉ đọc telemetry/hash/count. v0.24.2
-Release Hardening mở state DB bằng SQLite `mode=ro`, không tạo database và
-không chạy migration từ MCP GET.
-
-## Kiểm tra release
+## Kiểm tra
 
 ```powershell
 python tools\build_manifest.py .
@@ -45,13 +41,5 @@ $env:PYTHONPATH = (Resolve-Path .\.agents).Path
 python -m pytest -q .agents\tests -rs
 ```
 
-## Nâng cấp
-
-Xem [Upgrade v0.24.1 → v0.24.2](UPGRADE_FROM_0.24.1.md). Updater theo version
-được phát hành dưới dạng GitHub Release asset, không được lưu trên clean `main`.
-
-## Tài liệu
-
-- [DB-Aware Context Projection](.agents/docs/DB_AWARE_CONTEXT_PROJECTION_V0242.md)
-- [Risk-Tiered Batch Review](.agents/docs/RISK_TIERED_BATCH_REVIEW_V0241.md)
-- [Repository Release Policy](.agents/docs/REPOSITORY_RELEASE_POLICY.md)
+Xem [UPGRADE_FROM_0.24.2.md](UPGRADE_FROM_0.24.2.md) và
+[MCP Feature Runtime Refactor](.agents/docs/MCP_FEATURE_RUNTIME_REFACTOR_V0243.md).

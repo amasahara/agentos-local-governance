@@ -1,4 +1,9 @@
 # Changelog
+
+## 0.24.3 — MCP Feature Runtime Refactor
+- Active MCP feature handlers are detached from historical gateway modules.
+- Added runtime-native feature/core modules; schema remains 49 and tool authority is unchanged.
+
 ## 0.24.2 — DB-Aware Context Projection
 - Repository release cleanup: clean-main packaging, external release archive, generic current-release validator, and runtime/state/cache Git isolation.
 - Schema 49 adds hash/count-only DB-aware projection telemetry.

@@ -1,24 +1,19 @@
-# Hướng dẫn AgentOS v0.24.2 — DB-Aware Context Projection
+# Hướng dẫn AgentOS v0.24.3 — MCP Feature Runtime Refactor
 
-## v0.24.2 — DB-Aware Context Projection
+Current version: **0.24.3**. Database schema: **49**.
 
-1. Chỉ projection Evidence Plane dạng schema/mapping/manifest có strong signal.
-2. Codec phải deterministic, reversible và pin source hash.
-3. Chỉ dùng projection khi representation thực tế nhỏ hơn source.
-4. Không persist raw schema/mapping/manifest hoặc projected text.
-5. Original request, Requirement Ledger, `AGENTS.md`, approved scope, active plan
-   và governance authority luôn giữ lossless.
-6. `agentos.context_db_projection_get` chỉ đọc state DB bằng SQLite `mode=ro`;
-   không tạo DB và không chạy migration.
+## Quy tắc active MCP
 
-## v0.24.1 — Risk-Tiered Batch Review
+- `mcp_runtime`: chỉ JSON-RPC và dispatch.
+- `mcp_core_runtime`: 14 governed core tools.
+- `mcp_feature_runtime`: flat feature catalog/dispatch.
+- `mcp_feature_handlers`: 37 handlers được tách khỏi legacy gateway.
+- Không import `mcp_*_gateway.py` hoặc `mcp_server.py` vào active path.
+- Không subprocess/version forwarding.
+- Feature mutation authority không đổi.
+- Trusted `gateway_client → gatewayd` vẫn bắt buộc cho governed core tools.
 
-1. Chạy `project-consolidation-risk-assess`.
-2. Batch chỉ mapping `LOW` vào signed bundle.
-3. Review `MEDIUM/HIGH` riêng; `BLOCKED` phải re-plan.
-4. Exact-plan whole-plan approval vẫn bắt buộc trước execution.
-
-## Kiểm tra release
+## Kiểm tra
 
 ```powershell
 python tools\build_manifest.py .
@@ -27,5 +22,3 @@ python tools\validate_release.py .
 $env:PYTHONPATH = (Resolve-Path .\.agents).Path
 python -m pytest -q .agents\tests -rs
 ```
-
-Updater theo version là GitHub Release asset và không được commit vào clean `main`.

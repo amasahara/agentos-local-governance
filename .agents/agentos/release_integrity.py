@@ -34,6 +34,8 @@ CORE_FILES = (
     ".agents/agentos/memory.py",
     ".agents/agentos/mcp_server.py",
     ".agents/agentos/mcp_runtime.py",
+    ".agents/agentos/mcp_feature_runtime.py",
+    ".agents/agentos/mcp_core_runtime.py",
     ".agents/agentos/mcp_catalog.py",
     ".agents/tests/test_agentos.py",
     ".agents/bin/agentos",
@@ -64,11 +66,12 @@ RELEASE_FILES = (
     "INDEX_INCREMENTAL_BENCHMARK_V0234.json",
     "PERFORMANCE_BASELINE_V0233.json",
     "RELEASE_NOTES.md",
-    "UPGRADE_FROM_0.24.1.md",
     "tools/build_manifest.py",
     "tools/repository_release_cleanup.py",
     "tools/validate_release.py",
     "tools/verify_manifest.py",
+    ".agents/tests/test_mcp_feature_runtime_v0243.py",
+    "UPGRADE_FROM_0.24.2.md",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -110,22 +113,46 @@ EXTENSION_FILES = (
     ".agents/agentos/db_aware_context_projection.py",
     ".agents/agentos/db_aware_context_projection_cli.py",
     ".agents/agentos/mcp_db_aware_context_projection.py",
+    ".agents/agentos/mcp_feature_handlers.py",
 )
 REQUIRED_POLICY_SECTIONS = (
-    "language_policy", "instruction_policy", "filesystem_policy", "claim_policy",
-    "workflows", "task_context_policy", "workflow_policy", "drift_policy",
-    "installation_policy", "tool_policy", "local_override_policy", "proxy_policy",
-    "external_audit_policy", "documentation_policy", "concurrency_policy",
-    "security_program", "knowledge_runtime", "execution_platform", "evolution_policy",
-    "multi_agent_policy", "evaluation_policy", "storage_policy",
-    "project_identity_policy", "primary_project_selection_policy",
-    "primary_project_consolidation_policy", "database_boundary_policy",
-    "schema_mapping_policy", "read_only_extraction_policy",
-    "controlled_target_insert_policy", "identity_resolution_policy",
-    "reconciliation_recovery_policy", "governance_enforcement_policy",
+    "language_policy",
+    "instruction_policy",
+    "filesystem_policy",
+    "claim_policy",
+    "workflows",
+    "task_context_policy",
+    "workflow_policy",
+    "drift_policy",
+    "installation_policy",
+    "tool_policy",
+    "local_override_policy",
+    "proxy_policy",
+    "external_audit_policy",
+    "documentation_policy",
+    "concurrency_policy",
+    "security_program",
+    "knowledge_runtime",
+    "execution_platform",
+    "evolution_policy",
+    "multi_agent_policy",
+    "evaluation_policy",
+    "storage_policy",
+    "project_identity_policy",
+    "primary_project_selection_policy",
+    "primary_project_consolidation_policy",
+    "database_boundary_policy",
+    "schema_mapping_policy",
+    "read_only_extraction_policy",
+    "controlled_target_insert_policy",
+    "identity_resolution_policy",
+    "reconciliation_recovery_policy",
+    "governance_enforcement_policy",
     "unified_runtime_policy",
-    "secret_resolver_policy", "lineage_key_lifecycle_policy",
-    "data_subject_rights_policy", "privacy_boundary_policy",
+    "secret_resolver_policy",
+    "lineage_key_lifecycle_policy",
+    "data_subject_rights_policy",
+    "privacy_boundary_policy",
     "context_transport_policy",
     "adaptive_token_budget_policy",
     "context_expansion_evaluation_policy",
@@ -133,6 +160,7 @@ REQUIRED_POLICY_SECTIONS = (
     "incremental_symbol_index_policy",
     "risk_tiered_batch_review_policy",
     "db_aware_context_projection_policy",
+    "mcp_feature_runtime_policy",
 )
 
 
@@ -200,8 +228,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     except Exception as exc:
         findings.append(_finding("incremental_index_benchmark_unloadable", f"cannot validate incremental index benchmark: {exc}", "INDEX_INCREMENTAL_BENCHMARK_V0234.json"))
     version = (root / "VERSION").read_text(encoding="utf-8").strip() if (root / "VERSION").exists() else None
-    if version != "0.24.2":
-        findings.append(_finding("version_mismatch", f"expected VERSION 0.24.2, got {version!r}", "VERSION"))
+    if version != "0.24.3":
+        findings.append(_finding("version_mismatch", f"expected VERSION 0.24.3, got {version!r}", "VERSION"))
 
     policy_path = root / ".agents/config/governance.json"
     if not policy_path.exists():
@@ -212,8 +240,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             missing = sorted(set(REQUIRED_POLICY_SECTIONS) - set(policy))
             if missing:
                 findings.append(_finding("missing_policy_sections", f"missing policy sections: {missing}", ".agents/config/governance.json"))
-            if policy.get("version") != "0.24.2":
-                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.24.2", ".agents/config/governance.json"))
+            if policy.get("version") != "0.24.3":
+                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.24.3", ".agents/config/governance.json"))
         except Exception as exc:
             findings.append(_finding("invalid_governance", f"cannot parse governance.json: {exc}", ".agents/config/governance.json"))
 
@@ -262,6 +290,85 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     except Exception as exc:
         findings.append(_finding("mcp_runtime_unloadable", f"cannot load unified MCP runtime: {exc}", ".agents/agentos/mcp_runtime.py"))
 
+    # v0.24.3 MCP feature-runtime active import graph gate.
+    active_mcp_modules = (
+        ".agents/agentos/mcp_runtime.py",
+        ".agents/agentos/mcp_core_runtime.py",
+        ".agents/agentos/mcp_feature_runtime.py",
+        ".agents/agentos/mcp_feature_handlers.py",
+        ".agents/agentos/mcp_catalog.py",
+    )
+    legacy_mcp_imports = {
+        "mcp_identity_gateway",
+        "mcp_selection_gateway",
+        "mcp_consolidation_gateway",
+        "mcp_database_boundary_gateway",
+        "mcp_schema_mapping_gateway",
+        "mcp_read_only_extraction_gateway",
+        "mcp_controlled_target_insert_gateway",
+        "mcp_identity_resolution_gateway",
+        "mcp_reconciliation_recovery_gateway",
+        "mcp_server",
+    }
+    for rel in active_mcp_modules:
+        path = root / rel
+        if not path.is_file():
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            imported = set()
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.module:
+                    imported.add(node.module.split(".")[-1])
+                elif isinstance(node, ast.Import):
+                    imported.update(alias.name.split(".")[-1] for alias in node.names)
+            forbidden = sorted(imported & legacy_mcp_imports)
+            if forbidden:
+                findings.append(_finding(
+                    "mcp_feature_runtime_legacy_import",
+                    f"active MCP runtime imports legacy gateway modules: {forbidden}",
+                    rel,
+                ))
+            if "subprocess" in imported:
+                findings.append(_finding(
+                    "mcp_feature_runtime_subprocess_forbidden",
+                    "active MCP runtime must not import subprocess",
+                    rel,
+                ))
+        except Exception as exc:
+            findings.append(_finding(
+                "mcp_feature_runtime_import_graph_unreadable",
+                f"cannot inspect active MCP imports: {exc}",
+                rel,
+            ))
+    try:
+        from .mcp_feature_runtime import feature_runtime_health
+        feature_health = feature_runtime_health()
+        if feature_health.get("legacy_gateway_handler_count") != 0:
+            findings.append(_finding(
+                "mcp_feature_runtime_legacy_handler_active",
+                f"legacy gateway handlers still active: {feature_health.get('legacy_gateway_handler_names')}",
+                ".agents/agentos/mcp_feature_runtime.py",
+            ))
+        if feature_health.get("runtime_native_migrated_tool_count") != 37:
+            findings.append(_finding(
+                "mcp_feature_runtime_migration_count_mismatch",
+                f"expected 37 migrated runtime-native handlers, got {feature_health.get('runtime_native_migrated_tool_count')}",
+                ".agents/agentos/mcp_feature_runtime.py",
+            ))
+        from .mcp_runtime import ALL_TOOLS, CORE_TOOL_NAMES, FEATURE_TOOL_NAMES
+        if len(CORE_TOOL_NAMES) != 14 or len(FEATURE_TOOL_NAMES) != 63 or len(ALL_TOOLS) != 78:
+            findings.append(_finding(
+                "mcp_tool_surface_changed",
+                f"expected 14 core + 63 feature + health = 78 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} / {len(ALL_TOOLS)}",
+                ".agents/agentos/mcp_runtime.py",
+            ))
+    except Exception as exc:
+        findings.append(_finding(
+            "mcp_feature_runtime_health_unloadable",
+            f"cannot validate v0.24.3 MCP feature runtime: {exc}",
+            ".agents/agentos/mcp_feature_runtime.py",
+        ))
     for rel in (".agents/agentos/cli_runtime.py", ".agents/agentos/mcp_runtime.py"):
         path = root / rel
         if path.exists() and "import subprocess" in path.read_text(encoding="utf-8", errors="replace"):
@@ -271,7 +378,7 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     # them as a release-integrity failure only when they are actually committed
     # into the authoritative MANIFEST. The manifest builder excludes them.
     # Clean-main release packaging gate.
-    release_clutter_globs = ('apply_v*.py', 'apply_v*.py.sha256', 'tools/apply_v*.py', 'tools/validate_v*.py', 'CHECKSUMS_V*.sha256', 'VALIDATION_REPORT*.json', '*.zip', '*.zip.sha256', '.agents/bin/agentos.v*', '.agents/bin/agentos-mcp.v*', '.agents/docs/RELEASE_NOTES_V*.md', '.agents/docs/USAGE_V*.md', '.agents/docs/GITHUB_READY_FULL_RELEASE_V*.md', '.agents/docs/archive/*', '.agents/docs/archive/**', 'HOTFIX_INFO.txt', 'UPGRADE_FROM_0.22*.md', 'UPGRADE_FROM_0.23*.md', 'UPGRADE_FROM_0.24.0.md')
+    release_clutter_globs = ('apply_v*.py', 'apply_v*.py.sha256', 'tools/apply_v*.py', 'tools/validate_v*.py', 'CHECKSUMS_V*.sha256', 'VALIDATION_REPORT*.json', '*.zip', '*.zip.sha256', '.agents/bin/agentos.v*', '.agents/bin/agentos-mcp.v*', '.agents/docs/RELEASE_NOTES_V*.md', '.agents/docs/USAGE_V*.md', '.agents/docs/GITHUB_READY_FULL_RELEASE_V*.md', '.agents/docs/archive/*', '.agents/docs/archive/**', 'HOTFIX_INFO.txt', 'UPGRADE_FROM_0.22*.md', 'UPGRADE_FROM_0.23*.md', 'UPGRADE_FROM_0.24.0.md', 'UPGRADE_FROM_0.24.1.md')
     release_clutter = sorted({
         p.relative_to(root).as_posix()
         for pattern in release_clutter_globs
@@ -341,10 +448,11 @@ DOC_FILES = (
     "README.md",
     "README.vi.md",
     "RELEASE_NOTES.md",
-    "UPGRADE_FROM_0.24.1.md",
     "huong_dan.en.md",
     "huong_dan.md",
     "huong_dan.vi.md",
+    ".agents/docs/MCP_FEATURE_RUNTIME_REFACTOR_V0243.md",
+    "UPGRADE_FROM_0.24.2.md",
 )
 
 

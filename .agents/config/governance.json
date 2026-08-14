@@ -427,7 +427,7 @@
       "README.en.md",
       "RELEASE_NOTES.md"
     ],
-    "current_release_name": "DB-Aware Context Projection",
+    "current_release_name": "MCP Feature Runtime Refactor",
     "current_schema": 49,
     "current_schema_files": [
       "README.md",
@@ -446,7 +446,7 @@
       "README.md",
       "README.vi.md",
       "README.en.md",
-      "UPGRADE_FROM_0.24.1.md"
+      "UPGRADE_FROM_0.24.2.md"
     ]
   },
   "drift_policy": {
@@ -716,6 +716,26 @@
       "instruction_policy",
       "task_context_policy"
     ]
+  },
+  "mcp_feature_runtime_policy": {
+    "active_runtime": "mcp_feature_runtime_v1",
+    "core_tool_count": 14,
+    "database_schema": 49,
+    "extension_mutation_tools_exposed_over_mcp": false,
+    "feature_mutation_authority_changed": false,
+    "feature_tool_count": 63,
+    "legacy_gateway_handler_import_allowed": false,
+    "legacy_gateway_modules_active": false,
+    "legacy_gateway_subprocess_forwarding_allowed": false,
+    "mcp_server_active_runtime_dependency": false,
+    "runtime_native_migrated_handler_count": 37,
+    "schema_migration_required": false,
+    "source_database_write_authority_changed": false,
+    "target_database_write_authority_changed": false,
+    "total_tool_count_with_health": 78,
+    "trusted_core_enforcement_transport": "gateway_client_to_gatewayd",
+    "trusted_core_enforcement_transport_changed": false,
+    "version": 1
   },
   "multi_agent_policy": {
     "disclosure_levels": [
@@ -1048,12 +1068,17 @@
     "unknown_tools_fail_closed": true
   },
   "unified_runtime_policy": {
+    "active_mcp_core_runtime_module": "agentos.mcp_core_runtime",
+    "active_mcp_feature_runtime_module": "agentos.mcp_feature_runtime",
+    "active_mcp_runtime_module": "agentos.mcp_runtime",
     "duplicate_cli_commands_allowed": false,
     "duplicate_mcp_tools_allowed": false,
     "enabled": true,
     "extension_mutation_tools_exposed_over_mcp": false,
     "legacy_launchers_may_exist_but_must_not_be_active": true,
+    "legacy_mcp_gateway_active_import_allowed": false,
     "mcp_health_tool_required": true,
+    "mcp_server_active_runtime_dependency": false,
     "mcp_subprocess_forwarding_allowed": false,
     "single_python_cli_runtime_required": true,
     "single_python_mcp_runtime_required": true,
@@ -1063,7 +1088,7 @@
     "windows_posix_cli_parity_required": true,
     "windows_posix_mcp_parity_required": true
   },
-  "version": "0.24.2",
+  "version": "0.24.3",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,

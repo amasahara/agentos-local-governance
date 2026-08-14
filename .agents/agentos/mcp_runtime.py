@@ -2,14 +2,15 @@
 File: .agents/agentos/mcp_runtime.py
 
 Purpose:
-    Serve one cross-platform AgentOS MCP JSON-RPC runtime without subprocess forwarding.
+    Serve the active cross-platform AgentOS MCP JSON-RPC runtime with feature
+    handlers fully detached from historical MCP gateway modules.
 
 Responsibilities:
-    - Advertise the governed core proxy tools and all read-only extension tools.
-    - Dispatch extension tools by direct dictionary lookup.
-    - Route governed core actions through the existing session gateway.
-    - Return standards-shaped JSON-RPC errors for unknown methods/tools.
-    - Expose runtime health without leaking credentials or session tokens.
+    - Own JSON-RPC protocol handling only.
+    - Dispatch read-only feature tools through mcp_feature_runtime.
+    - Dispatch governed core tools through mcp_core_runtime and the trusted
+      gateway_client/gatewayd enforcement boundary.
+    - Never import mcp_server or mcp_*_gateway compatibility modules.
 """
 from __future__ import annotations
 
@@ -18,25 +19,30 @@ import json
 import os
 from pathlib import Path
 import platform
-import secrets
 import sys
 from typing import Any
 
-from .gateway_client import request as gateway_request
-from .mcp_catalog import FEATURE_HANDLERS, FEATURE_TOOLS
-from .mcp_server import TOOLS as CORE_TOOLS
+from .mcp_core_runtime import CORE_TOOLS, CORE_TOOL_NAMES, execute_core_tool
+from .mcp_feature_runtime import (
+    FEATURE_HANDLERS,
+    FEATURE_TOOLS,
+    FEATURE_TOOL_NAMES,
+    dispatch_feature_tool,
+    feature_runtime_health,
+)
 from .schema_version import CURRENT_SCHEMA_VERSION
 
-VERSION = "0.24.2"
+VERSION = "0.24.3"
+
 HEALTH_TOOL = {
     "name": "agentos.mcp_health",
-    "description": "Read unified MCP runtime/catalog health without secrets or mutation.",
+    "description": "Read active MCP runtime/catalog health without secrets or mutation.",
     "inputSchema": {"type": "object", "properties": {}},
 }
 
 
 def _merge_tools() -> tuple[list[dict[str, Any]], set[str], set[str]]:
-    """Merge core and extension catalogs and reject duplicate names."""
+    """Merge core, feature and health tool catalogs and reject duplicates."""
     tools: list[dict[str, Any]] = []
     names: set[str] = set()
     duplicates: set[str] = set()
@@ -49,7 +55,7 @@ def _merge_tools() -> tuple[list[dict[str, Any]], set[str], set[str]]:
         tools.append(definition)
     if duplicates:
         raise RuntimeError(f"duplicate MCP tool names: {sorted(duplicates)}")
-    return tools, {item["name"] for item in CORE_TOOLS}, {item["name"] for item in FEATURE_TOOLS}
+    return tools, set(CORE_TOOL_NAMES), set(FEATURE_TOOL_NAMES)
 
 
 ALL_TOOLS, CORE_TOOL_NAMES, FEATURE_TOOL_NAMES = _merge_tools()
@@ -75,12 +81,13 @@ def _tool_result(value: Any, is_error: bool = False) -> dict[str, Any]:
 
 
 def _health(root: Path, task_id: str | None, session_id: str | None) -> dict[str, Any]:
-    """Return privacy-safe unified MCP runtime health."""
+    """Return privacy-safe v0.24.3 MCP feature-runtime health."""
+    features = feature_runtime_health()
     return {
-        "ok": True,
+        "ok": bool(features["ok"]),
         "version": VERSION,
         "schema": CURRENT_SCHEMA_VERSION,
-        "runtime": "unified_python_mcp",
+        "runtime": "mcp_feature_runtime_v1",
         "project_root_name": root.name,
         "tool_count": len(ALL_TOOLS),
         "core_proxy_tool_count": len(CORE_TOOLS),
@@ -88,6 +95,9 @@ def _health(root: Path, task_id: str | None, session_id: str | None) -> dict[str
         "duplicate_tools": [],
         "subprocess_forwarding": False,
         "legacy_gateway_active": False,
+        "legacy_gateway_handler_count": features["legacy_gateway_handler_count"],
+        "runtime_native_migrated_tool_count": features["runtime_native_migrated_tool_count"],
+        "trusted_enforcement_gateway": True,
         "task_bound": bool(task_id),
         "session_bound": bool(session_id),
         "session_token_present": bool(os.environ.get("AGENTOS_SESSION_TOKEN")),
@@ -96,42 +106,20 @@ def _health(root: Path, task_id: str | None, session_id: str | None) -> dict[str
     }
 
 
-def _call_core(root: Path, task_id: str | None, session_id: str | None, name: str, arguments: dict[str, Any], sequence: int) -> dict[str, Any]:
-    """Execute one governed core MCP proxy tool through the session gateway."""
-    if not task_id or not session_id:
-        raise RuntimeError("core MCP proxy tool requires --task-id and --session-id")
-    session_token = os.environ.get("AGENTOS_SESSION_TOKEN")
-    if not session_token:
-        raise RuntimeError("AGENTOS_SESSION_TOKEN is required for governed core MCP tools")
-    payload = dict(arguments)
-    reason = payload.pop("reason_code", None)
-    justification = payload.pop("justification", None)
-    target = payload.get("url") if name == "agentos.http_request" else payload.get("path")
-    return gateway_request(root, {
-        "action": "execute",
-        "task_id": task_id,
-        "session_token": session_token,
-        "tool_name": name,
-        "args": payload,
-        "reason_code": reason,
-        "justification": justification,
-        "target": target,
-        "request_id": secrets.token_hex(16),
-        "sequence": sequence,
-    })
+def _call_core(
+    root: Path,
+    task_id: str | None,
+    session_id: str | None,
+    name: str,
+    arguments: dict[str, Any],
+    sequence: int,
+) -> dict[str, Any]:
+    """Backward-compatible core dispatch wrapper."""
+    return execute_core_tool(root, task_id, session_id, name, arguments, sequence)
 
 
 def serve(root: Path, task_id: str | None = None, session_id: str | None = None) -> None:
-    """Serve unified MCP JSON-RPC messages from stdin.
-
-    Args:
-        root: Governed project root.
-        task_id: Optional bound task for governed core tools.
-        session_id: Optional bound session for governed core tools.
-
-    Returns:
-        None.
-    """
+    """Serve active MCP JSON-RPC messages from stdin."""
     sequence = 0
     for line in sys.stdin:
         request: Any = None
@@ -146,7 +134,17 @@ def serve(root: Path, task_id: str | None = None, session_id: str | None = None)
                 continue
             if method == "initialize":
                 protocol = (request.get("params") or {}).get("protocolVersion") or "2025-03-26"
-                _reply(identifier, {"protocolVersion": protocol, "capabilities": {"tools": {}}, "serverInfo": {"name": "agentos-local-governance", "version": VERSION}})
+                _reply(
+                    identifier,
+                    {
+                        "protocolVersion": protocol,
+                        "capabilities": {"tools": {}},
+                        "serverInfo": {
+                            "name": "agentos-local-governance",
+                            "version": VERSION,
+                        },
+                    },
+                )
                 continue
             if method == "ping":
                 _reply(identifier, {})
@@ -155,35 +153,51 @@ def serve(root: Path, task_id: str | None = None, session_id: str | None = None)
                 _reply(identifier, {"tools": ALL_TOOLS})
                 continue
             if method != "tools/call":
-                _reply(identifier, error={"code": -32601, "message": f"method not found: {method}"})
+                _reply(
+                    identifier,
+                    error={"code": -32601, "message": f"method not found: {method}"},
+                )
                 continue
-
             sequence += 1
             params = request.get("params") or {}
             name = str(params.get("name") or "")
             arguments = params.get("arguments") or {}
             if not isinstance(arguments, dict):
-                _reply(identifier, error={"code": -32602, "message": "tool arguments must be an object"})
+                _reply(
+                    identifier,
+                    error={"code": -32602, "message": "tool arguments must be an object"},
+                )
                 continue
             if name == HEALTH_TOOL["name"]:
                 _reply(identifier, _tool_result(_health(root, task_id, session_id)))
                 continue
             if name in FEATURE_TOOL_NAMES:
-                value = FEATURE_HANDLERS[name](name, dict(arguments), root)
+                value = dispatch_feature_tool(name, arguments, root)
                 _reply(identifier, _tool_result(value))
                 continue
             if name in CORE_TOOL_NAMES:
-                value = _call_core(root, task_id, session_id, name, arguments, sequence)
-                _reply(identifier, _tool_result(value, is_error=not value.get("success", value.get("allowed", True))))
+                value = execute_core_tool(
+                    root, task_id, session_id, name, arguments, sequence
+                )
+                _reply(
+                    identifier,
+                    _tool_result(
+                        value,
+                        is_error=not value.get("success", value.get("allowed", True)),
+                    ),
+                )
                 continue
-            _reply(identifier, error={"code": -32602, "message": f"unknown MCP tool: {name}"})
+            _reply(
+                identifier,
+                error={"code": -32602, "message": f"unknown MCP tool: {name}"},
+            )
         except Exception as exc:
             identifier = request.get("id") if isinstance(request, dict) else None
             _reply(identifier, error={"code": -32000, "message": str(exc)})
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run the unified stdio MCP runtime."""
+    """Run the active stdio MCP runtime."""
     parser = argparse.ArgumentParser(prog="agentos-mcp")
     parser.add_argument("--root", default=os.environ.get("AGENTOS_PROJECT_ROOT", "."))
     parser.add_argument("--task-id", default=os.environ.get("AGENTOS_TASK_ID"))

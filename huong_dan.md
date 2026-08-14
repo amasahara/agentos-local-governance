@@ -2,35 +2,30 @@
 
 [🇻🇳 Tiếng Việt](huong_dan.vi.md) | [🇬🇧 English](huong_dan.en.md)
 
-Current version: **0.24.2**. Database schema: **49**.
+Current version: **0.24.3**. Database schema: **49**.
 
-## v0.24.2 — DB-Aware Context Projection
+## MCP Feature Runtime Refactor
 
-Use DB-aware projection only for structured schema/mapping/manifest evidence.
-The codec must be deterministic, reversible, source-hash pinned, and smaller
-than the source representation. Never project Control Plane authority.
-
-Read-only inspection:
+Active MCP code must follow:
 
 ```text
-context-db-projection-preview
-context-db-projection-status
-agentos.context_db_projection_get
+mcp_runtime            protocol/dispatch only
+mcp_core_runtime       governed core tools
+mcp_feature_runtime    read-only feature registry/dispatcher
+mcp_feature_handlers   runtime-native migrated handlers
 ```
 
-The MCP GET path is strict read-only state access: it must not create or migrate
-the AgentOS SQLite database.
+Do not add active imports from `mcp_*_gateway.py` or `mcp_server.py`.
+Do not introduce subprocess/version forwarding into these modules.
 
-## v0.24.1 — Risk-Tiered Batch Review
+Governed core tools keep the trusted `gateway_client → gatewayd` enforcement
+boundary. Feature MCP remains read-only unless a future governance node explicitly
+changes authority.
 
-Assess mapping risk deterministically. Batch only LOW mappings into a signed
-bundle, review MEDIUM/HIGH individually, resolve BLOCKED mappings, and retain
-the exact-plan whole-plan approval gate.
-
-## Release workflow
+## Release gate
 
 ```text
 build manifest → verify manifest → validate release → full regression → tag/release
 ```
 
-Versioned updater/recovery files belong to GitHub Releases, not clean `main`.
+Versioned updater/recovery scripts remain GitHub Release assets outside clean main.

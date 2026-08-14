@@ -35,10 +35,14 @@ def test_current_docs_identify_db_aware_context_projection_and_links_resolve() -
 
 
 def test_upgrade_guide_uses_external_release_asset_model() -> None:
-    text = (ROOT / "UPGRADE_FROM_0.24.1.md").read_text(encoding="utf-8")
-    assert "python tools/apply_v0242.py" not in text
+    guides = sorted(ROOT.glob("UPGRADE_FROM_*.md"))
+    assert len(guides) == 1
+    text = guides[0].read_text(encoding="utf-8")
+    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    updater = f"apply_v{version.replace('.', '')}.py"
+    assert f"python tools/{updater}" not in text
     assert "GitHub Release" in text
-    assert "apply_v0242.py" in text
+    assert updater in text
 
 
 def test_connect_read_only_missing_database_is_fail_closed_without_creation(tmp_path: Path) -> None:

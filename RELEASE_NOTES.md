@@ -1,27 +1,14 @@
-# AgentOS Local Governance v0.24.2 — DB-Aware Context Projection
+# AgentOS Local Governance v0.24.3 — MCP Feature Runtime Refactor
 
-- Schema **48 → 49**.
-- Added deterministic reversible structural compression for schema, mapping, and manifest JSON evidence.
-- Added `db_schema_keydict_v1`, `db_mapping_keydict_v1`, and `db_manifest_keydict_v1`.
-- Projection is Evidence-Plane-only; original request, Requirement Ledger, AGENTS authority, approved scope, active plan, and governance authority remain lossless.
-- A codec is selected only when it reduces actual serialized size.
-- Schema 49 persists only hashes/counters/codec metadata; raw projected DB content is not persisted.
-- Existing source hash, context revision, expansion, stale detection, adaptive token budget, and preservation gates remain authoritative.
-- Added read-only CLI preview/status and read-only MCP telemetry.
-- No DB mutation authority is granted to MCP or the LLM.
+Database schema remains **49**; this node has no state migration.
 
-## Repository Release Cleanup
-
-- `main` now represents only the latest runnable AgentOS package.
-- Historical versioned updater/validator/release packaging files are staged outside the repository for GitHub Release assets.
-- Historical regression tests remain on `main` as compatibility contracts.
-- Runtime/state/cache and editor/test caches remain local-only.
-
-## v0.24.2 Release Hardening
-
-- Replaced stale GitHub Actions version-pinned validation with `tools/validate_release.py`.
-- Synchronized README/developer guides with DB-Aware Context Projection.
-- Added semantic current-release identity and local-link validation.
-- Updated upgrade instructions for external GitHub Release updater assets.
-- Added strict SQLite read-only state access for DB-aware MCP telemetry: no DB creation and no migration from GET.
-
+- Added `mcp_core_runtime.py` as the active owner of the 14 governed core MCP tools.
+- Added `mcp_feature_handlers.py` and migrated 37 read-only handlers out of historical `mcp_*_gateway.py` modules.
+- Added `mcp_feature_runtime.py` as the active flat feature catalog/dispatcher.
+- Converted `mcp_catalog.py` into a compatibility facade; it no longer imports legacy gateway modules.
+- `mcp_runtime.py` now imports neither `mcp_server.py` nor any `mcp_*_gateway.py`.
+- Existing modern read-only feature modules remain direct in-process handlers.
+- Public MCP surface remains 78 tools: 14 core + 63 feature + health.
+- Governed core operations still traverse `gateway_client → gatewayd`; this trusted enforcement boundary is intentionally preserved.
+- MCP feature mutation authority, SOURCE/TARGET database boundaries, human approval, privacy, signed audit and context-preservation rules are unchanged.
+- Release integrity now rejects active MCP import paths that reintroduce legacy gateway ownership or subprocess forwarding.

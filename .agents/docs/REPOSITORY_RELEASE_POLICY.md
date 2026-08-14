@@ -13,7 +13,7 @@ Lịch sử phát hành không bị mất: Git commit/tag giữ snapshot source;
 - Launcher hiện tại: `agentos`, `agentos.cmd`, `agentos-mcp`, `agentos-mcp.cmd` và hooks.
 - Governance/config và tài liệu kiến trúc còn hiệu lực.
 - `README*`, `huong_dan*`, `CHANGELOG.md`, `RELEASE_NOTES.md`.
-- `UPGRADE_FROM_0.24.1.md` cho bước nâng cấp hiện tại.
+- `UPGRADE_FROM_0.24.2.md` cho bước nâng cấp hiện tại.
 - `MANIFEST.json`, `CHECKSUMS.sha256`.
 - Benchmark/evaluation artifacts vẫn được runtime checker hoặc regression test tham chiếu.
 - Tool generic: `build_manifest.py`, `verify_manifest.py`, `validate_release.py`,
@@ -52,7 +52,7 @@ Historical release packaging scripts không phải runtime contract và được
 
 Cleanup mặc định lưu file được loại khỏi `main` tại sibling directory:
 
-`.agentos-release-archive/<project-name>/v0.24.2-<timestamp>/`
+`.agentos-release-archive/<project-name>/v0.24.3-<timestamp>/`
 
 Có thể override bằng `AGENTOS_RELEASE_ARCHIVE_HOME`.
 

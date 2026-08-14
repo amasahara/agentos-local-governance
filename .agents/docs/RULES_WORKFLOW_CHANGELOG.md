@@ -1,3 +1,8 @@
+## v0.24.3 — MCP Feature Runtime Refactor
+- **Decision:** active MCP feature handlers may not be owned/imported from legacy gateway modules.
+- **Core boundary:** governed core tools keep gateway_client → gatewayd enforcement.
+- **Authority:** no MCP mutation permission or database schema migration is introduced.
+
 ## v0.24.2 — DB-Aware Context Projection
 - **Decision:** schema/mapping/manifest compression is deterministic and reversible.
 - **Boundary:** codecs apply only to Evidence Plane; Control Plane remains lossless.

@@ -1,28 +1,15 @@
-# AgentOS v0.24.2 Developer Guide — DB-Aware Context Projection
+# AgentOS v0.24.3 Developer Guide — MCP Feature Runtime Refactor
 
-## v0.24.2 — DB-Aware Context Projection
+Current version: **0.24.3**. Database schema: **49**.
 
-1. Project only strongly-signalled schema/mapping/manifest Evidence Plane data.
-2. Require deterministic, reversible, source-hash-pinned codecs.
-3. Select a projection only when it is smaller than its source representation.
-4. Never persist raw schema/mapping/manifest content or projected text.
-5. Preserve the original request, Requirement Ledger, `AGENTS.md`, approved scope,
-   active plan, and governance authority losslessly.
-6. `agentos.context_db_projection_get` opens state through SQLite `mode=ro`; it
-   cannot create the database or run migrations.
+Active MCP rules:
 
-## v0.24.1 — Risk-Tiered Batch Review
+- `mcp_runtime` owns protocol/dispatch only.
+- `mcp_core_runtime` owns the 14 governed core tools.
+- `mcp_feature_runtime` owns the flat read-only feature runtime.
+- `mcp_feature_handlers` owns the 37 migrated legacy-embedded handlers.
+- Active modules must not import `mcp_*_gateway.py` or `mcp_server.py`.
+- Active runtime must not use subprocess/version forwarding.
+- Core governance enforcement remains `gateway_client → gatewayd`.
 
-Batch only deterministic LOW mappings into a signed bundle, review MEDIUM/HIGH
-individually, resolve BLOCKED mappings, and retain whole-plan approval.
-
-## Release validation
-
-```bash
-python tools/build_manifest.py .
-python tools/verify_manifest.py .
-python tools/validate_release.py .
-PYTHONPATH=.agents python -m pytest -q .agents/tests -rs
-```
-
-Versioned updater/recovery files are GitHub Release assets rather than clean-main files.
+Run manifest verification, generic release validation, and full regression before release.

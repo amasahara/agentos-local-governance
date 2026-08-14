@@ -1,24 +1,33 @@
 # AgentOS Local Governance
 
-**Current release: v0.24.2 — DB-Aware Context Projection**
+**Current release: v0.24.3 — MCP Feature Runtime Refactor**
 
 [🇻🇳 Tiếng Việt](README.vi.md) | [🇬🇧 English](README.en.md)
 
 Database schema: **49**.
 
-v0.24.2 adds deterministic, reversible structural projection for DB schema,
-field-mapping, and manifest evidence. Projection is limited to the Context
-**Evidence Plane**; the original request, Requirement Ledger, `AGENTS.md`,
-approved scope, active plan, and governance authority remain lossless.
+v0.24.3 separates active MCP feature execution from historical
+`mcp_*_gateway.py` compatibility modules. The active runtime is now split into:
 
-## Security and governance invariants
+```text
+mcp_runtime
+├─ mcp_core_runtime
+│  └─ trusted gateway_client → gatewayd enforcement
+└─ mcp_feature_runtime
+   ├─ mcp_feature_handlers
+   └─ modern read-only feature modules
+```
 
-- SOURCE projects/databases remain read-only.
-- TARGET mutation authority is unchanged and remains approval/governance gated.
-- DB-aware projection is used only when it reduces serialized size.
-- Raw projected DB content is not persisted in projection telemetry.
-- MCP exposes projection telemetry as read-only inspection only.
-- Risk-Tiered Batch Review from v0.24.1 remains active; whole-plan approval is still required.
+The public MCP tool surface is preserved: **14 core + 63 feature + health = 78 tools**.
+
+## Governance invariants
+
+- No DB schema migration in v0.24.3; schema remains 49.
+- Legacy MCP gateway modules are not active handler owners.
+- Active MCP runtime does not subprocess/version-forward.
+- Governed core tools still use the trusted gatewayd enforcement boundary.
+- Extension mutation tools remain outside MCP.
+- SOURCE/TARGET DB boundaries, human approval, privacy, signed audit and context-preservation rules are unchanged.
 
 ## Validation
 
@@ -26,15 +35,10 @@ approved scope, active plan, and governance authority remain lossless.
 python tools/build_manifest.py .
 python tools/verify_manifest.py .
 python tools/validate_release.py .
-```
-
-Full regression:
-
-```bash
 PYTHONPATH=.agents python -m pytest -q .agents/tests -rs
 ```
 
-On PowerShell:
+PowerShell:
 
 ```powershell
 $env:PYTHONPATH = (Resolve-Path .\.agents).Path
@@ -43,19 +47,12 @@ python -m pytest -q .agents\tests -rs
 
 ## Upgrade
 
-See [Upgrade v0.24.1 → v0.24.2](UPGRADE_FROM_0.24.1.md).
-The versioned updater is distributed as a GitHub Release asset and is not
-committed to clean `main`.
+See [Upgrade v0.24.2 → v0.24.3](UPGRADE_FROM_0.24.2.md). The versioned updater
+is a GitHub Release asset and is intentionally absent from clean `main`.
 
 ## Current node documentation
 
+- [MCP Feature Runtime Refactor](.agents/docs/MCP_FEATURE_RUNTIME_REFACTOR_V0243.md)
 - [DB-Aware Context Projection](.agents/docs/DB_AWARE_CONTEXT_PROJECTION_V0242.md)
 - [Risk-Tiered Batch Review](.agents/docs/RISK_TIERED_BATCH_REVIEW_V0241.md)
-- [Requirement-Preserving Context Compression](.agents/docs/REQUIREMENT_PRESERVING_CONTEXT_COMPRESSION_V0230.md)
 - [Repository Release Policy](.agents/docs/REPOSITORY_RELEASE_POLICY.md)
-
-## Repository release model
-
-`main` contains the latest runnable source, regression tests, current docs, and
-generic validation tools. Versioned updater/recovery assets belong to Git tags
-and GitHub Releases rather than accumulating on `main`.

@@ -7,6 +7,7 @@ import pytest
 
 from agentos.db import connect
 from agentos.indexing import index_build, index_query, index_status
+from agentos.schema_version import CURRENT_SCHEMA_VERSION
 
 
 def _project(tmp_path: Path) -> Path:
@@ -21,9 +22,11 @@ def _project(tmp_path: Path) -> Path:
 def test_schema_47_adds_incremental_index_state(tmp_path: Path) -> None:
     root = _project(tmp_path)
     with connect(root) as conn:
-        version = conn.execute("SELECT MAX(version) AS v FROM schema_migrations").fetchone()["v"]
+        versions = {int(r["version"]) for r in conn.execute("SELECT version FROM schema_migrations")}
+        version = max(versions)
         tables = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert version == 47
+    assert 47 in versions
+    assert version == CURRENT_SCHEMA_VERSION
     assert {"symbol_index_state", "symbol_index_files"} <= tables
 
 

@@ -43,59 +43,29 @@ CORE_FILES = (
 )
 RELEASE_FILES = (
     ".agents/bin/hooks/pre-commit",
-    "tools/apply_v0223.py",
-    "tools/apply_v0224.py",
-    "tools/apply_v0225.py",
-    "tools/build_manifest.py",
-    "tools/verify_manifest.py",
-    "tools/validate_release.py",
-    ".agents/tests/test_governance_enforcement_v0224.py",
-    ".agents/tests/test_unified_runtime_v0225.py",
-    "UPGRADE_FROM_0.22.3.md",
-    "UPGRADE_FROM_0.22.4.md",
-    "tools/apply_v0226.py",
-    "tools/validate_v0226.py",
-    "tools/validate_release.py",
-    ".agents/tests/test_secret_lineage_v0226.py",
-    "UPGRADE_FROM_0.22.5.md",
-    "tools/apply_v0227.py",
-    "tools/validate_v0227.py",
-    ".agents/tests/test_data_subject_rights_v0227.py",
-    "UPGRADE_FROM_0.22.6.md",
-    "DATA_SUBJECT_RIGHTS.md",
-    ".agents/docs/PRIVACY_BOUNDARY_V0227.md",
-    ".agents/docs/USAGE_V0227.md",
-    "tools/apply_v0230.py",
-    "tools/validate_v0230.py",
-    ".agents/tests/test_context_transport_v0230.py",
-    "UPGRADE_FROM_0.22.7.md",
-    ".agents/docs/REQUIREMENT_PRESERVING_CONTEXT_COMPRESSION_V0230.md",
-    "tools/apply_v0231.py",
-    "tools/validate_v0231.py",
     ".agents/tests/test_adaptive_budget_v0231.py",
-    "UPGRADE_FROM_0.23.0.md",
-    ".agents/docs/ADAPTIVE_TOKEN_BUDGET_MODEL_PROFILES_V0231.md",
-    "ADAPTIVE_TOKEN_BUDGET_BENCHMARK.json",
-    "tools/apply_v0232.py",
-    "tools/validate_v0232.py",
-    ".agents/tests/test_context_expansion_evaluation_v0232.py",
-    "UPGRADE_FROM_0.23.1.md",
-    ".agents/docs/CONTEXT_EXPANSION_COMPRESSION_EVALUATION_V0232.md",
-    "CONTEXT_EXPANSION_EVALUATION_BENCHMARK.json",
-    ".agents/docs/GITHUB_READY_FULL_RELEASE_V0232.md",
-    "tools/apply_v0233.py",
-    "tools/validate_v0233.py",
+    ".agents/tests/test_agentos.py",
     ".agents/tests/test_consolidation_cockpit_v0233.py",
-    ".agents/docs/CONSOLIDATION_COCKPIT_PERFORMANCE_BASELINE_V0233.md",
-    "UPGRADE_FROM_0.23.2.md",
-    "PERFORMANCE_BASELINE_V0233.json",
-    "tools/apply_v0234.py",
-    "tools/validate_v0234.py",
+    ".agents/tests/test_context_expansion_evaluation_v0232.py",
+    ".agents/tests/test_context_transport_v0230.py",
+    ".agents/tests/test_data_subject_rights_v0227.py",
+    ".agents/tests/test_db_aware_context_projection_v0242.py",
+    ".agents/tests/test_governance_enforcement_v0224.py",
     ".agents/tests/test_incremental_index_v0234.py",
-    ".agents/docs/INCREMENTAL_SYMBOL_INDEX_V0234.md",
-    "UPGRADE_FROM_0.23.3.md",
-    "INDEX_INCREMENTAL_BENCHMARK_V0234.json",
+    ".agents/tests/test_risk_tiered_batch_review_v0241.py",
+    ".agents/tests/test_secret_lineage_v0226.py",
+    ".agents/tests/test_unified_runtime_v0225.py",
     ".github/workflows/agentos-release-validation.yml",
+    "ADAPTIVE_TOKEN_BUDGET_BENCHMARK.json",
+    "CONTEXT_EXPANSION_EVALUATION_BENCHMARK.json",
+    "INDEX_INCREMENTAL_BENCHMARK_V0234.json",
+    "PERFORMANCE_BASELINE_V0233.json",
+    "RELEASE_NOTES.md",
+    "UPGRADE_FROM_0.24.1.md",
+    "tools/build_manifest.py",
+    "tools/repository_release_cleanup.py",
+    "tools/validate_release.py",
+    "tools/verify_manifest.py",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -131,6 +101,12 @@ EXTENSION_FILES = (
     ".agents/agentos/mcp_consolidation_cockpit.py",
     ".agents/agentos/indexing.py",
     ".agents/agentos/incremental_index_benchmark.py",
+    ".agents/agentos/risk_tiered_batch_review.py",
+    ".agents/agentos/risk_tiered_batch_review_cli.py",
+    ".agents/agentos/mcp_risk_tiered_batch_review.py",
+    ".agents/agentos/db_aware_context_projection.py",
+    ".agents/agentos/db_aware_context_projection_cli.py",
+    ".agents/agentos/mcp_db_aware_context_projection.py",
 )
 REQUIRED_POLICY_SECTIONS = (
     "language_policy", "instruction_policy", "filesystem_policy", "claim_policy",
@@ -152,6 +128,8 @@ REQUIRED_POLICY_SECTIONS = (
     "context_expansion_evaluation_policy",
     "consolidation_cockpit_policy",
     "incremental_symbol_index_policy",
+    "risk_tiered_batch_review_policy",
+    "db_aware_context_projection_policy",
 )
 
 
@@ -219,8 +197,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     except Exception as exc:
         findings.append(_finding("incremental_index_benchmark_unloadable", f"cannot validate incremental index benchmark: {exc}", "INDEX_INCREMENTAL_BENCHMARK_V0234.json"))
     version = (root / "VERSION").read_text(encoding="utf-8").strip() if (root / "VERSION").exists() else None
-    if version != "0.23.4":
-        findings.append(_finding("version_mismatch", f"expected VERSION 0.23.4, got {version!r}", "VERSION"))
+    if version != "0.24.2":
+        findings.append(_finding("version_mismatch", f"expected VERSION 0.24.2, got {version!r}", "VERSION"))
 
     policy_path = root / ".agents/config/governance.json"
     if not policy_path.exists():
@@ -231,20 +209,22 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             missing = sorted(set(REQUIRED_POLICY_SECTIONS) - set(policy))
             if missing:
                 findings.append(_finding("missing_policy_sections", f"missing policy sections: {missing}", ".agents/config/governance.json"))
-            if policy.get("version") != "0.23.4":
-                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.23.4", ".agents/config/governance.json"))
+            if policy.get("version") != "0.24.2":
+                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.24.2", ".agents/config/governance.json"))
         except Exception as exc:
             findings.append(_finding("invalid_governance", f"cannot parse governance.json: {exc}", ".agents/config/governance.json"))
 
-    for rel, forbidden in ((".agents/bin/agentos.v0195", "exit 0"), (".agents/bin/agentos-mcp.v0195", "\ncat\n")):
-        path = root / rel
-        if not path.exists():
-            findings.append(_finding("missing_core_compat_launcher", "core compatibility launcher is missing", rel))
-        else:
-            text = "\n" + path.read_text(encoding="utf-8", errors="replace").strip() + "\n"
-            if forbidden in text:
-                findings.append(_finding("dead_core_compat_launcher", f"dead compatibility behavior detected: {forbidden.strip()}", rel))
-
+    legacy_launchers = sorted(
+        p.relative_to(root).as_posix()
+        for pattern in (".agents/bin/agentos.v*", ".agents/bin/agentos-mcp.v*")
+        for p in root.glob(pattern)
+        if p.is_file()
+    )
+    if legacy_launchers:
+        findings.append(_finding(
+            "legacy_versioned_launcher_present",
+            f"versioned compatibility launchers belong in Git tags/releases: {legacy_launchers}",
+        ))
     runtime_wrappers = {
         ".agents/bin/agentos": "agentos.cli_runtime",
         ".agents/bin/agentos.cmd": "agentos.cli_runtime",
@@ -287,6 +267,19 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     # Runtime caches may legitimately be created while running validation. Treat
     # them as a release-integrity failure only when they are actually committed
     # into the authoritative MANIFEST. The manifest builder excludes them.
+    # Clean-main release packaging gate.
+    release_clutter_globs = ('apply_v*.py', 'apply_v*.py.sha256', 'tools/apply_v*.py', 'tools/validate_v*.py', 'CHECKSUMS_V*.sha256', 'VALIDATION_REPORT*.json', '*.zip', '*.zip.sha256', '.agents/bin/agentos.v*', '.agents/bin/agentos-mcp.v*', '.agents/docs/RELEASE_NOTES_V*.md', '.agents/docs/USAGE_V*.md', '.agents/docs/GITHUB_READY_FULL_RELEASE_V*.md', '.agents/docs/archive/*', '.agents/docs/archive/**', 'HOTFIX_INFO.txt', 'UPGRADE_FROM_0.22*.md', 'UPGRADE_FROM_0.23*.md', 'UPGRADE_FROM_0.24.0.md')
+    release_clutter = sorted({
+        p.relative_to(root).as_posix()
+        for pattern in release_clutter_globs
+        for p in root.glob(pattern)
+        if p.is_file()
+    })
+    if release_clutter:
+        findings.append(_finding(
+            "release_clutter_present",
+            f"historical release packaging files must not be present on main: {release_clutter[:50]}",
+        ))
     manifest_path = root / "MANIFEST.json"
     if manifest_path.exists():
         try:
@@ -313,52 +306,51 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     }
 
 DOC_FILES = (
-    ".agents/docs/PROJECT_IDENTITY.md",
-    ".agents/docs/PRIMARY_PROJECT_SELECTION.md",
+    ".agents/docs/ADAPTIVE_TOKEN_BUDGET_MODEL_PROFILES_V0231.md",
+    ".agents/docs/CONSOLIDATION_COCKPIT_PERFORMANCE_BASELINE_V0233.md",
+    ".agents/docs/CONTEXT_EXPANSION_COMPRESSION_EVALUATION_V0232.md",
+    ".agents/docs/CONTROLLED_TARGET_INSERT.md",
+    ".agents/docs/CORE_REINTEGRATION_V0223.md",
+    ".agents/docs/DB_AWARE_CONTEXT_PROJECTION_V0242.md",
+    ".agents/docs/IDENTITY_RESOLUTION_DEDUPLICATION_LINEAGE.md",
+    ".agents/docs/INCREMENTAL_SYMBOL_INDEX_V0234.md",
     ".agents/docs/PRIMARY_PROJECT_CONSOLIDATION.md",
+    ".agents/docs/PRIMARY_PROJECT_SELECTION.md",
+    ".agents/docs/PRIVACY_BOUNDARY_V0227.md",
+    ".agents/docs/PROJECT_IDENTITY.md",
+    ".agents/docs/PROJECT_STRUCTURE.md",
+    ".agents/docs/READ_ONLY_EXTRACTION_AND_DATA_VALIDATION.md",
+    ".agents/docs/RECONCILIATION_AND_RECOVERY.md",
+    ".agents/docs/REPOSITORY_RELEASE_POLICY.md",
+    ".agents/docs/REQUIREMENT_PRESERVING_CONTEXT_COMPRESSION_V0230.md",
+    ".agents/docs/RISK_TIERED_BATCH_REVIEW_V0241.md",
+    ".agents/docs/RULES_WORKFLOW_CHANGELOG.md",
+    ".agents/docs/SECRET_RESOLVER_LINEAGE_KEY_LIFECYCLE.md",
     ".agents/docs/SOURCE_TARGET_DATABASE_BOUNDARY.md",
     ".agents/docs/TARGET_SCHEMA_CONTRACT_AND_FIELD_MAPPING.md",
-    ".agents/docs/READ_ONLY_EXTRACTION_AND_DATA_VALIDATION.md",
-    ".agents/docs/CONTROLLED_TARGET_INSERT.md",
-    ".agents/docs/IDENTITY_RESOLUTION_DEDUPLICATION_LINEAGE.md",
-    ".agents/docs/RECONCILIATION_AND_RECOVERY.md",
-    ".agents/docs/CORE_REINTEGRATION_V0223.md",
-    ".agents/docs/UNIFIED_GOVERNANCE_ENFORCEMENT_V0224.md",
     ".agents/docs/UNIFIED_CLI_MCP_RUNTIME_V0225.md",
-    ".agents/docs/SECRET_RESOLVER_LINEAGE_KEY_LIFECYCLE.md",
-    ".agents/docs/USAGE_V0226.md",
-    ".agents/docs/RULES_WORKFLOW_CHANGELOG.md",
+    ".agents/docs/UNIFIED_GOVERNANCE_ENFORCEMENT_V0224.md",
+    "CHANGELOG.md",
     "DATA_SUBJECT_RIGHTS.md",
-    ".agents/docs/PRIVACY_BOUNDARY_V0227.md",
-    ".agents/docs/USAGE_V0227.md",
-    ".agents/docs/REQUIREMENT_PRESERVING_CONTEXT_COMPRESSION_V0230.md",
-    "tools/apply_v0231.py",
-    "tools/validate_v0231.py",
-    ".agents/tests/test_adaptive_budget_v0231.py",
-    "UPGRADE_FROM_0.23.0.md",
-    ".agents/docs/ADAPTIVE_TOKEN_BUDGET_MODEL_PROFILES_V0231.md",
-    "tools/apply_v0232.py",
-    "tools/validate_v0232.py",
-    ".agents/tests/test_context_expansion_evaluation_v0232.py",
-    "UPGRADE_FROM_0.23.1.md",
-    ".agents/docs/CONTEXT_EXPANSION_COMPRESSION_EVALUATION_V0232.md",
-    ".agents/docs/GITHUB_READY_FULL_RELEASE_V0232.md",
-    ".agents/docs/CONSOLIDATION_COCKPIT_PERFORMANCE_BASELINE_V0233.md",
-    "UPGRADE_FROM_0.23.2.md",
-    "PERFORMANCE_BASELINE_V0233.json",
-    ".agents/docs/INCREMENTAL_SYMBOL_INDEX_V0234.md",
-    "UPGRADE_FROM_0.23.3.md",
     "INDEX_INCREMENTAL_BENCHMARK_V0234.json",
+    "PERFORMANCE_BASELINE_V0233.json",
+    "README.en.md",
+    "README.md",
+    "README.vi.md",
+    "RELEASE_NOTES.md",
+    "UPGRADE_FROM_0.24.1.md",
+    "huong_dan.en.md",
+    "huong_dan.md",
+    "huong_dan.vi.md",
 )
 
 
 def docs_check_current(root: Path) -> dict[str, Any]:
     """Run the current release documentation gate without stale node-version checks.
 
-    Older node-specific docs checks intentionally validate their historical release
-    numbers and therefore cannot be chained as the current-release gate. v0.23.4
-    validates their authoritative documents are present, while the core docs checker
-    validates the current VERSION/governance/package synchronization.
+    Historical regression tests keep their version-specific assertions, while this
+    current-release gate validates only authoritative current docs plus clean-main
+    release integrity.
     """
     from .core import docs_check as core_docs_check
 

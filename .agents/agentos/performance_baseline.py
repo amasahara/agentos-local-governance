@@ -192,9 +192,8 @@ def run_performance_baseline(root: Path, repeats: int = 3) -> dict[str, Any]:
         Structured baseline. All write-heavy measurements run only in temporary
         roots; the governed project database is read only via the cockpit.
     """
-    if CURRENT_SCHEMA_VERSION != BASELINE_SCHEMA_VERSION:
-        raise RuntimeError("PERFORMANCE_BASELINE_V0233 is frozen at schema 46; use index-benchmark-run for v0.23.4+")
     root = root.resolve()
+    diagnostic_runtime_schema = CURRENT_SCHEMA_VERSION
     repeats = max(1, int(repeats))
     workload = _python_workload(root)
     migration_count, migration_count_error = _migration_chain_length()
@@ -234,7 +233,9 @@ def run_performance_baseline(root: Path, repeats: int = 3) -> dict[str, Any]:
     return {
         "ok": not errors,
         "version": VERSION,
-        "schema_version": CURRENT_SCHEMA_VERSION,
+        "schema_version": diagnostic_runtime_schema,
+        "historical_baseline_schema_version": BASELINE_SCHEMA_VERSION,
+        "historical_artifact_write_allowed": diagnostic_runtime_schema == BASELINE_SCHEMA_VERSION,
         "measurement_scope": "local_non_destructive",
         "measurement_status": "measured" if not errors else "partial",
         "wall_clock_portable": False,

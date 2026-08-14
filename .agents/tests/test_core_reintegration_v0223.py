@@ -44,9 +44,17 @@ def test_governance_keeps_core_and_extension_sections():
         assert key in p
 
 
-def test_core_compat_launchers_are_not_dead_stubs():
-    assert "exit 0" not in (ROOT/".agents/bin/agentos.v0195").read_text()
-    assert (ROOT/".agents/bin/agentos-mcp.v0195").read_text().strip() != "#!/bin/sh\ncat"
+def test_core_compat_launchers_are_archived_from_clean_main():
+    legacy = (
+        ROOT / ".agents/bin/agentos.v0195",
+        ROOT / ".agents/bin/agentos-mcp.v0195",
+    )
+    assert not any(path.exists() for path in legacy)
+    agentos = (ROOT / ".agents/bin/agentos").read_text(encoding="utf-8")
+    agentos_mcp = (ROOT / ".agents/bin/agentos-mcp").read_text(encoding="utf-8")
+    assert "exit 0" not in agentos
+    assert "agentos.v0" not in agentos
+    assert "agentos-mcp.v0" not in agentos_mcp
 
 
 def test_unknown_core_cli_command_fails_nonzero():

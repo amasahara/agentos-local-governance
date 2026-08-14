@@ -345,8 +345,11 @@ def docs_check(root: Path) -> dict[str, Any]:
                 if marker in line and version not in line:
                     stale.append(f"{rel}: {line.strip()}")
     expected_schema = int(doc_policy.get("current_schema", SCHEMA_VERSION))
-    for rel in ["README.md", "huong_dan.md", ".agents/docs/PROJECT_STRUCTURE.md"]:
-        path = root / rel
+    current_schema_files = doc_policy.get("current_schema_files", ["README.md", "huong_dan.md"])
+    if not isinstance(current_schema_files, list):
+        current_schema_files = ["README.md", "huong_dan.md"]
+    for rel in current_schema_files:
+        path = root / str(rel)
         if path.exists():
             for line in path.read_text(encoding="utf-8").splitlines():
                 if "Database schema:" in line or "Schema database:" in line:

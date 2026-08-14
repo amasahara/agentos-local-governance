@@ -1,6 +1,11 @@
-# AgentOS Local Governance v0.23.4 — Incremental Symbol Index
+# AgentOS Local Governance v0.24.2 — Risk-Tiered Batch Review
 
 [README landing](README.md) | [English](README.en.md)
+
+## v0.24.2
+
+v0.24.1 bổ sung risk tier deterministic cho component mapping. Mapping LOW có thể gom vào một bundle bất biến pin `plan_hash` và mapping snapshot, được ký bằng external Ed25519 audit; MEDIUM/HIGH vẫn review riêng, CONFLICT bị chặn, và approval toàn plan vẫn bắt buộc. Schema **49**.
+
 
 ## v0.23.4
 
@@ -86,3 +91,8 @@ Không expose evaluation persistence, comparison persistence, transport compile/
 Bản phát hành đầy đủ v0.23.2 được materialize từ toàn bộ repository, không phải overlay. Khi dùng gói full, bạn chỉ cần giải nén, upload/replace nội dung repository và commit/push; không cần chạy `apply_v0232.py`. GitHub Actions trong `.github/workflows/agentos-release-validation.yml` sẽ tự chạy compile, validator, release-integrity, manifest/checksum, docs/instruction và toàn bộ test suite.
 
 Chi tiết: [Full GitHub-Ready Materialization](.agents/docs/GITHUB_READY_FULL_RELEASE_V0232.md).
+
+
+## v0.24.2 — DB-Aware Context Projection
+
+Deterministic reversible schema/mapping/manifest projection is limited to the Context Evidence Plane. Control Plane authority remains lossless.

@@ -1,4 +1,15 @@
 # Changelog
+## 0.24.2 — DB-Aware Context Projection
+- Repository release cleanup: clean-main packaging, external release archive, generic current-release validator, and runtime/state/cache Git isolation.
+- Schema 49 adds hash/count-only DB-aware projection telemetry.
+- Reversible schema/mapping/manifest codecs apply only to Context Evidence Plane.
+- Control Plane and DB mutation authority remain unchanged.
+
+## 0.24.1 — Risk-Tiered Batch Review
+- Added schema 48 mapping-level risk review state and immutable LOW-risk review bundles.
+- LOW bundles are pin-bound to the exact consolidation plan and mapping snapshots and are signed through the external Ed25519 audit chain.
+- MEDIUM/HIGH mappings require individual explicit human review; CONFLICT remains blocked.
+- Existing whole-plan human approval and execution gates are unchanged; MCP remains read-only for this feature.
 ## 0.23.4 — Incremental Symbol Index
 - Replaced repeated full symbol-index rebuilds with deterministic per-file content-hash incremental updates.
 - Added schema 47 file-state metadata, bootstrap full rebuild, deletion cleanup and atomic parse-failure rollback.

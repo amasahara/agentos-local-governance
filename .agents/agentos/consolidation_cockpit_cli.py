@@ -16,7 +16,13 @@ import json
 from pathlib import Path
 
 from .consolidation_cockpit import consolidation_status
-from .performance_baseline import check_performance_baseline, run_performance_baseline
+from .performance_baseline import (
+    BASELINE_SCHEMA_VERSION,
+    DEFAULT_BASELINE_FILE,
+    check_performance_baseline,
+    run_performance_baseline,
+)
+from .schema_version import CURRENT_SCHEMA_VERSION
 
 
 def _emit(value: object) -> int:
@@ -59,6 +65,15 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
     if args.command == "performance-baseline-run":
+        if CURRENT_SCHEMA_VERSION != BASELINE_SCHEMA_VERSION and args.output == DEFAULT_BASELINE_FILE:
+            return _emit({
+                "ok": False,
+                "error": "historical_baseline_is_frozen",
+                "historical_baseline": DEFAULT_BASELINE_FILE,
+                "historical_schema": BASELINE_SCHEMA_VERSION,
+                "current_schema": CURRENT_SCHEMA_VERSION,
+                "message": "Use an explicit non-historical --output for diagnostics; do not overwrite the v0.23.3 baseline artifact.",
+            })
         result = run_performance_baseline(root, repeats=max(1, args.repeats))
         target = root / args.output
         target.write_text(

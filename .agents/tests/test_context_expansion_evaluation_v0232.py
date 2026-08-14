@@ -108,8 +108,9 @@ def _duplicate_pack(root: Path, task_id: str = "T1", copies: int = 2) -> tuple[d
 def test_schema_46_tables_columns_and_foreign_keys(tmp_path: Path, project_root: Path) -> None:
     root = _root(tmp_path, project_root)
     with connect(root) as c:
-        assert CURRENT_SCHEMA_VERSION == 46
-        assert c.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0] == 46
+        versions = {int(row[0]) for row in c.execute("SELECT version FROM schema_migrations")}
+        assert 46 in versions
+        assert max(versions) == CURRENT_SCHEMA_VERSION
         assert c.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         tables = {r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         assert {"context_expansion_sessions", "context_compression_evaluation_runs", "context_compression_comparisons"} <= tables

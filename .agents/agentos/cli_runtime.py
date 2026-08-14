@@ -26,12 +26,14 @@ from .release_integrity import check_release_integrity, docs_check_current
 from .release_manifest import verify_manifest
 from .schema_version import CURRENT_SCHEMA_VERSION
 
-VERSION = "0.23.4"
+VERSION = "0.24.2"
 
 FEATURE_CLI_MODULES = (
     "project_identity_cli",
     "project_selection_cli",
     "project_consolidation_cli",
+    "risk_tiered_batch_review_cli",
+    "db_aware_context_projection_cli",
     "database_boundary_cli",
     "schema_mapping_cli",
     "read_only_extraction_cli",
@@ -71,6 +73,8 @@ PRIVILEGED_COMMANDS = {
     "lineage-rekey-plan-approve", "lineage-rekey-source-reread-authorize",
     "data-subject-erasure-request-create", "data-subject-erasure-plan-create", "data-subject-erasure-plan-review",
     "data-subject-erasure-plan-approve", "data-subject-erasure-execute",
+    "project-consolidation-batch-bundle-create", "project-consolidation-batch-review",
+    "project-consolidation-mapping-review",
 }
 
 
@@ -266,7 +270,7 @@ def _dispatch_special(command: str, root: Path, args: list[str]) -> int:
 
 def _help() -> None:
     registry = command_registry()
-    print("AgentOS Local Governance v0.23.4 — unified CLI runtime")
+    print("AgentOS Local Governance v0.24.2 — unified CLI runtime")
     print("Usage: agentos [--root PATH] [--task-id ID] [--session-id ID] COMMAND [ARGS]")
     print("Commands:")
     for command in sorted(registry):

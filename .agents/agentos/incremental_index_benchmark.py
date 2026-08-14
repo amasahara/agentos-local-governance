@@ -20,6 +20,7 @@ from .indexing import index_build
 from .schema_version import CURRENT_SCHEMA_VERSION
 
 VERSION = "0.23.4"
+BENCHMARK_SCHEMA_VERSION = 47
 BASELINE_FILE = "PERFORMANCE_BASELINE_V0233.json"
 DEFAULT_BENCHMARK_FILE = "INDEX_INCREMENTAL_BENCHMARK_V0234.json"
 
@@ -75,6 +76,11 @@ def _reference(root: Path) -> dict[str, Any]:
 
 def run_incremental_index_benchmark(root: Path, repeats: int = 3) -> dict[str, Any]:
     """Benchmark bootstrap, no-change, one-file-change and deletion paths in temp roots."""
+    if CURRENT_SCHEMA_VERSION != BENCHMARK_SCHEMA_VERSION:
+        raise RuntimeError(
+            "INDEX_INCREMENTAL_BENCHMARK_V0234 is frozen at schema 47; "
+            "do not recapture a historical benchmark under a newer release schema"
+        )
     root = root.resolve()
     repeats = max(1, int(repeats))
     bootstrap_samples: list[float] = []
@@ -140,7 +146,7 @@ def run_incremental_index_benchmark(root: Path, repeats: int = 3) -> dict[str, A
     return {
         "ok": functional_ok,
         "version": VERSION,
-        "schema_version": CURRENT_SCHEMA_VERSION,
+        "schema_version": BENCHMARK_SCHEMA_VERSION,
         "measurement_scope": "temporary_fixture_only",
         "measurement_status": "measured" if functional_ok else "invalid",
         "wall_clock_portable": False,
@@ -168,7 +174,7 @@ def check_incremental_index_benchmark(root: Path, path: str | None = None) -> di
         return {"ok": False, "findings": [f"benchmark_unloadable:{type(exc).__name__}"], "benchmark": str(target)}
     if data.get("version") != VERSION:
         findings.append("benchmark_version_mismatch")
-    if int(data.get("schema_version", -1)) != CURRENT_SCHEMA_VERSION:
+    if int(data.get("schema_version", -1)) != BENCHMARK_SCHEMA_VERSION:
         findings.append("benchmark_schema_mismatch")
     if data.get("measurement_status") != "measured":
         findings.append("benchmark_not_measured")
@@ -190,4 +196,4 @@ def check_incremental_index_benchmark(root: Path, path: str | None = None) -> di
             findings.append("single_change_contract_failed")
         if not item.get("delete_removed_one"):
             findings.append("delete_contract_failed")
-    return {"ok": not findings, "version": VERSION, "schema_version": CURRENT_SCHEMA_VERSION, "benchmark": path or DEFAULT_BENCHMARK_FILE, "findings": sorted(set(findings))}
+    return {"ok": not findings, "version": VERSION, "schema_version": BENCHMARK_SCHEMA_VERSION, "benchmark": path or DEFAULT_BENCHMARK_FILE, "findings": sorted(set(findings))}

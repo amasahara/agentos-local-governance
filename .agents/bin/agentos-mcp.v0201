@@ -1,7 +1,0 @@
-#!/usr/bin/env sh
-set -eu
-HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-ROOT=$(CDPATH= cd -- "$HERE/../.." && pwd)
-export AGENTOS_PROJECT_ROOT="$ROOT"
-export AGENTOS_V0200_MCP="$HERE/agentos-mcp.v0200"
-PYTHONPATH="$ROOT/.agents${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m agentos.mcp_selection_gateway "$@"

@@ -34,7 +34,13 @@ def tracked_files(root: Path) -> list[str]:
     required = {"AGENTS.md", "VERSION", ".agents/config/governance.json", ".agents/agentos/policy.py", ".agents/agentos/drift.py", ".agents/agentos/proxy.py"}
     found: set[str] = set()
     for pattern in patterns:
-        for path in root.glob(pattern):
+        if str(pattern).endswith("/**"):
+            base_rel = str(pattern)[:-3].rstrip("/")
+            base = root / base_rel
+            candidates = base.rglob("*") if base.exists() else ()
+        else:
+            candidates = root.glob(pattern)
+        for path in candidates:
             if path.is_file():
                 rel = path.relative_to(root).as_posix()
                 if not any(path.match(item) or Path(rel).match(item) for item in excluded):

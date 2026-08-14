@@ -1,15 +1,18 @@
-# AgentOS Local Governance v0.23.4 — Incremental Symbol Index
+# AgentOS Local Governance v0.24.2 — DB-Aware Context Projection
 
-v0.23.4 converts the historical full-rebuild Python symbol index into a deterministic content-hash incremental index.
+- Schema **48 → 49**.
+- Added deterministic reversible structural compression for schema, mapping, and manifest JSON evidence.
+- Added `db_schema_keydict_v1`, `db_mapping_keydict_v1`, and `db_manifest_keydict_v1`.
+- Projection is Evidence-Plane-only; original request, Requirement Ledger, AGENTS authority, approved scope, active plan, and governance authority remain lossless.
+- A codec is selected only when it reduces actual serialized size.
+- Schema 49 persists only hashes/counters/codec metadata; raw projected DB content is not persisted.
+- Existing source hash, context revision, expansion, stale detection, adaptive token budget, and preservation gates remain authoritative.
+- Added read-only CLI preview/status and read-only MCP telemetry.
+- No DB mutation authority is granted to MCP or the LLM.
 
-## Changes
+## Repository Release Cleanup
 
-- Schema 46 → 47 with persistent per-file index state.
-- `index-build` is incremental by default; `--full` forces rebuild.
-- First post-upgrade build bootstraps metadata with one full rebuild.
-- Unchanged files are hashed but not AST-parsed.
-- Changed/new files replace only their own symbol rows; deleted files remove stale rows.
-- Parse failures are transaction-atomic and preserve the previously valid index.
-- New `index-status`, `index-benchmark-run`, and `index-benchmark-check` commands.
-- Benchmark compares no-change incremental behavior to v0.23.3 full-rebuild baseline without introducing environment-specific hard timing thresholds.
-- SOURCE/TARGET, human approval, signed-audit, privacy/secret/key and lossless Context Control Plane invariants are unchanged.
+- `main` now represents only the latest runnable AgentOS package.
+- Historical versioned updater/validator/release packaging files are staged outside the repository for GitHub Release assets.
+- Historical regression tests remain on `main` as compatibility contracts.
+- Runtime/state/cache and editor/test caches remain local-only.

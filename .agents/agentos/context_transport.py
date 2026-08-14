@@ -38,6 +38,7 @@ from .adaptive_budget import (
     resolve_model_profile,
 )
 from .db import connect
+from .db_aware_context_projection import project_db_aware_candidate, persist_projection_telemetry_conn
 from .planning import active_plan
 from .policy import load_policy
 
@@ -88,6 +89,7 @@ CRITICAL_POLICY_SECTIONS = (
     "context_transport_policy",
     "adaptive_token_budget_policy",
     "context_expansion_evaluation_policy",
+    "db_aware_context_projection_policy",
 )
 
 PROHIBITION_PATTERNS = (
@@ -640,7 +642,7 @@ def _control_plane(root: Path, task: dict[str, Any], ledger: list[dict[str, Any]
         },
         "policy_authority": {
             "path": ".agents/config/governance.json",
-            "source_hash": _sha256_text(governance_text),
+            "source_hash": _file_hash(governance_path),
             "projection": projection,
             "projection_hash": _sha256_text(projection_json),
             "projection_codec": "deterministic_json_key_projection_v1",
@@ -794,7 +796,10 @@ def _project_candidate(root: Path, item: dict[str, Any], terms: set[str]) -> dic
     projected = text
     meta: dict[str, Any] = {"codec": "identity_exact_excerpt"}
     path = root / path_text if path_text else None
-    if suffix == ".py" and path and path.is_file():
+    db_result = project_db_aware_candidate(path_text, text)
+    if db_result is not None:
+        projected, meta = db_result
+    elif suffix == ".py" and path and path.is_file():
         result = _python_signature_projection(path, terms)
         if result and len(result[0]) < len(text):
             projected, meta = result
@@ -1250,6 +1255,9 @@ def compile_transport_pack(
             ),
         )
         pack_id = int(c.execute("SELECT last_insert_rowid() AS id").fetchone()["id"])
+        persist_projection_telemetry_conn(
+            c, pack_id, task_id, context_revision, revision, evidence
+        )
     return {**manifest, "pack_id": pack_id, "ok": True}
 
 

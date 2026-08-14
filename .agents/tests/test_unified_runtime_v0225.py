@@ -65,10 +65,11 @@ def test_posix_and_windows_wrappers_share_same_runtimes() -> None:
 
 
 def test_legacy_version_launchers_are_not_top_level_execution_path() -> None:
-    assert (ROOT / ".agents/bin/agentos.v0224").exists()
-    assert (ROOT / ".agents/bin/agentos-mcp.v0221").exists()
-    assert "agentos.v0224" not in (ROOT / ".agents/bin/agentos").read_text(encoding="utf-8")
-    assert "agentos-mcp.v0221" not in (ROOT / ".agents/bin/agentos-mcp").read_text(encoding="utf-8")
+    bin_dir = ROOT / ".agents/bin"
+    assert not list(bin_dir.glob("agentos.v*"))
+    assert not list(bin_dir.glob("agentos-mcp.v*"))
+    assert "agentos.v0" not in (ROOT / ".agents/bin/agentos").read_text(encoding="utf-8")
+    assert "agentos-mcp.v0" not in (ROOT / ".agents/bin/agentos-mcp").read_text(encoding="utf-8")
 
 
 def test_unified_mcp_catalog_is_unique_and_complete() -> None:

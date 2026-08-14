@@ -397,8 +397,34 @@
     "source_merge_allowed": false,
     "source_update_allowed": false
   },
+  "db_aware_context_projection_policy": {
+    "canonical_revision_pin_required": true,
+    "codecs": [
+      "db_schema_keydict_v1",
+      "db_mapping_keydict_v1",
+      "db_manifest_keydict_v1"
+    ],
+    "control_plane_projection_allowed": false,
+    "database_schema": 49,
+    "llm_summarization_authority": false,
+    "mcp_mutation_allowed": false,
+    "mcp_raw_projection_content_allowed": false,
+    "projection_only_when_smaller": true,
+    "raw_projection_persistence_allowed": false,
+    "reversible_codec_required": true,
+    "scope": "context_transport_evidence_plane_only",
+    "source_database_write_allowed": false,
+    "source_hash_pin_required": true,
+    "target_database_write_authority_changed": false,
+    "telemetry_persistence": "hash_count_codec_metadata_only",
+    "version": 1
+  },
   "documentation_policy": {
-    "current_schema": 47
+    "current_schema": 49,
+    "current_schema_files": [
+      "README.md",
+      "huong_dan.md"
+    ]
   },
   "drift_policy": {
     "agent_must_not_ack_for_user": true,
@@ -849,6 +875,48 @@
     "in_doubt_auto_retry_allowed": false,
     "partial_target_auto_repair_allowed": false
   },
+  "risk_tiered_batch_review_policy": {
+    "batch_eligible_risk_tier": "LOW",
+    "batch_review_human_confirmation_required": true,
+    "blocked_mapping_review_allowed": false,
+    "bundle_mapping_snapshot_hash_required": true,
+    "bundle_plan_hash_pin_required": true,
+    "bundle_signature": "external_ed25519_audit_chain",
+    "classifier": "risk_tiered_mapping_v1",
+    "classifier_authority": "deterministic_local_code_only",
+    "database_schema": 48,
+    "llm_risk_override_allowed": false,
+    "mcp_mutation_allowed": false,
+    "mcp_read_tools": [
+      "agentos.project_consolidation_risk_review_get",
+      "agentos.project_consolidation_batch_bundle_get"
+    ],
+    "medium_high_review_mode": "individual_human_review",
+    "privileged_cli_context_required_for_mutation": true,
+    "risk_tiers": {
+      "BLOCKED": [
+        "CONFLICT",
+        "UNSUPPORTED_ACTION"
+      ],
+      "HIGH": [
+        "ADAPT",
+        "REIMPLEMENT"
+      ],
+      "LOW": [
+        "IGNORE",
+        "REUSE",
+        "MOVE_TO_ABSENT_TARGET"
+      ],
+      "MEDIUM": [
+        "MOVE_REPLACING_EXISTING_TARGET"
+      ]
+    },
+    "signed_bundle_required": true,
+    "source_write_allowed": false,
+    "target_execution_authority_unchanged": true,
+    "version": 1,
+    "whole_plan_approval_still_required": true
+  },
   "schema_mapping_policy": {
     "approved_contract_versioned_and_immutable": true,
     "coercible_type_requires_transform_rule": true,
@@ -972,7 +1040,7 @@
     "windows_posix_cli_parity_required": true,
     "windows_posix_mcp_parity_required": true
   },
-  "version": "0.23.4",
+  "version": "0.24.2",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,

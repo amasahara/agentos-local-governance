@@ -1,18 +1,49 @@
-# AgentOS generated runtime/state/cache — never commit.
-.agents/runtime/
-.agents/cache/
-.agents/state/
-
-# Python/test caches.
+# Python
 __pycache__/
 *.py[cod]
 .pytest_cache/
 
-# Local environment / secrets.
-.env
-.env.*
-!.env.example
+# AgentOS ephemeral runtime
+.agents/runtime/*
+!.agents/runtime/.gitkeep
 
-# Legacy and versioned lineage key material must remain local only.
-.agents/state/identity_lineage.key
-.agents/state/lineage-keys/
+.agents/cache/*
+!.agents/cache/.gitkeep
+
+# Local AgentOS state
+.agents/state/*
+!.agents/state/.gitkeep
+
+# Local secrets / keys
+*.key
+*.pem
+*.secret
+
+# Local upgrade/recovery
+.agentos-upgrade-backups/
+.agents/runtime/upgrade-backups/
+.agents/runtime/hotfixes/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Generated release / hotfix artifacts
+/HOTFIX_INFO.txt
+/apply_v*.py.sha256
+/CHECKSUMS_V*.sha256
+/VALIDATION_REPORT_V*.json
+/*.zip
+/*.zip.sha256
+
+# Coverage / test outputs
+.coverage
+coverage.xml
+htmlcov/
+
+# Temporary files
+*.tmp
+*.bak
+*.log

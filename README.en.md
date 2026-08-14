@@ -1,6 +1,11 @@
-# AgentOS Local Governance v0.23.4 — Incremental Symbol Index
+# AgentOS Local Governance v0.24.2 — Risk-Tiered Batch Review
 
 [README landing](README.md) | [Tiếng Việt](README.vi.md)
+
+## v0.24.2
+
+v0.24.1 adds deterministic component-mapping risk tiers. LOW-risk mappings may be grouped into an immutable `plan_hash`/mapping-snapshot-pinned bundle bound to the external Ed25519 audit signature; MEDIUM/HIGH remain individual human review, CONFLICT remains blocked, and whole-plan approval is still mandatory. Schema **49**.
+
 
 v0.23.4 adds a deterministic content-hash incremental Python symbol index. Unchanged files are not AST-parsed; changed/new files replace only their own rows and deleted files remove stale rows. Schema is **47**.
 
@@ -18,3 +23,8 @@ Schema: **46**. New read-only MCP operations expose expansion metadata/batch rea
 The complete v0.23.2 package is materialized from the full repository rather than delivered as an overlay. Extract it, replace/upload the repository contents, and commit/push; `apply_v0232.py` is not required for the full package. The included GitHub Actions workflow runs compilation, validators, release-integrity, manifest/checksum, docs/instruction checks, and the complete test suite.
 
 See [Full GitHub-Ready Materialization](.agents/docs/GITHUB_READY_FULL_RELEASE_V0232.md).
+
+
+## v0.24.2 — DB-Aware Context Projection
+
+Deterministic reversible schema/mapping/manifest projection is limited to the Context Evidence Plane. Control Plane authority remains lossless.

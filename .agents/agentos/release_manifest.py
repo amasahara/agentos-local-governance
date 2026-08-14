@@ -12,13 +12,34 @@ Responsibilities:
 from __future__ import annotations
 
 import hashlib
+import fnmatch
 import json
 from pathlib import Path
 from typing import Any
 
 EXCLUDE = {"MANIFEST.json", "CHECKSUMS.sha256"}
-EXCLUDE_PREFIXES = (".git/", ".agents/runtime/", ".agents/state/", ".agents/cache/", ".pytest_cache/")
+EXCLUDE_PREFIXES = (".git/", ".agents/runtime/", ".agents/state/", ".agents/cache/", ".pytest_cache/", ".vscode/", ".idea/")
 EXCLUDE_PARTS = {"__pycache__"}
+EXCLUDE_GLOBS = (
+    "apply_v*.py",
+    "apply_v*.py.sha256",
+    "tools/apply_v*.py",
+    "tools/validate_v*.py",
+    "CHECKSUMS_V*.sha256",
+    "VALIDATION_REPORT*.json",
+    "*.zip",
+    "*.zip.sha256",
+    ".agents/bin/agentos.v*",
+    ".agents/bin/agentos-mcp.v*",
+    ".agents/docs/RELEASE_NOTES_V*.md",
+    ".agents/docs/USAGE_V*.md",
+    ".agents/docs/GITHUB_READY_FULL_RELEASE_V*.md",
+    ".agents/docs/archive/*",
+    ".agents/docs/archive/**",
+)
+
+def _excluded_local_release_artifact(rel: str) -> bool:
+    return any(fnmatch.fnmatch(rel, pattern) for pattern in EXCLUDE_GLOBS)
 
 
 def _hash(path: Path) -> str:
@@ -38,6 +59,8 @@ def _candidate_files(root: Path) -> set[str]:
         if rel in EXCLUDE or rel.startswith(EXCLUDE_PREFIXES):
             continue
         if any(part in EXCLUDE_PARTS for part in path.relative_to(root).parts) or rel.endswith(".pyc"):
+            continue
+        if _excluded_local_release_artifact(rel):
             continue
         out.add(rel)
     return out

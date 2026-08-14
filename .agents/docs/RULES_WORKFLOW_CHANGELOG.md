@@ -1,3 +1,15 @@
+## v0.24.2 — DB-Aware Context Projection
+- **Decision:** schema/mapping/manifest compression is deterministic and reversible.
+- **Boundary:** codecs apply only to Evidence Plane; Control Plane remains lossless.
+- **Persistence:** only hash/count/codec telemetry is stored.
+- **MCP:** read-only telemetry only.
+
+## v0.24.1 — Risk-Tiered Batch Review
+- **Decision:** only deterministic LOW-risk component mappings may share one signed human review bundle.
+- **Safety:** bundle and mapping hashes are pinned to the exact plan; plan drift makes prior bundle reviews stale.
+- **Authority:** MEDIUM/HIGH remain individual human review, CONFLICT remains blocked, and existing whole-plan approval/execution authority is unchanged.
+- **MCP:** read-only inspection only; no review/approval mutation.
+
 # Changelog
 ## v0.23.4 — Incremental Symbol Index
 - **Decision:** persist content hashes for indexed Python files and parse only new/changed bytes.

@@ -870,8 +870,8 @@
     },
     {
       "path": ".github/workflows/agentos-release-validation.yml",
-      "size": 1352,
-      "sha256": "3e5da83bbbdfe543e1ff5cb0c45bd9ef79ee8bcb025e7af7fa1c8229b35338ef"
+      "size": 1712,
+      "sha256": "50a6d707010182f1a394e2a17b734c5bece981b97da32c4b63cc43f178728ae9"
     },
     {
       "path": ".gitignore",
@@ -980,8 +980,8 @@
     },
     {
       "path": "tools/validate_release.py",
-      "size": 3534,
-      "sha256": "c553da13719f5c41992bbac15bade243e5bf84fd088e92c0bd6341fcaf0abfd0"
+      "size": 3904,
+      "sha256": "7e23c0d391ea4424076e0d95eb51e3e624ebf4fd6ee20c53724bc1e28243904b"
     },
     {
       "path": "tools/verify_manifest.py",

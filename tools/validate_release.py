@@ -71,6 +71,7 @@ def validate(root: Path, *, skip_manifest: bool = False) -> dict[str, object]:
             manifest.get("ok") is True and manifest.get("release") == version
         )
 
+    failed_checks = sorted(name for name, passed in checks.items() if not passed)
     return {
         "ok": all(checks.values()),
         "version": version,
@@ -79,6 +80,7 @@ def validate(root: Path, *, skip_manifest: bool = False) -> dict[str, object]:
         "cli_count": len(commands),
         "mcp_count": len(tools),
         "checks": checks,
+        "failed_checks": failed_checks,
         "release_integrity": integrity,
         "docs_check": docs,
         "instruction_check": instructions,
@@ -93,6 +95,9 @@ def main() -> int:
     args = parser.parse_args()
     result = validate(Path(args.root), skip_manifest=args.skip_manifest)
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+    if not result["ok"] and __import__("os").environ.get("GITHUB_ACTIONS") == "true":
+        failed = ", ".join(result.get("failed_checks") or ["unknown"])
+        print(f"::error title=AgentOS release validation failed::Failed checks: {failed}")
     return 0 if result["ok"] else 2
 
 

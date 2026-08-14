@@ -850,8 +850,8 @@
     },
     {
       "path": ".agents/tests/test_release_line_endings_v0242.py",
-      "size": 1315,
-      "sha256": "ac6e9a881d01d74b717b6d99c7a71278e2c7ce105b2f1f4c1b81e17d0dad5fe6"
+      "size": 1628,
+      "sha256": "2bce6383892c54765685b9fbe988cb97e35856622a7827a3bd0615c5381b83a5"
     },
     {
       "path": ".agents/tests/test_risk_tiered_batch_review_v0241.py",
@@ -875,13 +875,13 @@
     },
     {
       "path": ".gitattributes",
-      "size": 606,
-      "sha256": "fbd5ffbdb8395e95beff20f7ca1d89218248b0c2cb9ec8b942d29840cca538a0"
+      "size": 636,
+      "sha256": "8731936079f37fc017992f9681bd1af43f55181d94156a33d8f6635ee725a1cb"
     },
     {
       "path": ".github/workflows/agentos-release-validation.yml",
-      "size": 1712,
-      "sha256": "50a6d707010182f1a394e2a17b734c5bece981b97da32c4b63cc43f178728ae9"
+      "size": 2078,
+      "sha256": "d11616949b7053fc4fcf77825fadd9a48573bd157878c72614f14b3fc81f4e17"
     },
     {
       "path": ".gitignore",

@@ -20,5 +20,5 @@ AGENTS.md text eol=lf
 .agents/bin/agentos-mcp text eol=lf
 .agents/bin/hooks/* text eol=lf
 
-# Windows launchers intentionally use CRLF.
-*.cmd text eol=crlf
+# Windows batch launchers are canonical LF so release hashes are OS-stable.
+*.cmd text eol=lf

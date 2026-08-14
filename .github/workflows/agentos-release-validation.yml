@@ -44,6 +44,12 @@ jobs:
           PYTHONPATH: .agents
         run: python tools/validate_release.py . --skip-manifest
 
+      - name: Release byte diagnostics
+        run: |
+          git ls-files --eol -- .gitattributes .agents/bin/agentos.cmd .agents/bin/agentos-mcp.cmd .agents/bin/install.cmd
+          wc -c .agents/bin/agentos.cmd .agents/bin/agentos-mcp.cmd .agents/bin/install.cmd
+          sha256sum .agents/bin/agentos.cmd .agents/bin/agentos-mcp.cmd .agents/bin/install.cmd
+
       - name: Manifest verification
         env:
           PYTHONPATH: .agents

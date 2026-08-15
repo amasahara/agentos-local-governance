@@ -1,4 +1,16 @@
 
+## v0.25.2 — 27-Section Architecture Contract & Human Clarification Gates
+- Added the fixed 27-section Architecture Contract registry `ARCH-01` through `ARCH-27`.
+- Added immutable architecture baselines with deterministic content hashing and human-only review, approval, activation, rejection, and supersession lifecycle.
+- Added structured requirement clarity assessment and the Grill Me gate before task approval.
+- Added blocking Human Decision requests for material ambiguity discovered before or during execution.
+- Added fail-closed mutation blocking while dependent human decisions remain unresolved.
+- Added human resolution impact handling for requirement, scope, plan, and architecture changes.
+- Added protected human clarification/decision authority to the task control plane.
+- Added read-only Architecture MCP inspection and the monotonic `agentos.human_decision_request` blocker signal; MCP cannot resolve, waive, approve, or activate human authority.
+- Added database schema 50 while preserving schema bootstrap baseline 46.
+- Preserved `AGENTS.md` as the only coding-agent instruction authority.
+
 ## v0.25.1 — Release Metadata Coherence
 - **User requirement:** establish one coherent release identity before starting the 27-section Architecture Contract roadmap.
 - **Decision:** make `VERSION` the release-version source of truth and add a fail-closed read-only coherence validator across runtime, policy, manifest, package completeness, and current-release identity docs.

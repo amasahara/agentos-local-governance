@@ -43,6 +43,10 @@ def approve_plan(root: Path, plan_id: int, approved_by: str, note: str) -> dict[
             raise RuntimeError("plan not found")
         if row["status"] != "submitted":
             raise RuntimeError("only submitted plans can be approved")
+        from .human_decision import clarity_gate_status
+        gate = clarity_gate_status(root, row["task_id"])
+        if not gate["ready"]:
+            raise RuntimeError("clarity_gate_blocked")
         c.execute("UPDATE task_plans SET status='superseded' WHERE task_id=? AND status='active'", (row["task_id"],))
         c.execute("UPDATE task_plans SET status='active',approved_by=?,approval_note=?,approved_at=CURRENT_TIMESTAMP WHERE id=?", (approved_by, note, plan_id))
     event = append_signed_event(root, "plan.approved", {"plan_id": plan_id, "revision": row["revision"], "approved_by": approved_by, "note": note}, row["task_id"], None)
@@ -76,12 +80,17 @@ def precommit_check(root: Path, task_id: str, changed_files: list[str] | None = 
     outside_scope = [p for p in files if not any(p == s or p.startswith(s.rstrip("/") + "/") for s in scope)]
     unplanned = [p for p in files if planned and p not in planned]
     wf = workflow_status(root, task_id)
+    from .human_decision import clarity_gate_status, decision_gate_status
+    clarity_gate = clarity_gate_status(root, task_id)
+    human_gate = decision_gate_status(root, task_id)
     blockers = {
         "task_not_approved": not bool(task["approved"]),
         "missing_active_plan": plan is None,
         "outside_scope": outside_scope,
         "unplanned_files": unplanned,
         "invalid_provenance": wf["invalid_provenance"],
+        "clarity_gate_pending": not clarity_gate["ready"],
+        "human_decision_pending": human_gate["decisions"],
     }
-    ok = bool(task["approved"]) and plan is not None and not outside_scope and not unplanned and not wf["invalid_provenance"]
+    ok = bool(task["approved"]) and plan is not None and not outside_scope and not unplanned and not wf["invalid_provenance"] and clarity_gate["ready"] and not human_gate["blocked"]
     return {"ok": ok, "task_id": task_id, "changed_files": files, "active_plan_revision": plan["revision"] if plan else None, "blockers": blockers}

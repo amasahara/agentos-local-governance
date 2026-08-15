@@ -20,13 +20,14 @@ from pathlib import Path
 import sys
 from typing import Any, Callable
 
+from . import __version__
 from . import cli as core_cli
 from .governance_enforcement import governed_operation_status
 from .release_integrity import check_release_integrity, docs_check_current
 from .release_manifest import verify_manifest
 from .schema_version import CURRENT_SCHEMA_VERSION
 
-VERSION = "0.25.0"
+VERSION = __version__
 
 FEATURE_CLI_MODULES = (
     "project_identity_cli",
@@ -46,6 +47,8 @@ FEATURE_CLI_MODULES = (
     "adaptive_budget_cli",
     "context_evaluation_cli",
     "consolidation_cockpit_cli",
+    "architecture_contract_cli",
+    "human_decision_cli",
 )
 
 SPECIAL_COMMANDS = {
@@ -75,6 +78,8 @@ PRIVILEGED_COMMANDS = {
     "data-subject-erasure-plan-approve", "data-subject-erasure-execute",
     "project-consolidation-batch-bundle-create", "project-consolidation-batch-review",
     "project-consolidation-mapping-review",
+    "architecture-baseline-review", "architecture-baseline-approve", "architecture-baseline-activate", "architecture-baseline-reject",
+    "decision-resolve",
 }
 
 
@@ -270,7 +275,7 @@ def _dispatch_special(command: str, root: Path, args: list[str]) -> int:
 
 def _help() -> None:
     registry = command_registry()
-    print("AgentOS Local Governance v0.25.0 — unified CLI runtime")
+    print(f"AgentOS Local Governance v{VERSION} — unified CLI runtime")
     print("Usage: agentos [--root PATH] [--task-id ID] [--session-id ID] COMMAND [ARGS]")
     print("Commands:")
     for command in sorted(registry):

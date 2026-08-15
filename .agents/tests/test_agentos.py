@@ -15,9 +15,10 @@ if str(ROOT / ".agents") not in sys.path:
     sys.path.insert(0, str(ROOT / ".agents"))
 
 from agentos.concurrency import acquire_resource, atomic_write, claim_task, handoff_task, heartbeat_resource, list_resources, release_resource
-from agentos.core import approve_task, check_write, db_status, docs_check, instruction_check, prepare_change, record_claim, record_tool_execution, start_task
+from agentos.core import approve_task as _core_approve_task, check_write, db_status, docs_check, instruction_check, prepare_change, record_claim, record_tool_execution, start_task
 from agentos.db import SCHEMA_VERSION, connect
 from agentos.drift import ack_baseline, drift_check, tracked_files
+from agentos.human_decision import record_clarity_assessment
 from agentos.policy import approve_local_override, load_policy, local_override_status
 from agentos.tooling import classify_tool, complete_tool, guard_tool, redact_text
 from agentos.workflow import complete_automated_step, current_task_id, mark_step, seed_workflow, set_current_task, workflow_status
@@ -28,6 +29,18 @@ def project(tmp_path: Path) -> Path:
     shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns("runtime", "agentos.db", "__pycache__", ".pytest_cache"))
     (root / "src").mkdir(exist_ok=True)
     return root
+
+
+def approve_task(root: Path, task_id: str, scope: list[str]):
+    """Approve a historical-test task through the v0.25.2 clarity gate."""
+    record_clarity_assessment(
+        root, task_id, "pytest-fixture",
+        objective_understood=True,
+        scope_understood=True,
+        constraints_understood=True,
+        acceptance_understood=True,
+    )
+    return _core_approve_task(root, task_id, scope)
 
 
 def ready(root: Path, task_id: str = "T1") -> None:
@@ -743,7 +756,7 @@ def test_db_schema_27(tmp_path):
 
 def test_v0192_v0195_capabilities(tmp_path):
     root=project(tmp_path)
-    from agentos.core import start_task, approve_task
+    from agentos.core import start_task
     start_task(root,"T-NEW","use approved workflow skill and memory"); approve_task(root,"T-NEW",["src"])
     from agentos.memory import remember, query_memory, forget_identity
     remember(root,"semantic","private preference",task_id="T-NEW",owner_scope="user:alice",consent_source="explicit-test")

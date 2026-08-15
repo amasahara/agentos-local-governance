@@ -25,6 +25,7 @@ from .security import link_signed_state
 from .policy import load_policy
 
 AUTOMATED_ONLY_STEPS = {
+    "assess_requirement_clarity",
     "approve_task",
     "build_or_update_local_index",
     "prepare_change",
@@ -271,8 +272,8 @@ def next_step(root: Path, task_id: str) -> dict[str, Any]:
     status = workflow_status(root, task_id)
     step = status["required_pending"][0] if status["required_pending"] else None
     commands = {
-        "assess_requirement_clarity": "agentos mark-step --step assess_requirement_clarity --status done --note 'Requirements assessed'",
-        "clarify_if_needed": "agentos mark-step --step clarify_if_needed --status skipped --note 'No clarification required'",
+        "assess_requirement_clarity": "agentos clarity-assess --objective-understood --scope-understood --constraints-understood --acceptance-understood --assessed-by HUMAN_OR_AGENT",
+        "clarify_if_needed": "agentos grill-me",
         "approve_task": "agentos approve-task --scope '[\"src\",\"tests\"]'",
         "detect_environment": "agentos mark-step --step detect_environment --status done --note 'Environment detected'",
         "build_or_update_local_index": "agentos index-build src",

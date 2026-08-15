@@ -98,12 +98,25 @@ def _preflight(root: Path, task_id: str, session_id: str, capability: str) -> No
         task = conn.execute("SELECT approved,owner_session_id FROM tasks WHERE id=?", (task_id,)).fetchone()
     if not task:
         raise GovernanceEnforcementError(f"task_not_found:{task_id}")
-    if not bool(task["approved"]):
-        raise GovernanceEnforcementError("task_not_approved")
-    if cfg.get("require_task_owner_session", True) and task["owner_session_id"] != session_id:
-        raise GovernanceEnforcementError("task_not_owned_by_session")
-    if cfg.get("require_workflow_approval_step", True) and not _approved_step(root, task_id):
-        raise GovernanceEnforcementError("workflow_approve_task_incomplete")
+    preapproval_human_capabilities = {"human.decision.resolve"}
+    if capability not in preapproval_human_capabilities:
+        if not bool(task["approved"]):
+            raise GovernanceEnforcementError("task_not_approved")
+        if cfg.get("require_task_owner_session", True) and task["owner_session_id"] != session_id:
+            raise GovernanceEnforcementError("task_not_owned_by_session")
+        if cfg.get("require_workflow_approval_step", True) and not _approved_step(root, task_id):
+            raise GovernanceEnforcementError("workflow_approve_task_incomplete")
+    unblocker_capabilities = {
+        "human.decision.resolve",
+        "architecture.baseline.review", "architecture.baseline.approve",
+        "architecture.baseline.activate", "architecture.baseline.reject",
+    }
+    if capability not in unblocker_capabilities:
+        from .human_decision import clarity_gate_status, decision_gate_status
+        if not clarity_gate_status(root, task_id)["ready"]:
+            raise GovernanceEnforcementError("clarity_gate_pending")
+        if decision_gate_status(root, task_id)["blocked"]:
+            raise GovernanceEnforcementError("human_decision_pending")
     override = local_override_status(root)
     if override.get("sensitive") and override.get("status") != "approved":
         raise GovernanceEnforcementError("sensitive_local_override_not_approved")

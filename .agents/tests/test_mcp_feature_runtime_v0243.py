@@ -58,7 +58,9 @@ def test_public_mcp_tool_surface_is_preserved() -> None:
     assert len(names) == len(set(names))
     assert len(CORE_TOOL_NAMES) == 14
     assert len(FEATURE_TOOL_NAMES) == 63
-    assert len(ALL_TOOLS) == 78
+    from agentos.mcp_runtime import V0252_TOOL_NAMES
+    assert len(V0252_TOOL_NAMES) == 6
+    assert len(ALL_TOOLS) == 84
     assert "agentos.mcp_health" in names
     assert "agentos.read_file" in names
     assert "agentos.db_reconciliation_get" in names

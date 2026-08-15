@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.25.2 — 27-Section Architecture Contract & Human Clarification Gates
+- Added schema 50 with immutable architecture baseline/section/artifact/event state plus structured clarity assessments and first-class human decision requests/resolutions.
+- Added the fixed `ARCH-01`…`ARCH-27` registry; `ARCH-26 Improvement Proposal` is permanently proposal-only and working-copy files never carry activation authority.
+- Added deterministic architecture baseline hashing and explicit human review → approve → activate lifecycle with exact-hash confirmation and single-active-baseline supersession.
+- Upgraded `assess_requirement_clarity` / `clarify_if_needed` into a fail-closed Grill Me gate: material assumptions and ambiguities block task/plan approval until explicitly resolved and reassessed.
+- Added runtime Human Decision Gate: AI may open a blocker and recommend options, while human-only resolution controls resume/reapproval; open blockers stop dependent writes/tools/precommit/privileged mutations while bounded reads remain available.
+- Human question/answer text remains local; signed external audit receives hashes and bounded metadata only.
+- Added read-only Architecture/Human Decision MCP inspection plus the single monotonic `agentos.human_decision_request` blocker signal; no MCP resolve/waive/architecture approval authority was added.
+- Fixed CLI/MCP release version drift by deriving runtime version from `agentos.__version__`; fresh DB still bootstraps schema 46 and now applies migrations 47→50, while schema-49 databases apply only migration 50.
+
 
 ## 0.25.1 — Release Metadata Coherence
 - Established `VERSION` as the single release-version source of truth across runtime, governance, manifest, package completeness, and current-release identity documents.

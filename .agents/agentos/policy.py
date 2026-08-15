@@ -20,7 +20,7 @@ from .db import connect
 
 CLAIM_TYPES = {"business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"}
 RISK_LEVELS = {"low", "medium", "high"}
-SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy"}
+SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy"}
 SAFE_OVERRIDE_KEYS = {"source_root", "test_path", "encoding", "runtime_paths"}
 
 
@@ -74,10 +74,46 @@ def load_policy(root: Path) -> dict[str, Any]:
 
 def validate_policy(policy: dict[str, Any]) -> None:
     """Fail closed when mandatory policy sections are absent or invalid."""
-    required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy"}
+    required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy"}
     missing = sorted(required - policy.keys())
     if missing:
         raise RuntimeError(f"missing policy keys: {missing}")
+    architecture = policy["architecture_contract_policy"]
+    if architecture.get("enabled") is not True or int(architecture.get("section_count", 0)) != 27:
+        raise RuntimeError("architecture contract policy is invalid")
+    architecture_required_false = (
+        "ai_may_activate_architecture", "ai_may_approve_architecture", "working_copy_is_authority",
+        "mcp_architecture_mutation_allowed", "architecture_discovery_enabled_v0252", "architecture_drift_enforcement_enabled_v0252",
+    )
+    poisoned_architecture = [key for key in architecture_required_false if architecture.get(key) is not False]
+    if poisoned_architecture:
+        raise RuntimeError(f"architecture authority invariant violated: {poisoned_architecture}")
+    clarification = policy["human_clarification_policy"]
+    clarification_required_true = (
+        "enabled", "structured_clarity_assessment_required", "no_silent_material_assumptions",
+        "task_approval_requires_clear_assessment", "blocking_decisions_block_dependent_mutation",
+        "llm_may_open_blocking_decision", "human_resolution_lossless_local_persistence",
+        "resolution_revalidation_required",
+    )
+    disabled_clarification = [key for key in clarification_required_true if clarification.get(key) is not True]
+    if disabled_clarification:
+        raise RuntimeError(f"human clarification invariant disabled: {disabled_clarification}")
+    clarification_required_false = (
+        "llm_may_resolve_decision", "llm_may_waive_decision", "llm_may_silently_select_material_option",
+        "raw_human_answer_external_audit_allowed",
+    )
+    poisoned_clarification = [key for key in clarification_required_false if clarification.get(key) is not False]
+    if poisoned_clarification:
+        raise RuntimeError(f"human clarification authority invariant violated: {poisoned_clarification}")
+    if clarification.get("mcp_monotonic_blocker_signal_allowed") is not True:
+        raise RuntimeError("human clarification MCP blocker signal must be explicitly monotonic")
+    if clarification.get("mcp_monotonic_blocker_tool") != "agentos.human_decision_request":
+        raise RuntimeError("human clarification MCP blocker tool is invalid")
+    if clarification.get("mcp_human_decision_resolution_allowed") is not False:
+        raise RuntimeError("human decision resolution over MCP is forbidden")
+    if int(clarification.get("max_open_blocking_decisions_per_task", 0) or 0) != 32:
+        raise RuntimeError("human decision open-blocker limit is invalid")
+
     claim = policy["claim_policy"]
     if set(claim.get("claim_types", [])) != CLAIM_TYPES or set(claim.get("risk_levels", [])) != RISK_LEVELS:
         raise RuntimeError("claim policy allowlists are invalid")
@@ -127,6 +163,10 @@ def validate_policy(policy: dict[str, Any]) -> None:
     runtime_poisoned = [key for key in runtime_required_false if runtime.get(key) is not False]
     if runtime_poisoned:
         raise RuntimeError(f"unified runtime fail-closed invariant violated: {runtime_poisoned}")
+    if runtime.get("monotonic_blocker_signal_allowed") is not True:
+        raise RuntimeError("unified runtime monotonic blocker signal must be enabled")
+    if runtime.get("monotonic_blocker_signal_tools") != ["agentos.human_decision_request"]:
+        raise RuntimeError("unified runtime monotonic blocker tool allowlist is invalid")
 
     transport = policy["context_transport_policy"]
     transport_required_true = (

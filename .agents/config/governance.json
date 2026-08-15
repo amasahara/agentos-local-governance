@@ -427,8 +427,8 @@
       "README.en.md",
       "RELEASE_NOTES.md"
     ],
-    "current_release_name": "Release Metadata Coherence",
-    "current_schema": 49,
+    "current_release_name": "27-Section Architecture Contract & Human Clarification Gates",
+    "current_schema": 50,
     "current_schema_files": [
       "README.md",
       "huong_dan.md"
@@ -446,7 +446,7 @@
       "README.md",
       "README.vi.md",
       "README.en.md",
-      "UPGRADE_FROM_0.25.0.md"
+      "UPGRADE_FROM_0.25.1.md"
     ]
   },
   "drift_policy": {
@@ -598,7 +598,12 @@
       "privacy.erasure.plan",
       "privacy.erasure.review",
       "privacy.erasure.approve",
-      "privacy.erasure.execute"
+      "privacy.erasure.execute",
+      "architecture.baseline.review",
+      "architecture.baseline.approve",
+      "architecture.baseline.activate",
+      "architecture.baseline.reject",
+      "human.decision.resolve"
     ],
     "require_initialized_baseline": true,
     "require_session_id": true,
@@ -714,7 +719,9 @@
       "workflow_policy",
       "drift_policy",
       "instruction_policy",
-      "task_context_policy"
+      "task_context_policy",
+      "architecture_contract_policy",
+      "human_clarification_policy"
     ]
   },
   "mcp_feature_runtime_policy": {
@@ -965,7 +972,7 @@
     "bootstrap_artifact_metadata": ".agents/schema/bootstrap_v46.json",
     "bootstrap_artifact_sql": ".agents/schema/bootstrap_v46.sql",
     "bootstrap_schema": 46,
-    "current_database_schema": 49,
+    "current_database_schema": 50,
     "existing_database_mode": "incremental_from_recorded_version",
     "fresh_database_mode": "bootstrap_then_incremental",
     "fresh_replay_migrations_1_to_46": false,
@@ -985,7 +992,8 @@
     "post_baseline_migrations_at_release": [
       47,
       48,
-      49
+      49,
+      50
     ],
     "schema_change": "none",
     "schema_fingerprint_required": true,
@@ -1122,9 +1130,13 @@
     "unknown_mcp_method_must_return_jsonrpc_error": true,
     "version_forwarding_runtime_allowed": false,
     "windows_posix_cli_parity_required": true,
-    "windows_posix_mcp_parity_required": true
+    "windows_posix_mcp_parity_required": true,
+    "monotonic_blocker_signal_allowed": true,
+    "monotonic_blocker_signal_tools": [
+      "agentos.human_decision_request"
+    ]
   },
-  "version": "0.25.1",
+  "version": "0.25.2",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,
@@ -1185,5 +1197,48 @@
     "validator": ".agents/agentos/release_coherence.py",
     "database_schema_changed": false,
     "mcp_authority_changed": false
+  },
+  "architecture_contract_policy": {
+    "version": 1,
+    "database_schema": 50,
+    "enabled": true,
+    "registry_version": 1,
+    "section_count": 27,
+    "fixed_section_ids_required": true,
+    "working_copy_is_authority": false,
+    "human_review_required": true,
+    "human_approval_required": true,
+    "human_activation_required": true,
+    "exact_baseline_hash_confirmation_required": true,
+    "single_active_baseline_required": true,
+    "ai_may_draft_architecture": true,
+    "ai_may_validate_architecture": true,
+    "ai_may_activate_architecture": false,
+    "ai_may_approve_architecture": false,
+    "improvement_proposal_authority_mode": "proposal_only",
+    "mcp_architecture_mutation_allowed": false,
+    "architecture_discovery_enabled_v0252": false,
+    "architecture_drift_enforcement_enabled_v0252": false
+  },
+  "human_clarification_policy": {
+    "version": 1,
+    "database_schema": 50,
+    "enabled": true,
+    "structured_clarity_assessment_required": true,
+    "no_silent_material_assumptions": true,
+    "task_approval_requires_clear_assessment": true,
+    "blocking_decisions_block_dependent_mutation": true,
+    "read_only_investigation_while_waiting_allowed": true,
+    "llm_may_open_blocking_decision": true,
+    "llm_may_resolve_decision": false,
+    "llm_may_waive_decision": false,
+    "llm_may_silently_select_material_option": false,
+    "human_resolution_lossless_local_persistence": true,
+    "raw_human_answer_external_audit_allowed": false,
+    "resolution_revalidation_required": true,
+    "max_open_blocking_decisions_per_task": 32,
+    "mcp_monotonic_blocker_signal_allowed": true,
+    "mcp_monotonic_blocker_tool": "agentos.human_decision_request",
+    "mcp_human_decision_resolution_allowed": false
   }
 }

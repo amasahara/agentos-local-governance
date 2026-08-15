@@ -340,3 +340,19 @@ Database consolidation is directional and fail-closed.
 - Shadow comparison may read explicitly requested SUPERSEDED transport revisions but MUST NOT reactivate/select a revision automatically.
 - MCP may expose read-only expansion/evaluation/compare operations only. It MUST NOT persist evaluations/comparisons, compile/mutate transport, alter requirements, or switch provider/model authority.
 <!-- AGENTOS_V0232_CONTEXT_EXPANSION_EVALUATION_END -->
+
+
+<!-- AGENTOS_V0252_ARCHITECTURE_HUMAN_DECISION_BEGIN -->
+## AgentOS v0.25.2 — Architecture Authority & Human Decision Gates
+
+- `AGENTS.md` remains the only coding-agent instruction authority. `.agents/architecture/**` is project design material governed by a separate human-owned Architecture Authority.
+- The agent MUST NOT silently resolve a material ambiguity or convert a material assumption into an implementation decision. Material ambiguity includes requirements, acceptance behavior, business rules, architecture, technology/dependencies, external services, authentication/authorization, database/API/data migration, destructive actions, security/privacy tradeoffs and scope expansion.
+- Before task approval, a structured clarity assessment MUST be `clear`. Any stated material assumption is blocking until confirmed or corrected.
+- The agent MAY open a blocking human-decision request, explain alternatives and recommend an option. The agent MUST NOT resolve, waive, approve or fabricate a human answer.
+- While a blocking human decision is unresolved, bounded read-only investigation MAY continue, but dependent project mutation, mutating tool execution and privileged governed operations MUST stop.
+- Human decision text is local protected authority; external signed audit MUST retain hashes/metadata rather than raw question/answer text.
+- Human resolutions MUST be revalidated. Requirement/scope/architecture impact invalidates the affected approval/plan rather than being silently absorbed.
+- Architecture working-copy files are never approval authority. Only an immutable baseline explicitly reviewed, approved and activated by a human is ACTIVE Architecture Authority.
+- The agent MAY draft/validate an architecture baseline but MUST NOT review, approve or activate it on behalf of a human.
+- `ARCH-26 Improvement Proposal` is proposal-only and MUST NOT be implemented as current architecture unless a later human-authorized architecture lifecycle makes the relevant change authoritative.
+<!-- AGENTOS_V0252_ARCHITECTURE_HUMAN_DECISION_END -->

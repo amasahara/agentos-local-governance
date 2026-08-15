@@ -21,6 +21,7 @@ from agentos.database_boundary import register_connection
 from agentos.db import SCHEMA_VERSION, connect
 from agentos.drift import ack_baseline
 from agentos.external_audit import verify_external_log
+from agentos.human_decision import record_clarity_assessment
 from agentos.governance_enforcement import GovernanceEnforcementError
 from agentos.policy import load_policy
 from agentos.workflow import complete_automated_step, seed_workflow
@@ -44,6 +45,13 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def prepare(root: Path, *, task_id: str = "T-GOV", session_id: str = "S-GOV", approved: bool = True) -> None:
     start_task(root, task_id, "Governed database-domain mutation")
     seed_workflow(root, task_id)
+    record_clarity_assessment(
+        root, task_id, "pytest-fixture",
+        objective_understood=True,
+        scope_understood=True,
+        constraints_understood=True,
+        acceptance_understood=True,
+    )
     if approved:
         approve_task(root, task_id, [".agents", "src", "tests"])
         complete_automated_step(root, task_id, "approve_task", "approve-task", {"approved": True})

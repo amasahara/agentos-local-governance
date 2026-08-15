@@ -52,6 +52,10 @@ def approve_task(root: Path, task_id: str, scope: list[str]) -> dict[str, Any]:
     Returns:
         Approval metadata.
     """
+    from .human_decision import clarity_gate_status
+    gate = clarity_gate_status(root, task_id)
+    if not gate["ready"]:
+        raise RuntimeError("clarity_gate_blocked: structured clarity assessment and all blocking human decisions must be resolved")
     with connect(root) as c:
         cur = c.execute("UPDATE tasks SET approved=1,approved_scope=? WHERE id=?", (json.dumps(scope), task_id))
         if cur.rowcount != 1:
@@ -97,9 +101,15 @@ def check_write(root: Path, task_id: str, target: str) -> dict[str, Any]:
         if not task["approved"]:
             reason = "task_not_approved"
         else:
-            scope = json.loads(task["approved_scope"])
-            allowed = any(rel == s.rstrip("/") or rel.startswith(s.rstrip("/") + "/") for s in scope)
-            reason = "approved_scope" if allowed else "outside_approved_scope"
+            from .human_decision import clarity_gate_status, decision_gate_status
+            clarity_gate = clarity_gate_status(root, task_id)
+            decision_gate = decision_gate_status(root, task_id)
+            if not clarity_gate["ready"]:
+                reason = "clarity_gate_pending" if not decision_gate["blocked"] else "human_decision_pending"
+            else:
+                scope = json.loads(task["approved_scope"])
+                allowed = any(rel == s.rstrip("/") or rel.startswith(s.rstrip("/") + "/") for s in scope)
+                reason = "approved_scope" if allowed else "outside_approved_scope"
     with connect(root) as c:
         c.execute("INSERT INTO write_audit(task_id,target,allowed,reason) VALUES(?,?,?,?)", (task_id, target, int(allowed), reason))
     return {"allowed": allowed, "reason": reason, "target": rel or target}

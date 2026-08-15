@@ -75,7 +75,7 @@ RELEASE_FILES = (
     ".agents/schema/bootstrap_v46.sql",
     ".agents/schema/bootstrap_v46.json",
     ".agents/tests/test_release_metadata_coherence_v0251.py",
-    "UPGRADE_FROM_0.25.0.md",
+    "UPGRADE_FROM_0.25.1.md",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -410,11 +410,11 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 f"expected 37 migrated runtime-native handlers, got {feature_health.get('runtime_native_migrated_tool_count')}",
                 ".agents/agentos/mcp_feature_runtime.py",
             ))
-        from .mcp_runtime import ALL_TOOLS, CORE_TOOL_NAMES, FEATURE_TOOL_NAMES
-        if len(CORE_TOOL_NAMES) != 14 or len(FEATURE_TOOL_NAMES) != 63 or len(ALL_TOOLS) != 78:
+        from .mcp_runtime import ALL_TOOLS, CORE_TOOL_NAMES, FEATURE_TOOL_NAMES, V0252_TOOL_NAMES
+        if (len(CORE_TOOL_NAMES) != 14 or len(FEATURE_TOOL_NAMES) != 63 or len(V0252_TOOL_NAMES) != 6 or len(ALL_TOOLS) != 84):
             findings.append(_finding(
                 "mcp_tool_surface_changed",
-                f"expected 14 core + 63 feature + health = 78 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} / {len(ALL_TOOLS)}",
+                f"expected 14 core + 63 feature + 6 v0.25.2 + health = 84 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} / {len(ALL_TOOLS)}",
                 ".agents/agentos/mcp_runtime.py",
             ))
     except Exception as exc:
@@ -508,7 +508,7 @@ DOC_FILES = (
     ".agents/docs/MCP_FEATURE_RUNTIME_REFACTOR_V0243.md",
     ".agents/docs/SCHEMA_BOOTSTRAP_BASELINE_V0250.md",
     ".agents/docs/RELEASE_METADATA_COHERENCE_V0251.md",
-    "UPGRADE_FROM_0.25.0.md",
+    "UPGRADE_FROM_0.25.1.md",
 )
 
 

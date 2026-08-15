@@ -1,36 +1,67 @@
-# AgentOS Local Governance v0.25.1 — Release Metadata Coherence
+# AgentOS Local Governance v0.25.2 — 27-Section Architecture Contract & Human Clarification Gates
 
 [README landing](README.md) | [English](README.en.md)
 
-## Phiên bản hiện tại: v0.25.1 — Release Metadata Coherence
+## Phiên bản hiện tại
 
-Database schema: **49**.
+- Version: **0.25.2**
+- Database schema: **50**
+- Schema bootstrap baseline: **46** (không đổi)
 
-v0.25.1 khóa một release identity duy nhất cho toàn package. `VERSION` là nguồn
-release-version chuẩn; `agentos.__version__`, MCP runtime, governance policy,
-`MANIFEST.json`, `PACKAGE_COMPLETENESS.json` và tài liệu current-release phải
-đồng thuận. Mismatch làm validation fail-closed thay vì được bỏ qua hoặc sửa
-ngầm trong lúc kiểm tra.
+v0.25.2 đưa hai quyền quan trọng về phía con người.
 
-Node này **không đổi database schema và không nới authority**. Cơ chế v0.25.0
-Schema Bootstrap Baseline vẫn giữ nguyên: fresh DB materialize schema 46, xác
-minh fingerprint, ghi coverage 1..46 rồi chỉ chạy migration 47→49; existing DB
-vẫn migrate incremental từ version đã ghi nhận.
+Thứ nhất, kiến trúc project được biểu diễn bằng đúng **27 section cố định
+`ARCH-01`…`ARCH-27`**. Markdown/JSON trong `.agents/architecture/` chỉ là working
+copy. AgentOS snapshot nội dung thành baseline bất biến, hash xác định; chỉ con
+người mới được review → approve → activate. AI không thể sửa tài liệu rồi tự làm
+vi phạm kiến trúc trở thành hợp lệ. `ARCH-26 Improvement Proposal` luôn là
+`proposal_only`, không phải kiến trúc hiện hành.
 
-## Kiểm tra
+Thứ hai, `Grill Me` trở thành gate thật. Trước khi task được approve, AI phải ghi
+structured clarity assessment. Mọi giả định vật chất, mơ hồ, business choice,
+acceptance chưa xác định hoặc lựa chọn kiến trúc phải trở thành câu hỏi cho người
+dùng. Khi đang code, AI có thể mở `human decision` blocker; phần công việc phụ
+thuộc dừng lại, nhưng read-only investigation vẫn được phép. AI được nêu phương
+án và recommendation nhưng **không được tự resolve/waive**. Câu trả lời của con
+người được lưu nguyên văn ở local state; external signed audit chỉ giữ hash và
+metadata giới hạn.
 
-```bash
-python tools/build_manifest.py .
-python tools/verify_manifest.py .
-python tools/validate_release.py .
-PYTHONPATH=.agents python -m pytest -q .agents/tests -rs
+### Nguyên tắc No Silent Assumption
+
+```text
+Requirement/Architecture đã quyết định → làm theo
+Pure implementation detail            → AI có thể tự chọn
+Material behavior/architecture choice → phải hỏi con người
+Không chắc thuộc nhóm nào              → fail closed → hỏi
 ```
 
-## Nâng cấp
+Nếu human resolution thay đổi requirement/scope/architecture, AgentOS thu hồi
+approval hiện tại và supersede active/submitted plan để buộc revalidation.
 
-Xem [Upgrade v0.25.0 → v0.25.1](UPGRADE_FROM_0.25.0.md).
+Fresh DB vẫn bootstrap schema 46 rồi chỉ chạy migration **47→50**. Existing DB
+v0.25.1 schema 49 chỉ chạy migration **50**.
 
-## Tài liệu node
+## MCP
 
-- [Release Metadata Coherence](.agents/docs/RELEASE_METADATA_COHERENCE_V0251.md)
-- [Schema Bootstrap Baseline](.agents/docs/SCHEMA_BOOTSTRAP_BASELINE_V0250.md)
+Read-only architecture tools:
+
+- `agentos.architecture_get`
+- `agentos.architecture_section_get`
+- `agentos.architecture_status_get`
+
+Human-decision inspection:
+
+- `agentos.human_decision_status`
+- `agentos.human_decision_get`
+
+`agentos.human_decision_request` là ngoại lệ monotonic duy nhất: nó chỉ **mở
+blocker**, không thể resolve/waive/approve/activate hay cấp quyền.
+
+## Chưa thuộc v0.25.2
+
+Source discovery/evidence binding → v0.25.3; architecture drift/compliance →
+v0.25.4; ADR/change proposal → v0.25.5; architecture-aware task planning →
+v0.26.0.
+
+Xem [tài liệu node](.agents/docs/ARCHITECTURE_CONTRACT_HUMAN_CLARIFICATION_V0252.md)
+và [hướng dẫn nâng cấp](UPGRADE_FROM_0.25.1.md).

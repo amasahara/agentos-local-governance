@@ -136,7 +136,18 @@ def guard_tool(root: Path, task_id: str, session_id: str, tool_name: str, args: 
     """
     classification = classify_tool(tool_name)
     decision, reason = "allow", "local_tool"
-    if not classification["known"]:
+    read_only_tools = {"bounded_file_read", "filesystem_read", "index_query", "docs_scan"}
+    if tool_name not in read_only_tools and tool_name != "governed_operation":
+        from .human_decision import clarity_gate_status, decision_gate_status
+        clarity = clarity_gate_status(root, task_id)
+        decisions = decision_gate_status(root, task_id)
+        if decisions["blocked"]:
+            decision, reason = "block", "human_decision_pending"
+        elif not clarity["ready"]:
+            decision, reason = "block", "clarity_gate_pending"
+    if decision == "block":
+        pass
+    elif not classification["known"]:
         decision, reason = "block", "unknown_tool_fail_closed"
     elif classification["classification"] == "dynamic":
         decision, reason = "block", "dynamic_tool_requires_explicit_registry"

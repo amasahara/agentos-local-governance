@@ -1,19 +1,12 @@
-# AgentOS Local Governance v0.25.1 — Release Metadata Coherence
+# AgentOS Local Governance v0.25.2
 
-Database schema remains **49**. This hardening node repairs release/package
-identity drift and makes future release metadata inconsistencies fail closed.
+**27-Section Architecture Contract & Human Clarification Gates**
 
-- `VERSION` is the single release-version source of truth.
-- `agentos.__version__`, MCP runtime, governance version, manifest, package
-  completeness, and current-release identity docs must agree.
-- Added read-only `.agents/agentos/release_coherence.py`.
-- `tools/validate_release.py` now includes a `release_metadata_coherence` gate.
-- `release_integrity.py` no longer hard-codes one historical release literal.
-- `tools/build_manifest.py` synchronizes `PACKAGE_COMPLETENESS.json` before hash generation.
-- Stale `PACKAGE_COMPLETENESS` release/schema/count metadata is repaired at build time.
-- `VALIDATION_REPORT.json` is no longer a required clean-main package file because
-  generated validation reports are intentionally excluded from authoritative source packaging.
-- Current bilingual README/developer-guide identity is synchronized to v0.25.1.
-- v0.25.0 Schema Bootstrap Baseline remains unchanged: schema 46 bootstrap,
-  fingerprint verification, coverage 1..46, then migrations 47→49.
-- No SOURCE/TARGET, approval, privacy, signed-audit, context, MCP mutation, or DB schema change.
+This release adds schema 50, a fixed human-owned 27-section Architecture Contract,
+deterministic immutable architecture baselines, explicit review/approve/activate
+lifecycle, a structured Grill Me gate, and runtime human-decision blockers. It also
+removes stale CLI/MCP release literals by deriving runtime version from
+`agentos.__version__`.
+
+No architecture discovery/drift enforcement is introduced yet. SOURCE/TARGET,
+privacy, secret, signed-audit and existing authority boundaries remain in place.

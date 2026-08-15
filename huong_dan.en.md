@@ -1,12 +1,12 @@
-# AgentOS v0.25.1 Developer Guide — Release Metadata Coherence
+# AgentOS v0.25.2 Developer Guide
 
-1. Treat `VERSION` as the single release-version source of truth.
-2. Synchronize current-release docs, `agentos.__version__`, MCP runtime, and governance version.
-3. Run `python tools/build_manifest.py .`; the builder synchronizes `PACKAGE_COMPLETENESS.json` before hashing.
-4. Run `python tools/verify_manifest.py .`.
-5. Run `python tools/validate_release.py .` and require `release_metadata_coherence` to pass.
-6. Run documentation, instruction, and regression tests before release.
+1. Run `architecture-init` to create exactly 27 templates; it performs no source discovery or architecture inference.
+2. Complete Markdown and JSON contracts. An `applicable` section needs a non-empty payload and may not retain the default UNRESOLVED marker.
+3. Run `architecture-validate`, create a baseline, then have a human review → approve → activate the exact baseline hash.
+4. Before `approve-task`, run `clarity-assess`. If assumptions/ambiguities/decisions remain, use `grill-me` and wait for human resolution.
+5. During coding, raise `decision-request` for material behavior/architecture/data/API/security/scope choices instead of guessing.
+6. While a blocking decision is open, continue only bounded read-only investigation; dependent mutation must stop.
+7. A human resolves with `decision-resolve --human-confirmed`. Non-`none` impact revokes task approval and supersedes submitted/active plans.
+8. Rebuild the manifest and run release/docs/instruction/regression validation after upgrade.
 
-Database schema remains **49** and v0.25.1 has no migration. Do not commit
-`VALIDATION_REPORT*.json` to clean `main`. The v0.25.0 bootstrap path and all
-SOURCE/TARGET, privacy, signed-audit, context, and MCP authority boundaries remain unchanged.
+Database schema: **50**; bootstrap baseline remains **46**.

@@ -2,6 +2,8 @@
 # Release manifests/checksums hash filesystem bytes, so textual files must have
 # deterministic checkout line endings on Windows, Linux, and macOS.
 
+* text=auto eol=lf
+
 *.py text eol=lf
 *.pyi text eol=lf
 *.md text eol=lf
@@ -23,3 +25,4 @@ AGENTS.md text eol=lf
 
 # Windows batch launchers are canonical LF so release hashes are OS-stable.
 *.cmd text eol=lf
+*.bat text eol=lf

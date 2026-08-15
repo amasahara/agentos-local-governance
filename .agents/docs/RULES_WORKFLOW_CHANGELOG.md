@@ -1,3 +1,10 @@
+
+## v0.25.1 — Release Metadata Coherence
+- **User requirement:** establish one coherent release identity before starting the 27-section Architecture Contract roadmap.
+- **Decision:** make `VERSION` the release-version source of truth and add a fail-closed read-only coherence validator across runtime, policy, manifest, package completeness, and current-release identity docs.
+- **Packaging:** synchronize `PACKAGE_COMPLETENESS.json` before manifest hashing; generated `VALIDATION_REPORT*.json` remains outside clean-main authoritative source.
+- **Documentation:** current version/schema checks follow explicit `documentation_policy` file lists so historical schema references are not treated as current drift.
+- **Compatibility:** database schema remains 49; schema bootstrap, SOURCE/TARGET, privacy, signed audit, context, and MCP authority are unchanged.
 ## v0.24.3 — MCP Feature Runtime Refactor
 - **Decision:** active MCP feature handlers may not be owned/imported from legacy gateway modules.
 - **Core boundary:** governed core tools keep gateway_client → gatewayd enforcement.

@@ -1,5 +1,13 @@
 # Changelog
 
+
+## 0.25.1 — Release Metadata Coherence
+- Established `VERSION` as the single release-version source of truth across runtime, governance, manifest, package completeness, and current-release identity documents.
+- Added fail-closed read-only release metadata coherence validation to both generic release validation and release-integrity paths.
+- Made `tools/build_manifest.py` synchronize `PACKAGE_COMPLETENESS.json` before hashing and removed generated `VALIDATION_REPORT.json` from clean-main requirements.
+- Removed current-release validator hard-coding of the v0.25.0 literal and synchronized bilingual current docs/runtime package metadata.
+- Database schema remains 49; v0.25.0 schema-bootstrap behavior and all governance/MCP authority boundaries are unchanged.
+
 ## 0.25.0 — Schema Bootstrap Baseline
 - Fresh DB materializes schema 46 directly and then applies migrations 47→49.
 - Existing DBs retain incremental migrations from their recorded version.

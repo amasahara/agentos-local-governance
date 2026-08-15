@@ -1,8 +1,8 @@
 {
-  "release": "0.23.2",
+  "release": "0.25.1",
   "kind": "full_materialized_github_ready",
-  "schema": 46,
-  "authoritative_file_count": 255,
+  "schema": 49,
+  "authoritative_file_count": 212,
   "required_top_level": [
     "VERSION",
     "AGENTS.md",
@@ -14,9 +14,9 @@
     "huong_dan.en.md",
     "CHANGELOG.md",
     "RELEASE_NOTES.md",
-    "VALIDATION_REPORT.json",
     "MANIFEST.json",
-    "CHECKSUMS.sha256"
+    "CHECKSUMS.sha256",
+    "PACKAGE_COMPLETENESS.json"
   ],
   "runtime_roots": [
     ".agents/agentos",
@@ -36,5 +36,6 @@
     "__pycache__/"
   ],
   "upload_workflow": "extract -> upload/replace repository -> commit/push -> GitHub Actions validates",
-  "manual_apply_required": false
+  "manual_apply_required": false,
+  "coherence_contract_version": 1
 }

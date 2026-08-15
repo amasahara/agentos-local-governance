@@ -427,7 +427,7 @@
       "README.en.md",
       "RELEASE_NOTES.md"
     ],
-    "current_release_name": "Schema Bootstrap Baseline",
+    "current_release_name": "Release Metadata Coherence",
     "current_schema": 49,
     "current_schema_files": [
       "README.md",
@@ -446,7 +446,7 @@
       "README.md",
       "README.vi.md",
       "README.en.md",
-      "UPGRADE_FROM_0.24.3.md"
+      "UPGRADE_FROM_0.25.0.md"
     ]
   },
   "drift_policy": {
@@ -1124,7 +1124,7 @@
     "windows_posix_cli_parity_required": true,
     "windows_posix_mcp_parity_required": true
   },
-  "version": "0.25.0",
+  "version": "0.25.1",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,
@@ -1165,5 +1165,25 @@
       "run_checks",
       "report_matrix"
     ]
+  },
+  "release_metadata_coherence_policy": {
+    "version": 1,
+    "enabled": true,
+    "source_of_truth": "VERSION",
+    "schema_source": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
+    "fail_closed": true,
+    "runtime_version_files": [
+      ".agents/agentos/__init__.py",
+      ".agents/agentos/mcp_runtime.py"
+    ],
+    "package_identity_files": [
+      "MANIFEST.json",
+      "PACKAGE_COMPLETENESS.json"
+    ],
+    "package_completeness_builder": "tools/build_manifest.py",
+    "validation_report_clean_main_required": false,
+    "validator": ".agents/agentos/release_coherence.py",
+    "database_schema_changed": false,
+    "mcp_authority_changed": false
   }
 }

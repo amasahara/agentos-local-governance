@@ -4,36 +4,37 @@ File: tools/validate_release.py
 
 Purpose:
     Validate the currently materialized AgentOS release without pinning the
-    validator to a historical version number.
+    validator to a historical version number, including v0.25.1 release
+    metadata coherence.
 """
 from __future__ import annotations
 
 import argparse
 import json
-import sqlite3
 import sys
 import tempfile
 from pathlib import Path
 
 
 def validate(root: Path, *, skip_manifest: bool = False) -> dict[str, object]:
+    """Validate one materialized AgentOS release and return a structured report."""
+
     root = root.resolve()
     sys.path.insert(0, str(root / ".agents"))
-
+    from agentos import __version__ as PACKAGE_VERSION
     from agentos.cli_runtime import command_registry
     from agentos.core import instruction_check
-    from agentos.db import SCHEMA_VERSION, connect, migrate_with_report
+    from agentos.db import SCHEMA_VERSION, connect
     from agentos.mcp_runtime import ALL_TOOLS, VERSION as MCP_VERSION
     from agentos.policy import load_policy
+    from agentos.release_coherence import check_release_metadata_coherence
     from agentos.release_integrity import check_release_integrity, docs_check_current
-    from agentos.schema_bootstrap import BASELINE_SCHEMA_VERSION
     from agentos.release_manifest import verify_manifest
 
     version = (root / "VERSION").read_text(encoding="utf-8").strip()
     policy = load_policy(root)
     commands = command_registry()
     tools = [str(item.get("name")) for item in ALL_TOOLS]
-
     checks: dict[str, bool] = {}
     checks["version_nonempty"] = bool(version)
     checks["mcp_version"] = MCP_VERSION == version
@@ -59,22 +60,13 @@ def validate(root: Path, *, skip_manifest: bool = False) -> dict[str, object]:
         checks["migration_chain"] = versions == list(range(1, int(SCHEMA_VERSION) + 1))
         checks["foreign_keys_on"] = foreign_keys == 1
 
-    bootstrap_probe = sqlite3.connect(":memory:")
-    bootstrap_probe.row_factory = sqlite3.Row
-    try:
-        bootstrap_report = migrate_with_report(bootstrap_probe)
-    finally:
-        bootstrap_probe.close()
-    checks["fresh_bootstrap_path"] = (
-        bootstrap_report.get("mode") == "bootstrap"
-        and bootstrap_report.get("bootstrap_version")
-            == BASELINE_SCHEMA_VERSION
-            == 46
-        and bootstrap_report.get("applied_migrations") == [47, 48, 49]
-        and (bootstrap_report.get("bootstrap") or {}).get(
-            "historical_migrations_invoked"
-        ) == 0
+    coherence = check_release_metadata_coherence(
+        root,
+        runtime_version=MCP_VERSION,
+        package_version=PACKAGE_VERSION,
+        schema_version=int(SCHEMA_VERSION),
     )
+    checks["release_metadata_coherence"] = coherence.get("ok") is True
 
     integrity = check_release_integrity(root)
     docs = docs_check_current(root)
@@ -89,7 +81,6 @@ def validate(root: Path, *, skip_manifest: bool = False) -> dict[str, object]:
         checks["manifest"] = (
             manifest.get("ok") is True and manifest.get("release") == version
         )
-
     failed_checks = sorted(name for name, passed in checks.items() if not passed)
     return {
         "ok": all(checks.values()),
@@ -100,6 +91,7 @@ def validate(root: Path, *, skip_manifest: bool = False) -> dict[str, object]:
         "mcp_count": len(tools),
         "checks": checks,
         "failed_checks": failed_checks,
+        "release_metadata_coherence": coherence,
         "release_integrity": integrity,
         "docs_check": docs,
         "instruction_check": instructions,
@@ -108,6 +100,8 @@ def validate(root: Path, *, skip_manifest: bool = False) -> dict[str, object]:
 
 
 def main() -> int:
+    """CLI entry point for current-release validation."""
+
     parser = argparse.ArgumentParser()
     parser.add_argument("root", nargs="?", default=".")
     parser.add_argument("--skip-manifest", action="store_true")

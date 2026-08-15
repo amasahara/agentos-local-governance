@@ -1280,7 +1280,7 @@ def _pack_row(root: Path, task_id: str, revision: int | None = None, allow_shado
 def _current_authority_state(root: Path, task_id: str) -> dict[str, Any]:
     task = _task_row(root, task_id)
     agents = _file_text(root / "AGENTS.md")
-    governance = _file_text(root / ".agents/config/governance.json")
+    governance_path = root / ".agents/config/governance.json"
     with connect(root) as c:
         plan = c.execute(
             "SELECT plan_hash FROM task_plans WHERE task_id=? AND status='active' ORDER BY revision DESC LIMIT 1",
@@ -1290,7 +1290,7 @@ def _current_authority_state(root: Path, task_id: str) -> dict[str, Any]:
         "request_hash": _sha256_text(str(task["request"])),
         "scope_hash": _sha256_text(str(task.get("approved_scope") or "[]")),
         "agents_hash": _sha256_text(agents),
-        "governance_hash": _sha256_text(governance),
+        "governance_hash": _file_hash(governance_path),
         "plan_hash": str(plan["plan_hash"]) if plan else None,
     }
 

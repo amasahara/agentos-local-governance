@@ -74,7 +74,8 @@ RELEASE_FILES = (
     ".agents/tests/test_schema_bootstrap_v0250.py",
     ".agents/schema/bootstrap_v46.sql",
     ".agents/schema/bootstrap_v46.json",
-    "UPGRADE_FROM_0.24.3.md",
+    ".agents/tests/test_release_metadata_coherence_v0251.py",
+    "UPGRADE_FROM_0.25.0.md",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -89,6 +90,7 @@ EXTENSION_FILES = (
     ".agents/agentos/governance_enforcement.py",
     ".agents/agentos/governance_enforcement_cli.py",
     ".agents/agentos/release_manifest.py",
+    ".agents/agentos/release_coherence.py",
     ".agents/agentos/secret_lineage.py",
     ".agents/agentos/secret_lineage_cli.py",
     ".agents/agentos/mcp_secret_lineage.py",
@@ -166,6 +168,7 @@ REQUIRED_POLICY_SECTIONS = (
     "db_aware_context_projection_policy",
     "mcp_feature_runtime_policy",
     "schema_bootstrap_policy",
+    "release_metadata_coherence_policy",
 )
 
 
@@ -264,8 +267,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     except Exception as exc:
         findings.append(_finding("incremental_index_benchmark_unloadable", f"cannot validate incremental index benchmark: {exc}", "INDEX_INCREMENTAL_BENCHMARK_V0234.json"))
     version = (root / "VERSION").read_text(encoding="utf-8").strip() if (root / "VERSION").exists() else None
-    if version != "0.25.0":
-        findings.append(_finding("version_mismatch", f"expected VERSION 0.25.0, got {version!r}", "VERSION"))
+    if not version:
+        findings.append(_finding("version_missing", "VERSION must be non-empty", "VERSION"))
 
     policy_path = root / ".agents/config/governance.json"
     if not policy_path.exists():
@@ -276,11 +279,26 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             missing = sorted(set(REQUIRED_POLICY_SECTIONS) - set(policy))
             if missing:
                 findings.append(_finding("missing_policy_sections", f"missing policy sections: {missing}", ".agents/config/governance.json"))
-            if policy.get("version") != "0.25.0":
-                findings.append(_finding("policy_version_mismatch", "governance.json version must be 0.25.0", ".agents/config/governance.json"))
+            if policy.get("version") != version:
+                findings.append(_finding("policy_version_mismatch", f"governance.json version must equal VERSION {version!r}", ".agents/config/governance.json"))
         except Exception as exc:
             findings.append(_finding("invalid_governance", f"cannot parse governance.json: {exc}", ".agents/config/governance.json"))
 
+    try:
+        from .release_coherence import check_release_metadata_coherence
+        coherence = check_release_metadata_coherence(root)
+        for item in coherence.get("findings", []):
+            findings.append(_finding(
+                "release_metadata_incoherent",
+                f"{item.get('code')}: {item.get('message')}",
+                item.get("path"),
+            ))
+    except Exception as exc:
+        findings.append(_finding(
+            "release_metadata_coherence_unloadable",
+            f"cannot validate release metadata coherence: {exc}",
+            ".agents/agentos/release_coherence.py",
+        ))
     legacy_launchers = sorted(
         p.relative_to(root).as_posix()
         for pattern in (".agents/bin/agentos.v*", ".agents/bin/agentos-mcp.v*")
@@ -414,7 +432,7 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     # them as a release-integrity failure only when they are actually committed
     # into the authoritative MANIFEST. The manifest builder excludes them.
     # Clean-main release packaging gate.
-    release_clutter_globs = ('apply_v*.py', 'apply_v*.py.sha256', 'tools/apply_v*.py', 'tools/validate_v*.py', 'CHECKSUMS_V*.sha256', 'VALIDATION_REPORT*.json', '*.zip', '*.zip.sha256', '.agents/bin/agentos.v*', '.agents/bin/agentos-mcp.v*', '.agents/docs/RELEASE_NOTES_V*.md', '.agents/docs/USAGE_V*.md', '.agents/docs/GITHUB_READY_FULL_RELEASE_V*.md', '.agents/docs/archive/*', '.agents/docs/archive/**', 'HOTFIX_INFO.txt', 'UPGRADE_FROM_0.22*.md', 'UPGRADE_FROM_0.23*.md', 'UPGRADE_FROM_0.24.0.md', 'UPGRADE_FROM_0.24.1.md', 'UPGRADE_FROM_0.24.2.md')
+    release_clutter_globs = ('apply_v*.py', 'apply_v*.py.sha256', 'tools/apply_v*.py', 'tools/validate_v*.py', 'CHECKSUMS_V*.sha256', 'VALIDATION_REPORT*.json', '*.zip', '*.zip.sha256', '.agents/bin/agentos.v*', '.agents/bin/agentos-mcp.v*', '.agents/docs/RELEASE_NOTES_V*.md', '.agents/docs/USAGE_V*.md', '.agents/docs/GITHUB_READY_FULL_RELEASE_V*.md', '.agents/docs/archive/*', '.agents/docs/archive/**', 'HOTFIX_INFO.txt', 'UPGRADE_FROM_0.22*.md', 'UPGRADE_FROM_0.23*.md', 'UPGRADE_FROM_0.24.0.md', 'UPGRADE_FROM_0.24.1.md', 'UPGRADE_FROM_0.24.2.md', 'UPGRADE_FROM_0.24.3.md')
     release_clutter = sorted({
         p.relative_to(root).as_posix()
         for pattern in release_clutter_globs
@@ -489,7 +507,8 @@ DOC_FILES = (
     "huong_dan.vi.md",
     ".agents/docs/MCP_FEATURE_RUNTIME_REFACTOR_V0243.md",
     ".agents/docs/SCHEMA_BOOTSTRAP_BASELINE_V0250.md",
-    "UPGRADE_FROM_0.24.3.md",
+    ".agents/docs/RELEASE_METADATA_COHERENCE_V0251.md",
+    "UPGRADE_FROM_0.25.0.md",
 )
 
 

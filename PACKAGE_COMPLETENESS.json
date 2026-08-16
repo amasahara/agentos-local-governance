@@ -1,8 +1,8 @@
 {
-  "release": "0.25.2",
+  "release": "0.25.3",
   "kind": "full_materialized_github_ready",
-  "schema": 50,
-  "authoritative_file_count": 219,
+  "schema": 51,
+  "authoritative_file_count": 228,
   "required_top_level": [
     "VERSION",
     "AGENTS.md",
@@ -37,5 +37,6 @@
   ],
   "upload_workflow": "extract -> upload/replace repository -> commit/push -> GitHub Actions validates",
   "manual_apply_required": false,
-  "coherence_contract_version": 1
+  "coherence_contract_version": 1,
+  "update_preservation": "project_owned_never_overwrite_hash_gated_distribution"
 }

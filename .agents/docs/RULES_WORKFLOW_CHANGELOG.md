@@ -1,3 +1,11 @@
+## v0.25.3 — Architecture Discovery & Evidence Binding
+- Added schema 51 for deterministic static architecture scan runs, observations, evidence bindings, and advisory discrepancies.
+- Discovery is read-only: project code is not executed, network access and symlink traversal are forbidden, and raw source text is not persisted in AgentOS state.
+- Evidence is bound by project-relative path, SHA-256, and bounded locator metadata; scanner output cannot mutate or activate the 27-section Architecture Contract.
+- Added five CLI discovery commands and four read-only MCP inspection tools; scan execution and architecture mutation remain outside MCP.
+- Added an ownership-aware update preservation boundary: project source, `AGENTS.md`, local governance overrides, architecture working copy, skills, workflows, and runtime/state artifacts are never overwritten by the updater.
+- AgentOS-managed distribution files require exact baseline hashes before replacement; post-migration failure restores both distribution files and the SQLite state snapshot.
+- Architecture discrepancy findings remain advisory in v0.25.3; drift/compliance enforcement is reserved for v0.25.4.
 
 ## v0.25.2 — 27-Section Architecture Contract & Human Clarification Gates
 - Added the fixed 27-section Architecture Contract registry `ARCH-01` through `ARCH-27`.

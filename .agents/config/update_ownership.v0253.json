@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "release": "0.25.3",
+  "mode": "staged_hash_gated_fail_closed",
+  "unknown_paths": "PROJECT_OWNED",
+  "project_owned_never_overwrite": true,
+  "distribution_managed_requires_baseline_hash_match": true,
+  "preflight_all_changes_before_mutation": true,
+  "atomic_replace_distribution_files": true,
+  "rollback_distribution_files_on_failure": true,
+  "preserve_workflow_state": true,
+  "preserve_architecture_working_copy": true,
+  "preserve_local_governance_override": true,
+  "canonical_governance_conflict": "abort_before_mutation",
+  "project_owned_patterns": [
+    "AGENTS.md",
+    ".agents/config/governance.local.json",
+    ".agents/config/project.id",
+    ".agents/config/project.purpose.json",
+    ".agents/architecture/**",
+    ".agents/state/**",
+    ".agents/runtime/**",
+    ".agents/cache/**",
+    ".agents/skills/**",
+    ".agents/workflows/**"
+  ]
+}

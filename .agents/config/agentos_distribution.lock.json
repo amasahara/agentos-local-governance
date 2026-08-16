@@ -1,1147 +1,828 @@
 {
+  "schema": 1,
   "release": "0.25.3",
-  "kind": "full",
-  "file_count": 228,
-  "files": [
+  "database_schema": 51,
+  "ownership_default": "PROJECT_OWNED",
+  "managed_files": [
     {
       "path": ".agents/agentos/__init__.py",
-      "size": 23,
       "sha256": "997ac2d301b477dc78423d1bfb56b5e6d189e891e758d3a6f362769d7fc22f69"
     },
     {
       "path": ".agents/agentos/adaptive_budget.py",
-      "size": 30523,
       "sha256": "2ff30d086091f4a46b64207b329b73f18fcde5fa6de547bf02def72e84acbd5d"
     },
     {
       "path": ".agents/agentos/adaptive_budget_cli.py",
-      "size": 3655,
       "sha256": "d43881501bda27fb1edd4e655c06a6b62d3c8c5781b967efa87ded3170a27231"
     },
     {
       "path": ".agents/agentos/architecture_contract.py",
-      "size": 32028,
       "sha256": "f40e3cf72b387cfa307109e3ed2016da8e0afc4763bef00b6849e3f9d0da77ec"
     },
     {
       "path": ".agents/agentos/architecture_contract_cli.py",
-      "size": 4035,
       "sha256": "ea0e0c276750c4cb94c91d1a4a122f589fd333cd337b2e86fe296f07dad08a60"
     },
     {
       "path": ".agents/agentos/architecture_discovery.py",
-      "size": 33464,
       "sha256": "115ab4c94cbf15ed2679552eb39f9b99b051b356b255ddd59cb8e037fc3364b3"
     },
     {
       "path": ".agents/agentos/architecture_discovery_cli.py",
-      "size": 2725,
       "sha256": "5db4d00bdc37df4483a1f4bc64fadfd0888840f824e0c55a5edc4ab3702193a4"
     },
     {
       "path": ".agents/agentos/audit_daemon.py",
-      "size": 3802,
       "sha256": "a768a82512f6ce7fe58e80930b9208fec3eccc4348091f763a67e0c998027e33"
     },
     {
       "path": ".agents/agentos/cache.py",
-      "size": 3825,
       "sha256": "8233e523210063ad113ab344d56214d1b11f393c55b2ebc03267766a1ebbd5bd"
     },
     {
       "path": ".agents/agentos/cli.py",
-      "size": 33012,
       "sha256": "7896730ade10951b1e62db0e996677b636ac58192311a55eaf4890ab94ebeefd"
     },
     {
       "path": ".agents/agentos/cli_runtime.py",
-      "size": 12890,
       "sha256": "575e83022cb1b1e2ed4da6d7d3b9d4ab0ad2926d95358a97f6ac8b28618b9388"
     },
     {
       "path": ".agents/agentos/collaboration.py",
-      "size": 7250,
       "sha256": "c95febe326cf331239b1bdacec30f2d29807f07a033e2fdc67876af634dc756b"
     },
     {
       "path": ".agents/agentos/concurrency.py",
-      "size": 13450,
       "sha256": "b5ba9408727b2ffda1ed8e1ffeb2ab5d12e73901c131f2bb8ab0b15d8edb8e6d"
     },
     {
       "path": ".agents/agentos/consolidation_cockpit.py",
-      "size": 19020,
       "sha256": "fb01b3542b5fdf8ca5067230e4647aed552bd27fd044d003b016cb35f62e3ad2"
     },
     {
       "path": ".agents/agentos/consolidation_cockpit_cli.py",
-      "size": 3495,
       "sha256": "6f4be42a4d4b593f02fd404bed526e551f063e8416847215fc8286e674f92b3e"
     },
     {
       "path": ".agents/agentos/context_evaluation.py",
-      "size": 23411,
       "sha256": "25a14ceff9243b062ab6e07d587634ff9d3323593051fc4a9f03761e80d3052e"
     },
     {
       "path": ".agents/agentos/context_evaluation_cli.py",
-      "size": 5192,
       "sha256": "8e612e9f8d4503d1c6c14909adfe2e0478c595c68611d3add3d1808cd95ab8b2"
     },
     {
       "path": ".agents/agentos/context_runtime.py",
-      "size": 13791,
       "sha256": "db8feeca9cc7b8c2d62115b5107b33ec2df2cb93bce16f12263cb5a3237f834f"
     },
     {
       "path": ".agents/agentos/context_transport.py",
-      "size": 76798,
       "sha256": "4e0a22a4ec99e04fa24a231bc9c545e4784667c02491f874ad983511b809bdd2"
     },
     {
       "path": ".agents/agentos/context_transport_cli.py",
-      "size": 4826,
       "sha256": "ee9640e4c8454ff16732e7fe3ff96794fb827f6b8bb68ea6aeebe8ec96aaeeb4"
     },
     {
       "path": ".agents/agentos/controlled_target_insert.py",
-      "size": 56267,
       "sha256": "ccf3ed6fbc5bd36c7b10aa00e5ca6851743141ba4aae102ee07bc1f5233174d1"
     },
     {
       "path": ".agents/agentos/controlled_target_insert_cli.py",
-      "size": 4544,
       "sha256": "29d17a696a0f78ae2f6a47c91962bb7fda087edcfbb6717711227ee059efe31c"
     },
     {
       "path": ".agents/agentos/core.py",
-      "size": 21259,
       "sha256": "4aa169a556aedf0e484b0a2aa76cbbbf80bd5ccb2db56b7b3df3917c89347a6f"
     },
     {
       "path": ".agents/agentos/data_subject_rights.py",
-      "size": 40671,
       "sha256": "c915b13181cfb5883fa2000c4d585915daf5e48e54463a72165c21123d6b3e89"
     },
     {
       "path": ".agents/agentos/data_subject_rights_cli.py",
-      "size": 4356,
       "sha256": "df2fdaa4130287ea9e73e27af7f63868142c0d817c2edbb50d78975ccabcc315"
     },
     {
       "path": ".agents/agentos/database_boundary.py",
-      "size": 22901,
       "sha256": "a4acdbf7f9a744dbfc825efefa99f0d9f9e09d91d05693901d6512105052443b"
     },
     {
       "path": ".agents/agentos/database_boundary_cli.py",
-      "size": 5108,
       "sha256": "c38bcdbb2b1c4b1f15ec2389f0ac848506ab33b46eb3d6c552ff121e31daf6f1"
     },
     {
       "path": ".agents/agentos/db.py",
-      "size": 44182,
       "sha256": "fa99cee536e93515586aa10d22cf78a83211dba8255fd7d2e9c11d34f44a43ae"
     },
     {
       "path": ".agents/agentos/db_aware_context_projection.py",
-      "size": 13836,
       "sha256": "02e1f8b22b2c6a77735215783f5b860547bb4490b865f2fb3ec91f20a2be1d8a"
     },
     {
       "path": ".agents/agentos/db_aware_context_projection_cli.py",
-      "size": 1615,
       "sha256": "0802894dc64f5c8f6d41e5b5238ead6e2e60db7ff1e33ea575e2ba9acabbfe05"
     },
     {
       "path": ".agents/agentos/documentation.py",
-      "size": 3483,
       "sha256": "2ad310ba4a9b30387de2a2faaf6b94c7d9bf9efc55af4855be18fb63f04ac18e"
     },
     {
       "path": ".agents/agentos/drift.py",
-      "size": 6525,
       "sha256": "b13fb1d64c6c6ed0f09aca105134b8c51ca6818690fe11c6fd3447fbe34c14df"
     },
     {
       "path": ".agents/agentos/embeddings.py",
-      "size": 6086,
       "sha256": "0b95e796529234f173e59588cf77c01bee05f3311c58b258e8aadb7a855cceab"
     },
     {
       "path": ".agents/agentos/evaluation.py",
-      "size": 6848,
       "sha256": "7c2a18ec75b62757f272b3fcc7ade7eafc05428ba593d67152cf1f303b93f55c"
     },
     {
       "path": ".agents/agentos/evolution.py",
-      "size": 6407,
       "sha256": "33c7661e67ae9f1c21c38b9e4ff5fe649ea4c78f004d07996c17cc5429c41849"
     },
     {
       "path": ".agents/agentos/external_audit.py",
-      "size": 10168,
       "sha256": "2d78f335c160e59afbcaa285500b14fac0e6c563527d547ed97d03581523e2a5"
     },
     {
       "path": ".agents/agentos/gateway_client.py",
-      "size": 929,
       "sha256": "137047b65bc266af9fbaef28433d782b7c29243629fa5b91750105875270abaa"
     },
     {
       "path": ".agents/agentos/gatewayd.py",
-      "size": 3396,
       "sha256": "09b445bad0a3af7957a9b50dc281cfbfd79798e7a32bfaa6ee0269a4b417d2e8"
     },
     {
       "path": ".agents/agentos/governance_enforcement.py",
-      "size": 13040,
       "sha256": "119231d83a269f13f3450c1959ae922b408f9d7c07d6f4d2272e21e9174528c5"
     },
     {
       "path": ".agents/agentos/governance_enforcement_cli.py",
-      "size": 996,
       "sha256": "80f04608604927686ddaf6008559be4002e891098484531b722491782dc0ce7e"
     },
     {
       "path": ".agents/agentos/human_decision.py",
-      "size": 19391,
       "sha256": "e9981d1eb72869768c79e1134846179914ac21a5a4d72ae176e86cbbd0ddb598"
     },
     {
       "path": ".agents/agentos/human_decision_cli.py",
-      "size": 4762,
       "sha256": "f6c1e7197844d3e255efe4e4beb4058de02dad45916ad9def5abbe1a547e222a"
     },
     {
       "path": ".agents/agentos/identity_resolution.py",
-      "size": 55599,
       "sha256": "0ce2836c36bac2a13d7cc01855c3d7122b982774adff6f633e0b2489ff417543"
     },
     {
       "path": ".agents/agentos/identity_resolution_cli.py",
-      "size": 6314,
       "sha256": "2704ee2ceed73caeaa28bbe8095ef9ad04668cf72023438d06c342a02ba76099"
     },
     {
       "path": ".agents/agentos/incremental_index_benchmark.py",
-      "size": 9042,
       "sha256": "d1d87f263cc569d406bdff2dc0a628f0a5bab36e1173674d4d071c218d95c9d4"
     },
     {
       "path": ".agents/agentos/indexing.py",
-      "size": 12807,
       "sha256": "f588500dfbf2d4e68de18bc175d1efa6ccd2eb685d12f91a96aa286a3c1bded7"
     },
     {
       "path": ".agents/agentos/jobs.py",
-      "size": 9406,
       "sha256": "68c7d74148d1f54af13222c6b565d46a10b680c81f2c5924182f9c1cebe698a3"
     },
     {
       "path": ".agents/agentos/knowledge_graph.py",
-      "size": 5458,
       "sha256": "abe1f110ffca787d81cab63e55e352474e24508bf2067798c46b498af16b48c9"
     },
     {
       "path": ".agents/agentos/mcp_adaptive_budget.py",
-      "size": 2927,
       "sha256": "4b6622f9eb4d6df47aa803a3a2d4850e0224ef1d084833a03020899b9d035688"
     },
     {
       "path": ".agents/agentos/mcp_catalog.py",
-      "size": 682,
       "sha256": "888e126d6ebe97a12ef84d28a841ad93ecfc7547d5453fefe2bcd0370d2ea2d9"
     },
     {
       "path": ".agents/agentos/mcp_consolidation_cockpit.py",
-      "size": 2226,
       "sha256": "f0d86485a2ddccb320122ebdaa39bee6637284f717d8fd309ab4832c757a4435"
     },
     {
       "path": ".agents/agentos/mcp_consolidation_gateway.py",
-      "size": 5664,
       "sha256": "4b839a49dd6e12efebd1ef39ef9685d5d8d077f3bf263f7ffb2ecad84a038ed2"
     },
     {
       "path": ".agents/agentos/mcp_context_evaluation.py",
-      "size": 4970,
       "sha256": "b8d5dd17a6f1fcf2b42fc3a860d673a6590af9c5414b6a372d9637f4c48593e6"
     },
     {
       "path": ".agents/agentos/mcp_context_transport.py",
-      "size": 4452,
       "sha256": "bf697e2c5eae9a6d3d75b7d143344524c3020a427db94fc3c592112801c92dc9"
     },
     {
       "path": ".agents/agentos/mcp_controlled_target_insert_gateway.py",
-      "size": 7156,
       "sha256": "2ef7575a89ec1cfdc7bbde8e1a2b1bb4e537f6c62756d84d983b697120338f46"
     },
     {
       "path": ".agents/agentos/mcp_core_runtime.py",
-      "size": 5530,
       "sha256": "7895ea745717888522ac529fcaa57621a60c9308dedba9cbb3e375051979c65b"
     },
     {
       "path": ".agents/agentos/mcp_data_subject_rights.py",
-      "size": 1960,
       "sha256": "059797e3ab508b7b9a72dd1a20eae53512877a56a3ec95918f367476eb539bcf"
     },
     {
       "path": ".agents/agentos/mcp_database_boundary_gateway.py",
-      "size": 5630,
       "sha256": "42a03456729191825e96d970245ad615da02a094c90975cba53a952e4d3b557a"
     },
     {
       "path": ".agents/agentos/mcp_db_aware_context_projection.py",
-      "size": 1119,
       "sha256": "0d805fd4812013a5db3641523c14d1cb81d1de98776898669f4a01491b96a899"
     },
     {
       "path": ".agents/agentos/mcp_feature_handlers.py",
-      "size": 25916,
       "sha256": "317c57c5e9e195685d8089f8fedb01de765362cd172cd556ded1f2cff8d93455"
     },
     {
       "path": ".agents/agentos/mcp_feature_runtime.py",
-      "size": 4547,
       "sha256": "5b5b0ee5140655b5436078ced53e22a17f8a555e4127f5b1600370b749db8c91"
     },
     {
       "path": ".agents/agentos/mcp_identity_gateway.py",
-      "size": 5304,
       "sha256": "f921858057c59023ad6e819ea27bb98d94910765dcbd3a3f5a0803a20514c2c4"
     },
     {
       "path": ".agents/agentos/mcp_identity_resolution_gateway.py",
-      "size": 6349,
       "sha256": "98fd9c3ae679779bca6bcc76d5698c8adfc2a314834722a4100f8fe58f8a82b6"
     },
     {
       "path": ".agents/agentos/mcp_read_only_extraction_gateway.py",
-      "size": 8487,
       "sha256": "1e530e53d47ceb68c17ad142e8b2e61ef18cafc10d145223387410a7ec72dcf3"
     },
     {
       "path": ".agents/agentos/mcp_reconciliation_recovery_gateway.py",
-      "size": 7100,
       "sha256": "4d0033426fbb8d9748e495450241847cd310c766dd6d50cf2cdedb2c78a4fc37"
     },
     {
       "path": ".agents/agentos/mcp_risk_tiered_batch_review.py",
-      "size": 1375,
       "sha256": "5e631fc74839a2df515459599411ec1d14be80c783533ce5f7d9c7bae062eca5"
     },
     {
       "path": ".agents/agentos/mcp_runtime.py",
-      "size": 8541,
       "sha256": "b8dffe055506973f0abdf94cd3f5443a39ebd636c4e7a79125d7dafe00d88eee"
     },
     {
       "path": ".agents/agentos/mcp_schema_mapping_gateway.py",
-      "size": 7308,
       "sha256": "5ae33651e1bf5ed17c40c2de667ec6c5ea48c513f4a5201cbb6dfa62798b0de2"
     },
     {
       "path": ".agents/agentos/mcp_secret_lineage.py",
-      "size": 2694,
       "sha256": "9955102b156ee03ad67062b6d130a385f0ffc12fa63b438f7a6aefc358904aef"
     },
     {
       "path": ".agents/agentos/mcp_selection_gateway.py",
-      "size": 6700,
       "sha256": "ca45d19d0a579b4b967dc999ca7ee3456e42581e9676ddf00af114b298542b6a"
     },
     {
       "path": ".agents/agentos/mcp_server.py",
-      "size": 6477,
       "sha256": "a9256fb47822a31e630a7074c96f4f42a2f26290719caca96dc8b30fdc809bc8"
     },
     {
       "path": ".agents/agentos/mcp_v0252.py",
-      "size": 3867,
       "sha256": "e614a6e2a9d8629128fe3290495e0722e1927d4c7bd413cd8c8c5aa25268107b"
     },
     {
       "path": ".agents/agentos/mcp_v0253.py",
-      "size": 2560,
       "sha256": "e2be22b25ff97faf5d04d21655f4332d7c36220d86538c488ff995caafb50d2d"
     },
     {
       "path": ".agents/agentos/memory.py",
-      "size": 6048,
       "sha256": "4273f29d357b5d595a9b6c135f8af0abb6d3afdd79e27ae56c498f17519e2448"
     },
     {
       "path": ".agents/agentos/models.py",
-      "size": 1551,
       "sha256": "ec274bb902b5cea9b3614736e37fbc24c80c26c3e3581b153653ea1f0472bbb6"
     },
     {
       "path": ".agents/agentos/performance_baseline.py",
-      "size": 12280,
       "sha256": "6e1a980c22da5e1bd14fc6faf8fcea1cd11503877520f48767d070ffbed2f90c"
     },
     {
       "path": ".agents/agentos/planning.py",
-      "size": 5512,
       "sha256": "b562fd30c380879d9959db516cf6d85349332a7db9dedb2b8f66b9bb8f6c47aa"
     },
     {
       "path": ".agents/agentos/policy.py",
-      "size": 17394,
       "sha256": "86cff14c8dd85c6db24f05a3e5cebdc4f718e9403460dd58eee93903b7b2c0ff"
     },
     {
       "path": ".agents/agentos/project_consolidation.py",
-      "size": 51299,
       "sha256": "28ebec9d9d82bc8ebff49a70ead9244167d935d263404b30c56458b25fb05f04"
     },
     {
       "path": ".agents/agentos/project_consolidation_cli.py",
-      "size": 6411,
       "sha256": "6bdbadad1ea530f4caa3846477ef9b045cf831fed1e23415f99a534d3bdb501a"
     },
     {
       "path": ".agents/agentos/project_identity.py",
-      "size": 32736,
       "sha256": "6b385aed559a2a0ad0f2120073b070316d874095e28bdec05e60e28203e9712a"
     },
     {
       "path": ".agents/agentos/project_identity_cli.py",
-      "size": 9446,
       "sha256": "d54e7be32bf96442c37c17ecffcdb87b946ca484cf9dc741d62d78a09912016d"
     },
     {
       "path": ".agents/agentos/project_selection.py",
-      "size": 33447,
       "sha256": "f8d343e4bd8fde6e2d4ca0eabf328108d51b545e3292b158cdb029579c1b9b26"
     },
     {
       "path": ".agents/agentos/project_selection_cli.py",
-      "size": 9962,
       "sha256": "911994c4f2279bcef8eae9a7eb7b47658bffc9dfaecf1f13a9ca712e450a34bc"
     },
     {
       "path": ".agents/agentos/proxy.py",
-      "size": 21786,
       "sha256": "6360da95237e9afefe10eea75203a996b95008d4b549039f6457357d5930c09d"
     },
     {
       "path": ".agents/agentos/read_only_extraction.py",
-      "size": 62151,
       "sha256": "43af03e6314ecb48bd15fe473cfd27bbd90949a8d734f14d253a08a13dd66cc3"
     },
     {
       "path": ".agents/agentos/read_only_extraction_cli.py",
-      "size": 5156,
       "sha256": "46df27f3029bc9507fae7581dfe01463cc83c9559e61e1e1ccc8b2d4b9ac87f2"
     },
     {
       "path": ".agents/agentos/reconciliation_recovery.py",
-      "size": 54700,
       "sha256": "5b0e5e127e465e80039dcbd3455619b7d90c02bc9b7dec9793cc9c30d5e91400"
     },
     {
       "path": ".agents/agentos/reconciliation_recovery_cli.py",
-      "size": 5390,
       "sha256": "4775209d9f7549dc8b82fc09caa63ddecfffb2c216b70ea9b307101ded5b0905"
     },
     {
       "path": ".agents/agentos/release_coherence.py",
-      "size": 11943,
       "sha256": "d2e32a76216c3923e19a184f69030f8ae745323296d8336cf985a90c5b18c803"
     },
     {
       "path": ".agents/agentos/release_integrity.py",
-      "size": 25604,
       "sha256": "e0ef6cdb6a67a26a6053a81ff0c89cde604d515f24a34f16a3afead868158c6e"
     },
     {
       "path": ".agents/agentos/release_integrity_cli.py",
-      "size": 1008,
       "sha256": "ab0e950d031f78fbbb422a4272038b7eda84ecd3ffec30e79272216baccec1db"
     },
     {
       "path": ".agents/agentos/release_manifest.py",
-      "size": 3909,
       "sha256": "e0d52a693e06ea19a17f1260577156c83780fdbd59e5499472a40c0234648579"
     },
     {
       "path": ".agents/agentos/retrieval.py",
-      "size": 5228,
       "sha256": "9dc48471e112185b5dd3664a939b303e540387052c5698ef00ee21c8599a8860"
     },
     {
       "path": ".agents/agentos/risk_tiered_batch_review.py",
-      "size": 26451,
       "sha256": "8822310ec644128431749e387382d892164b7128102c83c9ff4bd9c92bf06b22"
     },
     {
       "path": ".agents/agentos/risk_tiered_batch_review_cli.py",
-      "size": 3625,
       "sha256": "99e2a2bd5ee9b5723b861b22d569839e5e202d2312cdfd76d5d84985be15b5a7"
     },
     {
       "path": ".agents/agentos/schema_bootstrap.py",
-      "size": 12981,
       "sha256": "393d335e021759fff6ea527cd6d75af5d3ff2474139b64d09c157920e2a69622"
     },
     {
       "path": ".agents/agentos/schema_mapping.py",
-      "size": 52993,
       "sha256": "62995eac1f57be175a073d2ba164e0c30ab73d327cb1439c491bf5dec5d261fb"
     },
     {
       "path": ".agents/agentos/schema_mapping_cli.py",
-      "size": 10245,
       "sha256": "57f0460c23b6b92af400888de8b6cd2f24bc54459a3fc22698974a1afcdc2931"
     },
     {
       "path": ".agents/agentos/schema_version.py",
-      "size": 312,
       "sha256": "caa23274025ff7a21996abac66bf665416e8a5d2be2d6ba914ccc32740bd8ab6"
     },
     {
       "path": ".agents/agentos/secret_lineage.py",
-      "size": 39464,
       "sha256": "798cba3633181966e09f68e965bf49ca608f62bbf2684c046ffe2164b8d9c478"
     },
     {
       "path": ".agents/agentos/secret_lineage_cli.py",
-      "size": 6512,
       "sha256": "74f85cb8fa8bd55c74a3248ae3f15f065609defe48ba18ae5f15ea5ec1699186"
     },
     {
       "path": ".agents/agentos/security.py",
-      "size": 6999,
       "sha256": "945bc138e257c7f877c95aee29e17d77b458e08ef822150834bd67ff0ca0c20d"
     },
     {
       "path": ".agents/agentos/skills.py",
-      "size": 7830,
       "sha256": "c262bdd34eba7d700bfefdbede8b431e24227c06c564edebb59a997d1e6f265b"
     },
     {
       "path": ".agents/agentos/storage.py",
-      "size": 4219,
       "sha256": "78a9960f1695d3fef3a58c3cbc4df9939c2b1c30506f045335bae8111644e080"
     },
     {
       "path": ".agents/agentos/tooling.py",
-      "size": 11499,
       "sha256": "596854230c0726136b231500a92e93ffc57fd82bc3b06973b8328df851a12aa9"
     },
     {
       "path": ".agents/agentos/update_preservation.py",
-      "size": 4664,
       "sha256": "135d5194452650377b3c90383441c866432ed369b696996c17c8d3ab473023aa"
     },
     {
       "path": ".agents/agentos/workflow.py",
-      "size": 12206,
       "sha256": "669d61ef153108ef84284bda5a706fb99dac384009356e25d8bca45164b21954"
     },
     {
       "path": ".agents/bin/agentos",
-      "size": 265,
       "sha256": "967b58fa1c48a1dfb31eb1829bd071e263218c8d4e09a44a44ed8ea517fcf2cd"
     },
     {
       "path": ".agents/bin/agentos-audit-daemon",
-      "size": 178,
       "sha256": "d9e02ed78091c383d60a0b07bf9d99c6bb51d9ecc8571d3cdd9b2b761884da34"
     },
     {
       "path": ".agents/bin/agentos-gatewayd",
-      "size": 160,
       "sha256": "cba761fad1b5c9fe7366bf313c08bdd9f35ad7fca40b3d7a43324fc307754644"
     },
     {
       "path": ".agents/bin/agentos-mcp",
-      "size": 265,
       "sha256": "c076a5fcc1df94df3bbe85afa2342ea934fafd29fb7f11d5dd66fc2bc55ae98c"
     },
     {
       "path": ".agents/bin/agentos-mcp.cmd",
-      "size": 191,
       "sha256": "74c33a991ce4bbf962238083a7a87ea273d6279dfb5505f2bfb2c22b02c8c251"
     },
     {
       "path": ".agents/bin/agentos.cmd",
-      "size": 191,
       "sha256": "e14f09ecaa86d6f70b37c450b030df1a3170be7d8d6f046ef8a5d67bcc581d84"
     },
     {
       "path": ".agents/bin/agentosctl",
-      "size": 1191,
       "sha256": "a0b185855b9ec6cb41f7ce90fb847de84be9146bbf323c4a76997917bc527d80"
     },
     {
       "path": ".agents/bin/hooks/pre-commit",
-      "size": 402,
       "sha256": "66cc8f9396f65c650797e8e6b3f13e3700d972beea361abb34371b89188db9ce"
     },
     {
       "path": ".agents/bin/install-git-hooks.sh",
-      "size": 295,
       "sha256": "ceb559ea4b88be0b0d45d18f5d6c0149922cd7886f0dbd57d2578c13dfe6da46"
     },
     {
       "path": ".agents/bin/install.cmd",
-      "size": 614,
       "sha256": "1019bbbfffdf0db18274e5b0b75d3d5c13d758c33d669a66272b999587fc676b"
     },
     {
       "path": ".agents/bin/install.sh",
-      "size": 1254,
       "sha256": "6b09800ed6f8b3d16a9cae1f7527ec5f75d259ae9e0dc5fad60812f80c564cf9"
     },
     {
-      "path": ".agents/config/agentos_distribution.lock.json",
-      "size": 31381,
-      "sha256": "6f8d997ab92b7c782067e4fda1a55deeeac4a106d4a70bf4489c595972723219"
-    },
-    {
       "path": ".agents/config/controlled_target_insert_policy.v0220.json",
-      "size": 1913,
       "sha256": "30543a0d9397a5f02cd8005cba3670f1e92423684adcf166cadc7b652c5ae11d"
     },
     {
       "path": ".agents/config/database_boundary_policy.v0210.json",
-      "size": 1453,
       "sha256": "4db975c50732a7ec9c740a84f2e8f110b314b224520842a398e6923bf0cc3fa2"
     },
     {
       "path": ".agents/config/governance.json",
-      "size": 44177,
       "sha256": "1633abaadca009ee169ae6ac9ddbd88de1da35045fc303d967ea2432a70fd433"
     },
     {
       "path": ".agents/config/identity_resolution_policy.v0221.json",
-      "size": 1350,
       "sha256": "99994a949e703d0128ec1f92a9bd7f7d940f3b1830ecd4a8029304ada5f8ebcc"
     },
     {
-      "path": ".agents/config/project.id",
-      "size": 345,
-      "sha256": "ab9f5773a69010f23dff927c4273aae21ee5ed02906dd43b514518b331c85dd1"
-    },
-    {
-      "path": ".agents/config/project.purpose.json",
-      "size": 563,
-      "sha256": "a4170cff32e65cd1f27db1a56e61039268b0c31c06e94e4d3086dbf929b3a5b9"
-    },
-    {
       "path": ".agents/config/project_consolidation_policy.v0202.json",
-      "size": 1228,
       "sha256": "76ca1f54266799cea7879292fe6c56e1db24b71e15263188ecc7520001afa68f"
     },
     {
       "path": ".agents/config/read_only_extraction_policy.v0212.json",
-      "size": 1519,
       "sha256": "8becb5417849b520c3cd5a95b72fb2b69657e869496c6fc360e5ff50c7bac9ca"
     },
     {
       "path": ".agents/config/reconciliation_recovery_policy.v0222.json",
-      "size": 1230,
       "sha256": "235a7873e3f485196421c25142b9ee9894814bd42088c83250b4785cc851c068"
     },
     {
       "path": ".agents/config/schema_mapping_policy.v0211.json",
-      "size": 1548,
       "sha256": "4bc70ebd3a6688cdb01cd75bc008ab610f4c319ba2e069103a253a80da951672"
     },
     {
       "path": ".agents/config/update_ownership.v0253.json",
-      "size": 882,
       "sha256": "9cfe57f2873052a6d65b89d493db9b1a4b8ddf6688c77dae3f50ab526aae1443"
     },
     {
       "path": ".agents/docs/ADAPTIVE_TOKEN_BUDGET_MODEL_PROFILES_V0231.md",
-      "size": 3258,
       "sha256": "b482f7ef95c09421078cd8290bf0572da403edef4e10598bd9f648752bc5b110"
     },
     {
       "path": ".agents/docs/ARCHITECTURE_CONTRACT_HUMAN_CLARIFICATION_V0252.md",
-      "size": 3763,
       "sha256": "f22b385a9b0b8fc98091e1ea5f9afc97593b0e147508c6925729b0b9b225b503"
     },
     {
       "path": ".agents/docs/ARCHITECTURE_DISCOVERY_EVIDENCE_V0253.md",
-      "size": 4613,
       "sha256": "ef05350a387845e3a6cfc74c7ae6cd98310b3d8b4b46369ee833d9d272f5d4e4"
     },
     {
       "path": ".agents/docs/CONSOLIDATION_COCKPIT_PERFORMANCE_BASELINE_V0233.md",
-      "size": 4282,
       "sha256": "7d5f8da23e0625e09ece5beac4786e908f7eb539954d579c77008e091b5d2022"
     },
     {
       "path": ".agents/docs/CONTEXT_EXPANSION_COMPRESSION_EVALUATION_V0232.md",
-      "size": 2943,
       "sha256": "00ef4e33383133258e6cea68b1bc68e7856b57f1a04c42cbe4d1fee73a7fe33d"
     },
     {
       "path": ".agents/docs/CONTROLLED_TARGET_INSERT.md",
-      "size": 1931,
       "sha256": "07f0abbe1c7a96d10472001e490e92dbec26f42deccb63685f9c8c2f91c4030c"
     },
     {
       "path": ".agents/docs/CORE_REINTEGRATION_V0223.md",
-      "size": 518,
       "sha256": "a227dcb1e5b09e40c1c9a950a3f739c3b25112d62879d706d78d0d71ab1387e7"
     },
     {
       "path": ".agents/docs/DB_AWARE_CONTEXT_PROJECTION_V0242.md",
-      "size": 2316,
       "sha256": "897d3ada091e5f448ce50ad18d1ecaaab13156b4bb872645ad34980f61b2dab0"
     },
     {
       "path": ".agents/docs/IDENTITY_RESOLUTION_DEDUPLICATION_LINEAGE.md",
-      "size": 1525,
       "sha256": "00c40d19c30653a34aa9af4d971b3e5a8043df64896e9d1fb61f975bc83cbd1b"
     },
     {
       "path": ".agents/docs/INCREMENTAL_SYMBOL_INDEX_V0234.md",
-      "size": 1882,
       "sha256": "b1e828f7664deb73e8154e6754806439a702283dd520fc5d7741737b38dc675b"
     },
     {
       "path": ".agents/docs/MCP_FEATURE_RUNTIME_REFACTOR_V0243.md",
-      "size": 3010,
       "sha256": "f518b51f50955b396bfe9f7dda1e6061b9a377d4ed77b666b5ec22acbfa8c959"
     },
     {
       "path": ".agents/docs/PRIMARY_PROJECT_CONSOLIDATION.md",
-      "size": 2355,
       "sha256": "6accae58fa389b5e536004ee2cffa57b598217b23ed701b35223d6810f3bbe3c"
     },
     {
       "path": ".agents/docs/PRIMARY_PROJECT_SELECTION.md",
-      "size": 2397,
       "sha256": "734cb23ebf968306f90cfe5e4db43e9f4520cead1e902374f877b14a431e042f"
     },
     {
       "path": ".agents/docs/PRIVACY_BOUNDARY_V0227.md",
-      "size": 728,
       "sha256": "c6f7b66a64c180994899741e9b082c65c9a59119836920b5d09113f3b6c7e0d5"
     },
     {
       "path": ".agents/docs/PROJECT_IDENTITY.md",
-      "size": 3108,
       "sha256": "d2c32188da2564a4d8c449ea823842131ef39ec0783ef9f61d7db3e618ad7ace"
     },
     {
       "path": ".agents/docs/PROJECT_STRUCTURE.md",
-      "size": 11641,
       "sha256": "99724e5f036048a9f6aedebc2f68cfc7786cb35d10d17b9611241705789be07d"
     },
     {
       "path": ".agents/docs/READ_ONLY_EXTRACTION_AND_DATA_VALIDATION.md",
-      "size": 3394,
       "sha256": "112bf1710e2a27cefff115957978e1e25ec24d68de903bef4480af711794ee69"
     },
     {
       "path": ".agents/docs/RECONCILIATION_AND_RECOVERY.md",
-      "size": 2162,
       "sha256": "7047a211cd120ac9b1553628cf1d5b1350bcabb8eacf547e2be5b81e29d267f5"
     },
     {
       "path": ".agents/docs/RELEASE_METADATA_COHERENCE_V0251.md",
-      "size": 2382,
       "sha256": "db29c545b37b88425037d59b278cb9243c2fea67c0f2ef88a93951aba277affc"
     },
     {
       "path": ".agents/docs/REPOSITORY_RELEASE_POLICY.md",
-      "size": 2646,
       "sha256": "b2f4869f722fa5d6de569598c760d1c414c556912bd20247c40299f576f7581d"
     },
     {
       "path": ".agents/docs/REQUIREMENT_PRESERVING_CONTEXT_COMPRESSION_V0230.md",
-      "size": 2535,
       "sha256": "0e19506e65b5651363ba8962719e3ab41638835af1c635524583122178b72f6e"
     },
     {
       "path": ".agents/docs/RISK_TIERED_BATCH_REVIEW_V0241.md",
-      "size": 4477,
       "sha256": "520469eaf659803799f0a86d1597755646359badb21a1c881a38b9ff448deb03"
     },
     {
       "path": ".agents/docs/RULES_WORKFLOW_CHANGELOG.md",
-      "size": 18239,
       "sha256": "ecbb6e76bb53eb27666a05ece5241b3ac9268a08de93cf18f4d79246bc272bc1"
     },
     {
       "path": ".agents/docs/SCHEMA_BOOTSTRAP_BASELINE_V0250.md",
-      "size": 2258,
       "sha256": "d9c8d771e9979477fe653a4d2c8d5bb4cb4402eb7125a2fabf9b47a74857ad81"
     },
     {
       "path": ".agents/docs/SECRET_RESOLVER_LINEAGE_KEY_LIFECYCLE.md",
-      "size": 3865,
       "sha256": "bbc37e7c896481a4ac49dafc0af5e1e68bf18fb91fada8b57ead238bd8d2b782"
     },
     {
       "path": ".agents/docs/SOURCE_TARGET_DATABASE_BOUNDARY.md",
-      "size": 1845,
       "sha256": "e6ad60d7b5013357b571d2c587b71bd8742fbdd6bbc6db27c69ed01913581197"
     },
     {
       "path": ".agents/docs/TARGET_SCHEMA_CONTRACT_AND_FIELD_MAPPING.md",
-      "size": 3194,
       "sha256": "02861f129a8198ef2d35381977e84bbfdd7d7afbf84402d6ef5e6269429877a2"
     },
     {
       "path": ".agents/docs/UNIFIED_CLI_MCP_RUNTIME_V0225.md",
-      "size": 2433,
       "sha256": "a49640e9542ea2857d3453913ee965032f4364e0414b0b2137a4183ce94eaff8"
     },
     {
       "path": ".agents/docs/UNIFIED_GOVERNANCE_ENFORCEMENT_V0224.md",
-      "size": 1207,
       "sha256": "987320e66d4bf2845e9619ac5cbb66f8eb693ec6cf218b26f9ceb087bc72ea5f"
     },
     {
       "path": ".agents/docs/UPGRADE_FROM_0.20.0.md",
-      "size": 1220,
       "sha256": "f369a6b9a8416c2175b895346d860d393483ac5bc987945082a642e7a45c519e"
     },
     {
       "path": ".agents/docs/UPGRADE_FROM_0.20.1.md",
-      "size": 769,
       "sha256": "5ca3a4c2302c059b9a3643b399e844823ecbc90a0b27a243336f89e1dbe045db"
     },
     {
       "path": ".agents/docs/UPGRADE_FROM_0.20.2.md",
-      "size": 535,
       "sha256": "3d951b26183c08e23ce3d59ee4c4a2ad799e2304b0d861120d7cd47ca102697d"
     },
     {
       "path": ".agents/docs/UPGRADE_FROM_0.21.0.md",
-      "size": 491,
       "sha256": "f88fdddca203f73fc1cd6195d956f5a8a5c129e26612f9960cd87c0e2249807d"
     },
     {
       "path": ".agents/docs/UPGRADE_FROM_0.21.1.md",
-      "size": 774,
       "sha256": "6dcbfb24a4982fa36b67e74161149ad2cc492e2ee059cad0afda0f21b25a75b8"
     },
     {
       "path": ".agents/docs/UPGRADE_FROM_0.21.2.md",
-      "size": 685,
       "sha256": "3d0849ca9d1b6e58f45f8820edc4174b2e3c0ad053128f4518490bf4d72e5679"
     },
     {
       "path": ".agents/docs/UPGRADE_FROM_0.22.0.md",
-      "size": 851,
       "sha256": "bdd152408f764d82080b4a967be55195d9c3962c94a93e05f3c4e2fd956be5b4"
     },
     {
       "path": ".agents/docs/UPGRADE_FROM_0.22.1.md",
-      "size": 564,
       "sha256": "bc08c0ca4b9532bf85db8111f923368a9914fe1a59979f4f50da8b5c14657e48"
     },
     {
       "path": ".agents/docs/UPGRADE_FROM_0.22.2.md",
-      "size": 413,
       "sha256": "3570ddb8c71161db45735225293108c0f742d808189463489541988e226b9c35"
     },
     {
       "path": ".agents/docs/UPGRADE_FROM_0.25.2.md",
-      "size": 1541,
       "sha256": "35995e2b960cf82bf786bda72af237e1de22ed33c0a9943d5ca2dabbc9f2cacf"
     },
     {
       "path": ".agents/docs/USAGE.md",
-      "size": 10687,
       "sha256": "24b1d353a1c4ddd4599ecfba4275854b2ff4aee1c90a50aef615b9adbdf19038"
     },
     {
       "path": ".agents/docs/mcp-config.example.json",
-      "size": 335,
       "sha256": "c0f3b3ae58909d5a2f34a8f23165b9a29ea20ca4a8ed2535e741e9a31ffe9d79"
     },
     {
       "path": ".agents/requirements.txt",
-      "size": 35,
       "sha256": "b732a10b0534b27becec1738d50462566d2941906031ff1b8f3d6d2c088dc9f9"
     },
     {
       "path": ".agents/schema/bootstrap_v46.json",
-      "size": 1945,
       "sha256": "0731b9145e8d54e4c371484b541fd4bdbf6343483b3899f1da5b9309ea3eec18"
     },
     {
       "path": ".agents/schema/bootstrap_v46.sql",
-      "size": 83793,
       "sha256": "29afffd4f0fa922032567ddc321802d862b6965e90f38b3e7e700492b47b15c3"
     },
     {
       "path": ".agents/tests/test_adaptive_budget_v0231.py",
-      "size": 15847,
       "sha256": "5c21ca3b254b057268f32a9431b800ff40e271fd03e83cc3a92fec101ceabe82"
     },
     {
       "path": ".agents/tests/test_agentos.py",
-      "size": 39227,
       "sha256": "5ec4c5f12876cfbba4ad96271026c91b4bcb6996db6e514088913392356e63f2"
     },
     {
       "path": ".agents/tests/test_architecture_contract_v0252.py",
-      "size": 10962,
       "sha256": "914799d8f4e7918fac9e58f19c6eb606c9bdb1dd22921eb89af66c94aca67d51"
     },
     {
       "path": ".agents/tests/test_architecture_discovery_v0253.py",
-      "size": 9192,
       "sha256": "499de417553a7eb8f8803f66430bfa28a12626caad15104fef586adce396e7e4"
     },
     {
       "path": ".agents/tests/test_consolidation_cockpit_v0233.py",
-      "size": 8506,
       "sha256": "503d611f3b9de70e6642f22fa7c8938b70ec97ee08317d50a62f7d72cfca09f7"
     },
     {
       "path": ".agents/tests/test_context_expansion_evaluation_v0232.py",
-      "size": 12699,
       "sha256": "3bb8a1c3d1c9e500782b53439a71f4a7b07b215ddf14253bdd915b6d0293b2d8"
     },
     {
       "path": ".agents/tests/test_context_transport_v0230.py",
-      "size": 12315,
       "sha256": "6b732be0f1a8dcf9bad7d84fe6b84a97f9c5e7a7291507889999fc8fa93b66e0"
     },
     {
       "path": ".agents/tests/test_controlled_target_insert_v0220.py",
-      "size": 19136,
       "sha256": "825180bc6824145209a8fbd443703a926cc4a8050c6bb5268ef6de2eb8bf6f6c"
     },
     {
       "path": ".agents/tests/test_core_reintegration_v0223.py",
-      "size": 4143,
       "sha256": "5b3db9a46d55b7faf719e67e0763663615e304bd67d717aa25962c6218d10c26"
     },
     {
       "path": ".agents/tests/test_data_subject_rights_v0227.py",
-      "size": 14897,
       "sha256": "4de43b6be400396556ebef3de73973ee678c38e4a6dc1b61207e65a74b7fad0f"
     },
     {
       "path": ".agents/tests/test_database_boundary_v0210.py",
-      "size": 8402,
       "sha256": "047806022b7dc4c1c904649c3c3f20eb343771abd57ef8593dd69289137fa029"
     },
     {
       "path": ".agents/tests/test_db_aware_context_projection_v0242.py",
-      "size": 4392,
       "sha256": "0da1bda749a154694c6b6eb68c04c9b69fba5e3ca09aa8a73a899e28011d45d7"
     },
     {
       "path": ".agents/tests/test_governance_enforcement_v0224.py",
-      "size": 9581,
       "sha256": "45f134eb3d056a2393296f1823a45f17e72d89a9d8170cba0fd99e5a39e9d2d6"
     },
     {
       "path": ".agents/tests/test_identity_resolution_v0221.py",
-      "size": 9524,
       "sha256": "13045428d85ed6b0d2183909ebb52f406b8641aa20a492f1ed4e509bde4fc017"
     },
     {
       "path": ".agents/tests/test_incremental_index_v0234.py",
-      "size": 3269,
       "sha256": "7a707678d7733c385c0c38414f3a6e0530f3b4b03ef97f1b0d8f6d0e0d2954f6"
     },
     {
       "path": ".agents/tests/test_mcp_feature_runtime_v0243.py",
-      "size": 4904,
       "sha256": "bfe5ed5c01402471060598f27d3eff71678acf6c4516dd57c843f50c7229def6"
     },
     {
       "path": ".agents/tests/test_project_consolidation_v0202.py",
-      "size": 20949,
       "sha256": "7f5074998bb30f4a5b4ddb6d1625a2755381d79e326520fcac84dc096783916c"
     },
     {
       "path": ".agents/tests/test_project_selection_v0201.py",
-      "size": 15884,
       "sha256": "b81e9f79831c36aa6b1fea6ff4e558e9d90cd228819b4a1f866556c1b6e66183"
     },
     {
       "path": ".agents/tests/test_read_only_extraction_v0212.py",
-      "size": 15846,
       "sha256": "21d1477993542e9e578576ad88b075abb063053c74150f074b3032309ec20f0d"
     },
     {
       "path": ".agents/tests/test_reconciliation_recovery_v0222.py",
-      "size": 14209,
       "sha256": "a795160482c7dccc1223fae4876b1805598c31a95b65b088fe634b7ca91c5908"
     },
     {
       "path": ".agents/tests/test_release_hardening_v0242.py",
-      "size": 3686,
       "sha256": "4eec1f2385e58759f4df9c416a5ab9b22fd4a4059df2d7a596e8773b64d0dccf"
     },
     {
       "path": ".agents/tests/test_release_line_endings_v0242.py",
-      "size": 1923,
       "sha256": "8fb1c4771e20454ba0872dd6091e363100a44ce781dfb2e3eb1caafe393b00b4"
     },
     {
       "path": ".agents/tests/test_release_metadata_coherence_v0251.py",
-      "size": 5466,
       "sha256": "8378df8c491c09eaff8577ff8031ed166669c2b1105445a304a2e586d43a82e7"
     },
     {
       "path": ".agents/tests/test_risk_tiered_batch_review_v0241.py",
-      "size": 12122,
       "sha256": "30c1092714003b7642a2cd1963d50bc33706966d5fad27c48beae031911e0c2b"
     },
     {
       "path": ".agents/tests/test_schema_bootstrap_v0250.py",
-      "size": 10418,
       "sha256": "5ad5545a0121c7cb1b1afb510866468914121439a6f3117b66acb26e85d6a8ba"
     },
     {
       "path": ".agents/tests/test_schema_mapping_v0211.py",
-      "size": 22348,
       "sha256": "654ed2dd3e97acd19f6926424f3e4e4ac8fa8da9a729f5586d9e6577f7a52298"
     },
     {
       "path": ".agents/tests/test_secret_lineage_v0226.py",
-      "size": 11830,
       "sha256": "b757bb9faeb6f38b430ee703339f86a778bc7c6436efc96c81b2c485fa09e811"
     },
     {
       "path": ".agents/tests/test_unified_runtime_v0225.py",
-      "size": 5911,
       "sha256": "2aa136a5bc98a71b4cbf0249167404fa1b0aae9d15338e88825eb9c4adc5815c"
     },
     {
-      "path": ".gitattributes",
-      "size": 691,
-      "sha256": "e8c650896bafea3cc36201800e6e78529d87c00d72cf399247f8a034ef04d03e"
-    },
-    {
-      "path": ".github/workflows/agentos-release-validation.yml",
-      "size": 2078,
-      "sha256": "d11616949b7053fc4fcf77825fadd9a48573bd157878c72614f14b3fc81f4e17"
-    },
-    {
-      "path": ".gitignore",
-      "size": 670,
-      "sha256": "e8e04053e984efdb7a5ec1417bb21eb8404939042c7ba2702bde8b9aacbf4f46"
-    },
-    {
-      "path": "ADAPTIVE_TOKEN_BUDGET_BENCHMARK.json",
-      "size": 2392,
-      "sha256": "d312691aaae5ddfad164fe47b1f0f1d0af94d65972755b50b7bcb1569ed885d7"
-    },
-    {
-      "path": "AGENTS.md",
-      "size": 32882,
-      "sha256": "2ae6dfa6fd7651b656594fc6191ee6b66835598ff13a998cf9eb34a0ec92c39a"
-    },
-    {
-      "path": "CHANGELOG.md",
-      "size": 13261,
-      "sha256": "aa6a6329a7681f2b5ce13f3f78d4bdb90f6db5a72eff088e024d4e757a6fe7c7"
-    },
-    {
-      "path": "CONTEXT_EXPANSION_EVALUATION_BENCHMARK.json",
-      "size": 1697,
-      "sha256": "6f4d690c2c176473deb5cc86048cf0e701c407bf5f67115ba7232d16f397a82b"
-    },
-    {
-      "path": "CONTEXT_TRANSPORT_BENCHMARK.json",
-      "size": 1108,
-      "sha256": "f1676e9528ba2d954d489c94319286529e92a426c48220e5859f4662e45ed86b"
-    },
-    {
-      "path": "DATA_SUBJECT_RIGHTS.md",
-      "size": 1346,
-      "sha256": "baa18c6b4f11d3bf24cc3bb8e00ebcd7521127b6f30bbf5fe4f06efc2753096f"
-    },
-    {
-      "path": "INDEX_INCREMENTAL_BENCHMARK_V0234.json",
-      "size": 2348,
-      "sha256": "10dac6e9eb355ad1b2a39c4c07a0bb233f00a2f32c292078c740e7c2328e70e1"
-    },
-    {
       "path": "PACKAGE_COMPLETENESS.json",
-      "size": 1066,
-      "sha256": "befd76b656b2f85da76fc1706d18236a920153f747a8179dc7d71772cac7ee3e"
-    },
-    {
-      "path": "PERFORMANCE_BASELINE_V0233.json",
-      "size": 2014,
-      "sha256": "79c59622dd7b871da9f0142e88041ed25ca687b9e645b7c4cb108fcc3042341d"
-    },
-    {
-      "path": "README.en.md",
-      "size": 2121,
-      "sha256": "2d9d032110e4ecd1dc2129ab94f422a884b1d3f8ed9c2eddead378638ef31af0"
-    },
-    {
-      "path": "README.md",
-      "size": 4652,
-      "sha256": "3b014b598954ce7a6d4ae1ea5c73ec0c21500ffb98f5fd285a53cae717f0b193"
-    },
-    {
-      "path": "README.vi.md",
-      "size": 2965,
-      "sha256": "eda433acc61df7ab3eb01e16262ae49e991d5142e15608ca027218f450c85d72"
-    },
-    {
-      "path": "RELEASE_NOTES.md",
-      "size": 605,
-      "sha256": "13fab800a5fe2cb2c8d70d179cdc64a1e21aa6ac7b1ea11f2d66326a12d3c220"
-    },
-    {
-      "path": "UPGRADE_FROM_0.25.1.md",
-      "size": 2172,
-      "sha256": "a70707ae1a7fb4da211238d02d25ce47cf77fc8ce50f945661f5a4eff351eb64"
+      "sha256": "cebec35455ca70bb39cafa6720842f76939bf251783e8a4e83e5d0bb1cc0599d"
     },
     {
       "path": "VERSION",
-      "size": 7,
       "sha256": "98c9e27ccefc72e9fe151671f865b91b381eac25a9bc03baa7db45a8658781e3"
-    },
-    {
-      "path": "huong_dan.en.md",
-      "size": 1102,
-      "sha256": "677c2fd0c8e356bad3ace6f8798b12d45384b92ea21d1d444cb2c375f2674148"
-    },
-    {
-      "path": "huong_dan.md",
-      "size": 636,
-      "sha256": "e7818ee9ff5555127f9bee95e1ea3be244119f89eb2b0f810c21d773046b4b87"
-    },
-    {
-      "path": "huong_dan.vi.md",
-      "size": 1133,
-      "sha256": "918ef5591d5c7b9ec92aa561ddd5a22485ebaf7d69eaedaa5cefc854db30fb35"
-    },
-    {
-      "path": "tools/build_manifest.py",
-      "size": 3761,
-      "sha256": "9693a989d80bad84166fd562b336bac6ee970235ff354005379976b87f12c625"
-    },
-    {
-      "path": "tools/repository_release_cleanup.py",
-      "size": 33602,
-      "sha256": "a9684b98425b8131f9aa797601674de9b05cd20af66903fb3c8c625e8d514f01"
-    },
-    {
-      "path": "tools/validate_release.py",
-      "size": 4538,
-      "sha256": "731e5955d12bb57cba1aa634faaf2def8433bce4ecdfcbc3cb112b4fe6e9f925"
-    },
-    {
-      "path": "tools/verify_manifest.py",
-      "size": 980,
-      "sha256": "92af43a222c8d0a0eebdad38af433a4d64fd124f5a907079140f2f15e4b6dea0"
     }
+  ],
+  "project_owned_patterns": [
+    "AGENTS.md",
+    ".agents/config/governance.local.json",
+    ".agents/config/project.id",
+    ".agents/config/project.purpose.json",
+    ".agents/architecture/",
+    ".agents/state/",
+    ".agents/runtime/",
+    ".agents/cache/",
+    ".agents/skills/",
+    ".agents/workflows/"
   ]
 }

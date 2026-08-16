@@ -35,9 +35,14 @@ def test_current_docs_identify_db_aware_context_projection_and_links_resolve() -
 
 
 def test_upgrade_guide_uses_external_release_asset_model() -> None:
-    guides = sorted(ROOT.glob("UPGRADE_FROM_*.md"))
-    assert len(guides) == 1
-    text = guides[0].read_text(encoding="utf-8")
+    from agentos.policy import load_policy
+
+    policy = load_policy(ROOT)
+    rel = policy.get("documentation_policy", {}).get("current_upgrade_guide")
+    assert rel, "current_upgrade_guide must be declared by AgentOS documentation policy"
+    guide = ROOT / str(rel)
+    assert guide.is_file()
+    text = guide.read_text(encoding="utf-8")
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     updater = f"apply_v{version.replace('.', '')}.py"
     assert f"python tools/{updater}" not in text

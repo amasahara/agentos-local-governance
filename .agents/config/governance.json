@@ -44,6 +44,58 @@
     "tokenizer_auto_download_allowed": false,
     "version": 1
   },
+  "architecture_contract_policy": {
+    "ai_may_activate_architecture": false,
+    "ai_may_approve_architecture": false,
+    "ai_may_draft_architecture": true,
+    "ai_may_validate_architecture": true,
+    "architecture_discovery_enabled_v0252": false,
+    "architecture_discovery_enabled_v0253": true,
+    "architecture_drift_enforcement_enabled_v0252": false,
+    "architecture_drift_enforcement_enabled_v0253": false,
+    "architecture_evidence_binding_enabled_v0253": true,
+    "database_schema": 50,
+    "enabled": true,
+    "exact_baseline_hash_confirmation_required": true,
+    "fixed_section_ids_required": true,
+    "human_activation_required": true,
+    "human_approval_required": true,
+    "human_review_required": true,
+    "improvement_proposal_authority_mode": "proposal_only",
+    "mcp_architecture_mutation_allowed": false,
+    "registry_version": 1,
+    "section_count": 27,
+    "single_active_baseline_required": true,
+    "version": 1,
+    "working_copy_is_authority": false
+  },
+  "architecture_discovery_policy": {
+    "active_baseline_mutation_allowed": false,
+    "ai_may_activate_architecture": false,
+    "ai_may_synthesize_draft_from_observations": true,
+    "architecture_drift_enforcement": false,
+    "database_schema": 51,
+    "deterministic_static_discovery_only": true,
+    "discrepancies_are_advisory": true,
+    "enabled": true,
+    "mcp_mutation_allowed": false,
+    "mcp_read_tools": [
+      "agentos.architecture_scan_get",
+      "agentos.architecture_observations_get",
+      "agentos.architecture_evidence_get",
+      "agentos.architecture_discrepancies_get"
+    ],
+    "mcp_scan_execution_allowed": false,
+    "network_access_allowed": false,
+    "persisted_evidence": "path_sha256_locator_only",
+    "project_code_execution_allowed": false,
+    "raw_source_persistence_allowed": false,
+    "scanner_version": 1,
+    "source_read_only": true,
+    "symlink_following_allowed": false,
+    "version": 1,
+    "working_copy_mutation_allowed": false
+  },
   "claim_policy": {
     "allow_network_evidence": false,
     "claim_types": [
@@ -422,25 +474,16 @@
   },
   "documentation_policy": {
     "current_release_identity_files": [
-      "README.md",
-      "README.vi.md",
-      "README.en.md",
-      "RELEASE_NOTES.md"
+      ".agents/docs/ARCHITECTURE_DISCOVERY_EVIDENCE_V0253.md"
     ],
-    "current_release_name": "27-Section Architecture Contract & Human Clarification Gates",
-    "current_schema": 50,
+    "current_release_name": "Architecture Discovery & Evidence Binding",
+    "current_schema": 51,
     "current_schema_files": [
-      "README.md",
-      "huong_dan.md"
+      ".agents/docs/ARCHITECTURE_DISCOVERY_EVIDENCE_V0253.md"
     ],
+    "current_upgrade_guide": ".agents/docs/UPGRADE_FROM_0.25.2.md",
     "current_version_files": [
-      "README.md",
-      "README.vi.md",
-      "README.en.md",
-      "huong_dan.md",
-      "huong_dan.vi.md",
-      "huong_dan.en.md",
-      "AGENTS.md"
+      ".agents/docs/ARCHITECTURE_DISCOVERY_EVIDENCE_V0253.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -618,6 +661,27 @@
     "signed_request_event_required": true,
     "valid_project_root_requires_governed_mutations": true
   },
+  "human_clarification_policy": {
+    "blocking_decisions_block_dependent_mutation": true,
+    "database_schema": 50,
+    "enabled": true,
+    "human_resolution_lossless_local_persistence": true,
+    "llm_may_open_blocking_decision": true,
+    "llm_may_resolve_decision": false,
+    "llm_may_silently_select_material_option": false,
+    "llm_may_waive_decision": false,
+    "max_open_blocking_decisions_per_task": 32,
+    "mcp_human_decision_resolution_allowed": false,
+    "mcp_monotonic_blocker_signal_allowed": true,
+    "mcp_monotonic_blocker_tool": "agentos.human_decision_request",
+    "no_silent_material_assumptions": true,
+    "raw_human_answer_external_audit_allowed": false,
+    "read_only_investigation_while_waiting_allowed": true,
+    "resolution_revalidation_required": true,
+    "structured_clarity_assessment_required": true,
+    "task_approval_requires_clear_assessment": true,
+    "version": 1
+  },
   "identity_resolution_policy": {
     "historical_automatic_rehmac_allowed": false,
     "legacy_key_import_preserves_material": true,
@@ -651,10 +715,16 @@
   },
   "installation_policy": {
     "automatic_baseline_acknowledgement": false,
+    "distribution_managed_requires_baseline_hash_match": true,
     "fallback_suffix": ".agentos",
     "git_hook_optional": true,
     "never_overwrite_existing_root_files": true,
-    "support_local_policy_override": true
+    "preflight_all_update_changes_before_mutation": true,
+    "preserve_project_rules_workflows_source": true,
+    "rollback_distribution_files_on_failure": true,
+    "support_local_policy_override": true,
+    "unknown_update_paths_are_project_owned": true,
+    "update_mode": "staged_hash_gated_fail_closed"
   },
   "instruction_policy": {
     "forbid_model_specific_instruction_files": true,
@@ -721,7 +791,9 @@
       "instruction_policy",
       "task_context_policy",
       "architecture_contract_policy",
-      "human_clarification_policy"
+      "human_clarification_policy",
+      "architecture_discovery_policy",
+      "update_preservation_policy"
     ]
   },
   "mcp_feature_runtime_policy": {
@@ -925,6 +997,26 @@
     "in_doubt_auto_retry_allowed": false,
     "partial_target_auto_repair_allowed": false
   },
+  "release_metadata_coherence_policy": {
+    "database_schema_changed": true,
+    "enabled": true,
+    "fail_closed": true,
+    "mcp_authority_changed": false,
+    "package_completeness_builder": "tools/build_manifest.py",
+    "package_identity_files": [
+      "MANIFEST.json",
+      "PACKAGE_COMPLETENESS.json"
+    ],
+    "runtime_version_files": [
+      ".agents/agentos/__init__.py",
+      ".agents/agentos/mcp_runtime.py"
+    ],
+    "schema_source": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
+    "source_of_truth": "VERSION",
+    "validation_report_clean_main_required": false,
+    "validator": ".agents/agentos/release_coherence.py",
+    "version": 1
+  },
   "risk_tiered_batch_review_policy": {
     "batch_eligible_risk_tier": "LOW",
     "batch_review_human_confirmation_required": true,
@@ -972,7 +1064,7 @@
     "bootstrap_artifact_metadata": ".agents/schema/bootstrap_v46.json",
     "bootstrap_artifact_sql": ".agents/schema/bootstrap_v46.sql",
     "bootstrap_schema": 46,
-    "current_database_schema": 50,
+    "current_database_schema": 51,
     "existing_database_mode": "incremental_from_recorded_version",
     "fresh_database_mode": "bootstrap_then_incremental",
     "fresh_replay_migrations_1_to_46": false,
@@ -993,9 +1085,10 @@
       47,
       48,
       49,
-      50
+      50,
+      51
     ],
-    "schema_change": "none",
+    "schema_change": "additive_architecture_discovery_evidence_schema_51",
     "schema_fingerprint_required": true,
     "schema_migration_markers_preserved": true,
     "source_database_write_authority_changed": false,
@@ -1124,19 +1217,36 @@
     "mcp_health_tool_required": true,
     "mcp_server_active_runtime_dependency": false,
     "mcp_subprocess_forwarding_allowed": false,
+    "monotonic_blocker_signal_allowed": true,
+    "monotonic_blocker_signal_tools": [
+      "agentos.human_decision_request"
+    ],
     "single_python_cli_runtime_required": true,
     "single_python_mcp_runtime_required": true,
     "unknown_cli_command_must_fail": true,
     "unknown_mcp_method_must_return_jsonrpc_error": true,
     "version_forwarding_runtime_allowed": false,
     "windows_posix_cli_parity_required": true,
-    "windows_posix_mcp_parity_required": true,
-    "monotonic_blocker_signal_allowed": true,
-    "monotonic_blocker_signal_tools": [
-      "agentos.human_decision_request"
-    ]
+    "windows_posix_mcp_parity_required": true
   },
-  "version": "0.25.2",
+  "update_preservation_policy": {
+    "agents_md_preserved": true,
+    "architecture_working_copy_preserved": true,
+    "atomic_distribution_replace": true,
+    "canonical_governance_conflict": "abort_before_mutation",
+    "distribution_lock_path": ".agents/config/agentos_distribution.lock.json",
+    "distribution_managed_requires_baseline_hash_match": true,
+    "governance_local_preserved": true,
+    "mode": "staged_hash_gated_fail_closed",
+    "project_owned_never_overwrite": true,
+    "rollback_on_post_apply_failure": true,
+    "skills_preserved": true,
+    "source_tree_writes_by_updater": false,
+    "unknown_paths": "PROJECT_OWNED",
+    "version": 1,
+    "workflow_state_preserved": true
+  },
+  "version": "0.25.3",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,
@@ -1177,68 +1287,5 @@
       "run_checks",
       "report_matrix"
     ]
-  },
-  "release_metadata_coherence_policy": {
-    "version": 1,
-    "enabled": true,
-    "source_of_truth": "VERSION",
-    "schema_source": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
-    "fail_closed": true,
-    "runtime_version_files": [
-      ".agents/agentos/__init__.py",
-      ".agents/agentos/mcp_runtime.py"
-    ],
-    "package_identity_files": [
-      "MANIFEST.json",
-      "PACKAGE_COMPLETENESS.json"
-    ],
-    "package_completeness_builder": "tools/build_manifest.py",
-    "validation_report_clean_main_required": false,
-    "validator": ".agents/agentos/release_coherence.py",
-    "database_schema_changed": false,
-    "mcp_authority_changed": false
-  },
-  "architecture_contract_policy": {
-    "version": 1,
-    "database_schema": 50,
-    "enabled": true,
-    "registry_version": 1,
-    "section_count": 27,
-    "fixed_section_ids_required": true,
-    "working_copy_is_authority": false,
-    "human_review_required": true,
-    "human_approval_required": true,
-    "human_activation_required": true,
-    "exact_baseline_hash_confirmation_required": true,
-    "single_active_baseline_required": true,
-    "ai_may_draft_architecture": true,
-    "ai_may_validate_architecture": true,
-    "ai_may_activate_architecture": false,
-    "ai_may_approve_architecture": false,
-    "improvement_proposal_authority_mode": "proposal_only",
-    "mcp_architecture_mutation_allowed": false,
-    "architecture_discovery_enabled_v0252": false,
-    "architecture_drift_enforcement_enabled_v0252": false
-  },
-  "human_clarification_policy": {
-    "version": 1,
-    "database_schema": 50,
-    "enabled": true,
-    "structured_clarity_assessment_required": true,
-    "no_silent_material_assumptions": true,
-    "task_approval_requires_clear_assessment": true,
-    "blocking_decisions_block_dependent_mutation": true,
-    "read_only_investigation_while_waiting_allowed": true,
-    "llm_may_open_blocking_decision": true,
-    "llm_may_resolve_decision": false,
-    "llm_may_waive_decision": false,
-    "llm_may_silently_select_material_option": false,
-    "human_resolution_lossless_local_persistence": true,
-    "raw_human_answer_external_audit_allowed": false,
-    "resolution_revalidation_required": true,
-    "max_open_blocking_decisions_per_task": 32,
-    "mcp_monotonic_blocker_signal_allowed": true,
-    "mcp_monotonic_blocker_tool": "agentos.human_decision_request",
-    "mcp_human_decision_resolution_allowed": false
   }
 }

@@ -108,12 +108,12 @@ def test_fresh_migrate_does_not_invoke_migrations_1_to_46(
 
     assert report["mode"] == "bootstrap"
     assert report["bootstrap_version"] == 46
-    assert report["applied_migrations"] == [47, 48, 49, 50]
+    assert report["applied_migrations"] == list(range(BASELINE_SCHEMA_VERSION + 1, db.SCHEMA_VERSION + 1))
     assert report["bootstrap"]["historical_migrations_invoked"] == 0
-    assert versions == list(range(1, 51))
+    assert versions == list(range(1, db.SCHEMA_VERSION + 1))
 
 
-def test_bootstrap_plus_47_49_matches_full_replay_schema() -> None:
+def test_bootstrap_plus_post_baseline_migrations_matches_full_replay_schema() -> None:
     bootstrapped = _memory()
     replayed = _memory()
     try:
@@ -192,7 +192,7 @@ def test_existing_schema_45_remains_incremental() -> None:
         assert report["mode"] == "incremental"
         assert report["starting_version"] == 45
         assert report["bootstrap_version"] is None
-        assert report["applied_migrations"] == [46, 47, 48, 49, 50]
+        assert report["applied_migrations"] == list(range(46, db.SCHEMA_VERSION + 1))
     finally:
         connection.close()
 
@@ -204,7 +204,7 @@ def test_existing_schema_46_applies_only_post_baseline_migrations() -> None:
         report = db.migrate_with_report(connection)
         assert report["mode"] == "incremental"
         assert report["starting_version"] == 46
-        assert report["applied_migrations"] == [47, 48, 49, 50]
+        assert report["applied_migrations"] == list(range(BASELINE_SCHEMA_VERSION + 1, db.SCHEMA_VERSION + 1))
     finally:
         connection.close()
 
@@ -255,7 +255,7 @@ def test_verified_legacy_module_local_state_is_reconciled_and_rows_survive() -> 
 
         assert report["mode"] == "legacy_reconcile"
         assert report["legacy_reconcile"]["recognized"] is True
-        assert report["applied_migrations"] == list(range(1, 51))
+        assert report["applied_migrations"] == list(range(1, db.SCHEMA_VERSION + 1))
         assert connection.execute(
             "SELECT coordinator_project_uuid FROM project_candidate_sets WHERE id=?",
             (legacy_id,),
@@ -265,7 +265,7 @@ def test_verified_legacy_module_local_state_is_reconciled_and_rows_survive() -> 
             for row in connection.execute(
                 "SELECT version FROM schema_migrations ORDER BY version"
             )
-        ] == list(range(1, 51))
+        ] == list(range(1, db.SCHEMA_VERSION + 1))
     finally:
         connection.close()
 

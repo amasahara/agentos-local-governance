@@ -33,6 +33,7 @@ from .mcp_feature_runtime import (
 from . import __version__
 from .schema_version import CURRENT_SCHEMA_VERSION
 from .mcp_v0252 import TOOLS as V0252_TOOLS, TOOL_NAMES as V0252_TOOL_NAMES, dispatch as dispatch_v0252_tool
+from .mcp_v0253 import TOOLS as V0253_TOOLS, TOOL_NAMES as V0253_TOOL_NAMES, dispatch as dispatch_v0253_tool
 
 VERSION = __version__
 
@@ -48,7 +49,7 @@ def _merge_tools() -> tuple[list[dict[str, Any]], set[str], set[str]]:
     tools: list[dict[str, Any]] = []
     names: set[str] = set()
     duplicates: set[str] = set()
-    for definition in [*CORE_TOOLS, *FEATURE_TOOLS, *V0252_TOOLS, HEALTH_TOOL]:
+    for definition in [*CORE_TOOLS, *FEATURE_TOOLS, *V0252_TOOLS, *V0253_TOOLS, HEALTH_TOOL]:
         name = str(definition["name"])
         if name in names:
             duplicates.add(name)
@@ -93,7 +94,7 @@ def _health(root: Path, task_id: str | None, session_id: str | None) -> dict[str
         "project_root_name": root.name,
         "tool_count": len(ALL_TOOLS),
         "core_proxy_tool_count": len(CORE_TOOLS),
-        "extension_readonly_tool_count": len(FEATURE_TOOLS) + len(V0252_TOOLS) - 1,
+        "extension_readonly_tool_count": len(FEATURE_TOOLS) + len(V0252_TOOLS) + len(V0253_TOOLS) - 1,
         "monotonic_blocker_tool_count": 1,
         "duplicate_tools": [],
         "subprocess_forwarding": False,
@@ -173,6 +174,10 @@ def serve(root: Path, task_id: str | None = None, session_id: str | None = None)
                 continue
             if name == HEALTH_TOOL["name"]:
                 _reply(identifier, _tool_result(_health(root, task_id, session_id)))
+                continue
+            if name in V0253_TOOL_NAMES:
+                value = dispatch_v0253_tool(name, arguments, root, task_id, session_id)
+                _reply(identifier, _tool_result(value))
                 continue
             if name in V0252_TOOL_NAMES:
                 value = dispatch_v0252_tool(name, arguments, root, task_id, session_id)

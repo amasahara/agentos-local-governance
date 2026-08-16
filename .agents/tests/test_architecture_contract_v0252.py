@@ -5,7 +5,7 @@ Purpose:
     Verify v0.25.2 Architecture Contract and Human Clarification fail-closed behavior.
 
 Responsibilities:
-    - Verify schema 50 and the fixed 27-section registry.
+    - Verify migration-50 architecture contracts against the current schema and fixed 27-section registry.
     - Verify architecture working-copy/baseline authority separation.
     - Verify explicit human confirmation and exact-hash lifecycle gates.
     - Verify Grill Me task approval and runtime decision blockers.
@@ -29,7 +29,7 @@ from agentos.architecture_contract import (
     validate_working_copy,
 )
 from agentos.core import approve_task, check_write, start_task
-from agentos.db import connect
+from agentos.db import SCHEMA_VERSION, connect
 from agentos.human_decision import (
     grill_me,
     record_clarity_assessment,
@@ -61,11 +61,12 @@ def _resolve_architecture_working_copy(root: Path) -> None:
 
 
 def test_schema_50_and_fixed_architecture_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Schema 50 must exist and the registry must be exactly ARCH-01..ARCH-27."""
+    """Architecture migration 50 must remain covered and the registry must be exactly ARCH-01..ARCH-27."""
     root = _root(tmp_path, monkeypatch)
     with connect(root) as conn:
         version = conn.execute("SELECT MAX(version) AS v FROM schema_migrations").fetchone()["v"]
-    assert version == 50
+    assert version == SCHEMA_VERSION
+    assert SCHEMA_VERSION >= 50
     assert [s["section_id"] for s in ARCHITECTURE_SECTIONS] == [f"ARCH-{i:02d}" for i in range(1, 28)]
     assert ARCHITECTURE_SECTIONS[25]["authority_mode"] == "proposal_only"
 

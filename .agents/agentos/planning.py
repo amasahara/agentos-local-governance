@@ -83,6 +83,15 @@ def precommit_check(root: Path, task_id: str, changed_files: list[str] | None = 
     from .human_decision import clarity_gate_status, decision_gate_status
     clarity_gate = clarity_gate_status(root, task_id)
     human_gate = decision_gate_status(root, task_id)
+    from .architecture_compliance import architecture_compliance_check
+    architecture = architecture_compliance_check(
+        root,
+        task_id=task_id,
+        changed_files=files,
+        mode="precommit",
+        refresh_scan=True,
+        created_by="system:precommit",
+    )
     blockers = {
         "task_not_approved": not bool(task["approved"]),
         "missing_active_plan": plan is None,
@@ -91,6 +100,7 @@ def precommit_check(root: Path, task_id: str, changed_files: list[str] | None = 
         "invalid_provenance": wf["invalid_provenance"],
         "clarity_gate_pending": not clarity_gate["ready"],
         "human_decision_pending": human_gate["decisions"],
+        "architecture_compliance": architecture if not architecture.get("ok", True) else None,
     }
-    ok = bool(task["approved"]) and plan is not None and not outside_scope and not unplanned and not wf["invalid_provenance"] and clarity_gate["ready"] and not human_gate["blocked"]
-    return {"ok": ok, "task_id": task_id, "changed_files": files, "active_plan_revision": plan["revision"] if plan else None, "blockers": blockers}
+    ok = bool(task["approved"]) and plan is not None and not outside_scope and not unplanned and not wf["invalid_provenance"] and clarity_gate["ready"] and not human_gate["blocked"] and bool(architecture.get("ok", False))
+    return {"ok": ok, "task_id": task_id, "changed_files": files, "active_plan_revision": plan["revision"] if plan else None, "architecture_compliance": architecture, "blockers": blockers}

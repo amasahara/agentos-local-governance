@@ -1,8 +1,8 @@
 {
-  "release": "0.25.3",
+  "release": "0.25.4",
   "kind": "full_materialized_github_ready",
-  "schema": 51,
-  "authoritative_file_count": 228,
+  "schema": 52,
+  "authoritative_file_count": 235,
   "required_top_level": [
     "VERSION",
     "AGENTS.md",
@@ -38,5 +38,6 @@
   "upload_workflow": "extract -> upload/replace repository -> commit/push -> GitHub Actions validates",
   "manual_apply_required": false,
   "coherence_contract_version": 1,
-  "update_preservation": "project_owned_never_overwrite_hash_gated_distribution"
+  "update_preservation": "project_owned_never_overwrite_hash_gated_distribution",
+  "architecture_compliance": "active_baseline_hard_contract_fail_closed"
 }

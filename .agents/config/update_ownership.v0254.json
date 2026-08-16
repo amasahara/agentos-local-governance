@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "release": "0.25.4",
+  "model": "ownership_aware_hash_gated_fail_closed",
+  "unknown_paths_are": "PROJECT_OWNED",
+  "project_owned_never_overwrite": true,
+  "distribution_managed_requires_baseline_hash_match": true,
+  "distribution_lock": ".agents/config/agentos_distribution.lock.json",
+  "preflight_before_mutation": true,
+  "atomic_replace": true,
+  "rollback_distribution_files_on_failure": true,
+  "sqlite_snapshot_before_schema_migration": true,
+  "sqlite_restore_on_failed_upgrade": true,
+  "preserve": [
+    "project source",
+    "AGENTS.md",
+    ".agents/config/governance.local.json",
+    ".agents/config/project.id",
+    ".agents/config/project.purpose.json",
+    ".agents/architecture/**",
+    ".agents/state/**",
+    ".agents/runtime/**",
+    ".agents/cache/**",
+    ".agents/skills/**",
+    ".agents/workflows/**"
+  ]
+}

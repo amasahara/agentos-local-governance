@@ -76,7 +76,9 @@ RELEASE_FILES = (
     ".agents/schema/bootstrap_v46.json",
     ".agents/tests/test_release_metadata_coherence_v0251.py",
     ".agents/tests/test_architecture_discovery_v0253.py",
+    ".agents/tests/test_architecture_compliance_v0254.py",
     ".agents/config/update_ownership.v0253.json",
+    ".agents/config/update_ownership.v0254.json",
     "UPGRADE_FROM_0.25.1.md",
 )
 EXTENSION_FILES = (
@@ -131,6 +133,9 @@ EXTENSION_FILES = (
     ".agents/agentos/architecture_discovery_cli.py",
     ".agents/agentos/mcp_v0253.py",
     ".agents/agentos/update_preservation.py",
+    ".agents/agentos/architecture_compliance.py",
+    ".agents/agentos/architecture_compliance_cli.py",
+    ".agents/agentos/mcp_v0254.py",
 )
 REQUIRED_POLICY_SECTIONS = (
     "language_policy",
@@ -184,6 +189,7 @@ REQUIRED_POLICY_SECTIONS = (
     "human_clarification_policy",
     "architecture_discovery_policy",
     "update_preservation_policy",
+    "architecture_compliance_policy",
 )
 
 
@@ -425,11 +431,11 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 f"expected 37 migrated runtime-native handlers, got {feature_health.get('runtime_native_migrated_tool_count')}",
                 ".agents/agentos/mcp_feature_runtime.py",
             ))
-        from .mcp_runtime import ALL_TOOLS, CORE_TOOL_NAMES, FEATURE_TOOL_NAMES, V0252_TOOL_NAMES, V0253_TOOL_NAMES
-        if (len(CORE_TOOL_NAMES) != 14 or len(FEATURE_TOOL_NAMES) != 63 or len(V0252_TOOL_NAMES) != 6 or len(V0253_TOOL_NAMES) != 4 or len(ALL_TOOLS) != 88):
+        from .mcp_runtime import ALL_TOOLS, CORE_TOOL_NAMES, FEATURE_TOOL_NAMES, V0252_TOOL_NAMES, V0253_TOOL_NAMES, V0254_TOOL_NAMES
+        if (len(CORE_TOOL_NAMES) != 14 or len(FEATURE_TOOL_NAMES) != 63 or len(V0252_TOOL_NAMES) != 6 or len(V0253_TOOL_NAMES) != 4 or len(V0254_TOOL_NAMES) != 3 or len(ALL_TOOLS) != 91):
             findings.append(_finding(
                 "mcp_tool_surface_changed",
-                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + health = 88 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} / {len(ALL_TOOLS)}",
+                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + health = 91 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} / {len(ALL_TOOLS)}",
                 ".agents/agentos/mcp_runtime.py",
             ))
     except Exception as exc:
@@ -525,6 +531,8 @@ DOC_FILES = (
     ".agents/docs/RELEASE_METADATA_COHERENCE_V0251.md",
     ".agents/docs/ARCHITECTURE_CONTRACT_HUMAN_CLARIFICATION_V0252.md",
     ".agents/docs/ARCHITECTURE_DISCOVERY_EVIDENCE_V0253.md",
+    ".agents/docs/ARCHITECTURE_DRIFT_COMPLIANCE_V0254.md",
+    ".agents/docs/UPGRADE_FROM_0.25.3.md",
     "UPGRADE_FROM_0.25.1.md",
 )
 

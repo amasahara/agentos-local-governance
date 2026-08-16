@@ -49,6 +49,7 @@ FEATURE_CLI_MODULES = (
     "consolidation_cockpit_cli",
     "architecture_contract_cli",
     "architecture_discovery_cli",
+    "architecture_compliance_cli",
     "human_decision_cli",
 )
 

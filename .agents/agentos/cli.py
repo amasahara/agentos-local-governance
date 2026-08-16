@@ -334,10 +334,12 @@ def main(argv: list[str] | None = None) -> int:
             if tid and result["ok"]: complete_automated_step(root,tid,"synchronize","sync-check",result)
         elif args.cmd=="report":
             status=workflow_status(root,tid); pending=[x for x in status["required_pending"] if x!="report"]; drift=drift_check(root,task_id=tid); override=local_override_status(root); audit=verify_external_log(root)
-            blockers={"pending_steps":pending,"invalid_provenance":status["invalid_provenance"],"baseline_state":drift["baseline_state"],"drift_changes":drift["changes"],"sensitive_override_status":override["status"],"external_audit":audit}
-            blocked=bool(pending or status["invalid_provenance"] or drift["baseline_state"]!="initialized" or drift["drift_detected"] or (override["sensitive"] and override["status"]!="approved") or not audit["ok"])
+            from .architecture_compliance import architecture_compliance_check
+            architecture=architecture_compliance_check(root,task_id=tid,mode="final_report",refresh_scan=True,created_by="system:final-report")
+            blockers={"pending_steps":pending,"invalid_provenance":status["invalid_provenance"],"baseline_state":drift["baseline_state"],"drift_changes":drift["changes"],"sensitive_override_status":override["status"],"external_audit":audit,"architecture_compliance":architecture if not architecture.get("ok",True) else None}
+            blocked=bool(pending or status["invalid_provenance"] or drift["baseline_state"]!="initialized" or drift["drift_detected"] or (override["sensitive"] and override["status"]!="approved") or not audit["ok"] or not architecture.get("ok",False))
             if blocked: result={"ok":False,"blocked":True,**blockers}
-            else: mark_step(root,tid,"report","done","Final report produced after all automated gates and governance review passed."); result={"ok":True,"workflow":workflow_status(root,tid),"drift":drift,"override":override,"external_audit":audit}
+            else: mark_step(root,tid,"report","done","Final report produced after all automated gates, architecture compliance, and governance review passed."); result={"ok":True,"workflow":workflow_status(root,tid),"drift":drift,"override":override,"external_audit":audit,"architecture_compliance":architecture}
         elif args.cmd=="ack-baseline": result=ack_baseline(root,args.identity,force_noninteractive=args.force_noninteractive,session_id=session)
         elif args.cmd=="drift-check": result=drift_check(root,task_id=current_task_id(root,session))
         elif args.cmd=="drift-diff": result=drift_diff(root,args.file)

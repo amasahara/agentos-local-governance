@@ -1,5 +1,5 @@
 """Path: .agents/agentos/architecture_discovery.py
-Purpose: Deterministic read-only project architecture discovery and source-evidence binding for AgentOS v0.25.3.
+Purpose: Deterministic read-only project architecture discovery and source-evidence binding for AgentOS v0.25.4.
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from .db import connect, connect_read_only
 
 MIGRATION_VERSION = 51
-SCANNER_VERSION = 1
+SCANNER_VERSION = 2
 MAX_SCAN_FILE_BYTES = 2 * 1024 * 1024
 
 
@@ -63,6 +63,8 @@ MIGRATION_RE = re.compile(r"(^|/)(migrations?|alembic|schema)(/|$)|(^|/)[0-9]{3,
 TEST_RE = re.compile(r"(^|/)(tests?|specs?)(/|$)|(^|/)(test_.*|.*_test|.*\.spec|.*\.test)\.", re.I)
 CLI_LITERAL_RE = re.compile(r"\.add_parser\(\s*[\"']([^\"']+)[\"']")
 MCP_NAME_RE = re.compile(r"[\"']name[\"']\s*:\s*[\"'](agentos\.[a-zA-Z0-9_.-]+)[\"']")
+URL_HOST_RE = re.compile(r"https?://([A-Za-z0-9.-]+)(?::[0-9]+)?(?:[/\s\"']|$)", re.I)
+ENV_GET_RE = re.compile(r"(?:os\.getenv\(|os\.environ\.get\(|os\.environ\[)\s*[\"']([A-Za-z_][A-Za-z0-9_]*)[\"']")
 
 
 def migration_51(connection: Any) -> None:
@@ -335,6 +337,9 @@ def discover_source(root: Path, source_root: Path) -> tuple[list[Observation], d
     python_imports: dict[str, list[dict[str, Any]]] = {}
     cli_commands: dict[str, list[dict[str, Any]]] = defaultdict(list)
     mcp_tools: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    module_paths: set[str] = set()
+    external_domains: dict[str, set[str]] = defaultdict(set)
+    environment_variables: dict[str, set[str]] = defaultdict(set)
 
     for path in _iter_files(source_root):
         data = _read_bytes(path)
@@ -366,6 +371,7 @@ def discover_source(root: Path, source_root: Path) -> tuple[list[Observation], d
         if path.name in DEPLOYMENT_NAMES or any(part.lower() in {"k8s", "kubernetes", "helm", "deploy", "deployment"} for part in path.parts):
             deployments.append(rel)
         if path.suffix.lower() == ".py":
+            module_paths.add(rel)
             try:
                 tree = ast.parse(text, filename=rel)
                 imports: list[dict[str, Any]] = []
@@ -380,6 +386,14 @@ def discover_source(root: Path, source_root: Path) -> tuple[list[Observation], d
                     python_imports[rel] = sorted(imports, key=lambda x: (x["module"], x["line"]))
             except SyntaxError:
                 pass
+        runtime_literal_suffixes = {".py", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".go", ".rs", ".java", ".kt", ".kts", ".cs", ".rb", ".php", ".swift", ".scala", ".sh", ".ps1", ".json", ".yaml", ".yml", ".toml", ".ini", ".properties"}
+        if path.suffix.lower() in runtime_literal_suffixes or path.name in CONFIG_NAMES or path.name in DEPLOYMENT_NAMES:
+            for match in URL_HOST_RE.finditer(text):
+                host = match.group(1).lower().rstrip(".")
+                if host:
+                    external_domains[host].add(rel)
+            for match in ENV_GET_RE.finditer(text):
+                environment_variables[match.group(1)].add(rel)
         for match in CLI_LITERAL_RE.finditer(text):
             cli_commands[match.group(1)].append({"path": rel, "offset": match.start()})
         for match in MCP_NAME_RE.finditer(text):
@@ -397,8 +411,19 @@ def discover_source(root: Path, source_root: Path) -> tuple[list[Observation], d
     if top_level:
         dir_fingerprint = _sha256_json(sorted(top_level))
         observations.append(Observation("ARCH-03", "folder_inventory", "source_top_level", sorted(top_level), (Evidence("derived_tree", ".", dir_fingerprint, {"source_root": _norm_rel(source_root, root)}),)))
+    if module_paths:
+        module_list = sorted(module_paths)
+        observations.append(Observation("ARCH-05", "module_inventory", "python_modules", module_list, tuple(_ev(p, file_hashes[p]) for p in module_list)))
     for rel, imports in sorted(python_imports.items()):
         observations.append(Observation("ARCH-12", "python_imports", rel, imports, (_ev(rel, file_hashes[rel], lines=sorted({x["line"] for x in imports})),)))
+    if external_domains:
+        domains = sorted(external_domains)
+        paths = sorted({p for values in external_domains.values() for p in values})
+        observations.append(Observation("ARCH-13", "external_service_domains", "domains", domains, tuple(_ev(p, file_hashes[p]) for p in paths)))
+    if environment_variables:
+        names = sorted(environment_variables)
+        paths = sorted({p for values in environment_variables.values() for p in values})
+        observations.append(Observation("ARCH-14", "environment_variables", "environment_variable_names", names, tuple(_ev(p, file_hashes[p]) for p in paths)))
     if configs:
         observations.append(Observation("ARCH-14", "configuration_inventory", "configuration_files", sorted(configs), tuple(_ev(p, file_hashes[p]) for p in sorted(configs))))
     if migrations:

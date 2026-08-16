@@ -44,6 +44,36 @@
     "tokenizer_auto_download_allowed": false,
     "version": 1
   },
+  "architecture_compliance_policy": {
+    "active_baseline_hard_violation": "block",
+    "ai_waiver_allowed": false,
+    "architecture_change_proposal_deferred_to": "v0.25.5",
+    "authority": "human_activated_architecture_contract",
+    "automatic_architecture_mutation_allowed": false,
+    "database_schema": 52,
+    "discovery_only_discrepancy": "warn",
+    "enabled": true,
+    "final_report_enforcement": true,
+    "machine_contract_sections": [
+      "ARCH-02",
+      "ARCH-03",
+      "ARCH-05",
+      "ARCH-10",
+      "ARCH-12",
+      "ARCH-13",
+      "ARCH-14"
+    ],
+    "mcp_mutation_allowed": false,
+    "mcp_read_tools": [
+      "agentos.architecture_compliance_get",
+      "agentos.architecture_compliance_findings_get",
+      "agentos.architecture_compliance_status_get"
+    ],
+    "no_active_baseline_behavior": "not_evaluable_non_blocking",
+    "precommit_enforcement": true,
+    "prepare_write_target_enforcement": true,
+    "version": 1
+  },
   "architecture_contract_policy": {
     "ai_may_activate_architecture": false,
     "ai_may_approve_architecture": false,
@@ -53,6 +83,7 @@
     "architecture_discovery_enabled_v0253": true,
     "architecture_drift_enforcement_enabled_v0252": false,
     "architecture_drift_enforcement_enabled_v0253": false,
+    "architecture_drift_enforcement_enabled_v0254": true,
     "architecture_evidence_binding_enabled_v0253": true,
     "database_schema": 50,
     "enabled": true,
@@ -73,7 +104,7 @@
     "active_baseline_mutation_allowed": false,
     "ai_may_activate_architecture": false,
     "ai_may_synthesize_draft_from_observations": true,
-    "architecture_drift_enforcement": false,
+    "architecture_drift_enforcement": true,
     "database_schema": 51,
     "deterministic_static_discovery_only": true,
     "discrepancies_are_advisory": true,
@@ -90,7 +121,7 @@
     "persisted_evidence": "path_sha256_locator_only",
     "project_code_execution_allowed": false,
     "raw_source_persistence_allowed": false,
-    "scanner_version": 1,
+    "scanner_version": 2,
     "source_read_only": true,
     "symlink_following_allowed": false,
     "version": 1,
@@ -474,16 +505,16 @@
   },
   "documentation_policy": {
     "current_release_identity_files": [
-      ".agents/docs/ARCHITECTURE_DISCOVERY_EVIDENCE_V0253.md"
+      ".agents/docs/ARCHITECTURE_DRIFT_COMPLIANCE_V0254.md"
     ],
-    "current_release_name": "Architecture Discovery & Evidence Binding",
-    "current_schema": 51,
+    "current_release_name": "Architecture Drift & Compliance Engine",
+    "current_schema": 52,
     "current_schema_files": [
-      ".agents/docs/ARCHITECTURE_DISCOVERY_EVIDENCE_V0253.md"
+      ".agents/docs/ARCHITECTURE_DRIFT_COMPLIANCE_V0254.md"
     ],
-    "current_upgrade_guide": ".agents/docs/UPGRADE_FROM_0.25.2.md",
+    "current_upgrade_guide": ".agents/docs/UPGRADE_FROM_0.25.3.md",
     "current_version_files": [
-      ".agents/docs/ARCHITECTURE_DISCOVERY_EVIDENCE_V0253.md"
+      ".agents/docs/ARCHITECTURE_DRIFT_COMPLIANCE_V0254.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -724,7 +755,8 @@
     "rollback_distribution_files_on_failure": true,
     "support_local_policy_override": true,
     "unknown_update_paths_are_project_owned": true,
-    "update_mode": "staged_hash_gated_fail_closed"
+    "update_mode": "staged_hash_gated_fail_closed",
+    "update_ownership_contract": ".agents/config/update_ownership.v0254.json"
   },
   "instruction_policy": {
     "forbid_model_specific_instruction_files": true,
@@ -793,7 +825,8 @@
       "architecture_contract_policy",
       "human_clarification_policy",
       "architecture_discovery_policy",
-      "update_preservation_policy"
+      "update_preservation_policy",
+      "architecture_compliance_policy"
     ]
   },
   "mcp_feature_runtime_policy": {
@@ -1064,7 +1097,7 @@
     "bootstrap_artifact_metadata": ".agents/schema/bootstrap_v46.json",
     "bootstrap_artifact_sql": ".agents/schema/bootstrap_v46.sql",
     "bootstrap_schema": 46,
-    "current_database_schema": 51,
+    "current_database_schema": 52,
     "existing_database_mode": "incremental_from_recorded_version",
     "fresh_database_mode": "bootstrap_then_incremental",
     "fresh_replay_migrations_1_to_46": false,
@@ -1086,9 +1119,10 @@
       48,
       49,
       50,
-      51
+      51,
+      52
     ],
-    "schema_change": "additive_architecture_discovery_evidence_schema_51",
+    "schema_change": "additive_architecture_compliance_schema_52",
     "schema_fingerprint_required": true,
     "schema_migration_markers_preserved": true,
     "source_database_write_authority_changed": false,
@@ -1246,7 +1280,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.25.3",
+  "version": "0.25.4",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,

@@ -110,6 +110,12 @@ def check_write(root: Path, task_id: str, target: str) -> dict[str, Any]:
                 scope = json.loads(task["approved_scope"])
                 allowed = any(rel == s.rstrip("/") or rel.startswith(s.rstrip("/") + "/") for s in scope)
                 reason = "approved_scope" if allowed else "outside_approved_scope"
+                if allowed:
+                    from .architecture_compliance import architecture_target_check
+                    architecture = architecture_target_check(root, rel)
+                    if architecture.get("enforced") and not architecture.get("allowed", True):
+                        allowed = False
+                        reason = str(architecture.get("reason") or "architecture_compliance_blocked")
     with connect(root) as c:
         c.execute("INSERT INTO write_audit(task_id,target,allowed,reason) VALUES(?,?,?,?)", (task_id, target, int(allowed), reason))
     return {"allowed": allowed, "reason": reason, "target": rel or target}

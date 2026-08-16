@@ -241,3 +241,8 @@ Added Primary-Project Consolidation as a directed, plan-hashed workflow:
 - Existing versioned databases remain incremental.
 - Bootstrap fingerprint mismatch or unversioned non-empty state fails closed.
 
+## 0.25.4 — Architecture Drift & Compliance Engine
+- Added schema 52 compliance runs/findings bound to ACTIVE human Architecture baselines.
+- Integrated hard architecture gates into write preparation, precommit, and final report.
+- Added scanner v2 module/domain/environment-name observations without raw secret persistence.
+- Added read-only MCP compliance inspection; no waiver/approval/architecture mutation authority.

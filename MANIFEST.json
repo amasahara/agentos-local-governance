@@ -1,12 +1,12 @@
 {
-  "release": "0.25.3",
+  "release": "0.25.4",
   "kind": "full",
-  "file_count": 228,
+  "file_count": 235,
   "files": [
     {
       "path": ".agents/agentos/__init__.py",
       "size": 23,
-      "sha256": "997ac2d301b477dc78423d1bfb56b5e6d189e891e758d3a6f362769d7fc22f69"
+      "sha256": "79c17c5a51a036e6118f74116cc2500558dda4a6d2170956f6768ce0d24450e1"
     },
     {
       "path": ".agents/agentos/adaptive_budget.py",
@@ -17,6 +17,16 @@
       "path": ".agents/agentos/adaptive_budget_cli.py",
       "size": 3655,
       "sha256": "d43881501bda27fb1edd4e655c06a6b62d3c8c5781b967efa87ded3170a27231"
+    },
+    {
+      "path": ".agents/agentos/architecture_compliance.py",
+      "size": 32139,
+      "sha256": "e61154ec970e714b6e195cdeb942435542cbbdfc180bd6c4d4ffe035a2aefb08"
+    },
+    {
+      "path": ".agents/agentos/architecture_compliance_cli.py",
+      "size": 3357,
+      "sha256": "b4fb4034da06ce0c5c9ac76ca819964f0d7b68cefdfb9f3838b8703d107b25cc"
     },
     {
       "path": ".agents/agentos/architecture_contract.py",
@@ -30,8 +40,8 @@
     },
     {
       "path": ".agents/agentos/architecture_discovery.py",
-      "size": 33464,
-      "sha256": "115ab4c94cbf15ed2679552eb39f9b99b051b356b255ddd59cb8e037fc3364b3"
+      "size": 35371,
+      "sha256": "d2b253c54911bcdd9c9468b090f2813ac97e65a54a1f409f35b01b69ed5b00f2"
     },
     {
       "path": ".agents/agentos/architecture_discovery_cli.py",
@@ -50,13 +60,13 @@
     },
     {
       "path": ".agents/agentos/cli.py",
-      "size": 33012,
-      "sha256": "7896730ade10951b1e62db0e996677b636ac58192311a55eaf4890ab94ebeefd"
+      "size": 33420,
+      "sha256": "f590ec0b5d087b6f86ded058b99b839ee79366824a9c6e71303f64016fc21ed2"
     },
     {
       "path": ".agents/agentos/cli_runtime.py",
-      "size": 12890,
-      "sha256": "575e83022cb1b1e2ed4da6d7d3b9d4ab0ad2926d95358a97f6ac8b28618b9388"
+      "size": 12925,
+      "sha256": "b86aa5a8915102003d6b590a820392825bad417d93a4021890f13bf27beaf00d"
     },
     {
       "path": ".agents/agentos/collaboration.py",
@@ -115,8 +125,8 @@
     },
     {
       "path": ".agents/agentos/core.py",
-      "size": 21259,
-      "sha256": "4aa169a556aedf0e484b0a2aa76cbbbf80bd5ccb2db56b7b3df3917c89347a6f"
+      "size": 21679,
+      "sha256": "d7060eb459a0321879ce9dd11978246e9875c3e3ddd39b8eaa191558bc83248c"
     },
     {
       "path": ".agents/agentos/data_subject_rights.py",
@@ -140,8 +150,8 @@
     },
     {
       "path": ".agents/agentos/db.py",
-      "size": 44182,
-      "sha256": "fa99cee536e93515586aa10d22cf78a83211dba8255fd7d2e9c11d34f44a43ae"
+      "size": 44250,
+      "sha256": "963b62b082037faa397dc0b73f9cd6a5ec23fe8bc07502586b850e9d472d42a5"
     },
     {
       "path": ".agents/agentos/db_aware_context_projection.py",
@@ -335,8 +345,8 @@
     },
     {
       "path": ".agents/agentos/mcp_runtime.py",
-      "size": 8541,
-      "sha256": "b8dffe055506973f0abdf94cd3f5443a39ebd636c4e7a79125d7dafe00d88eee"
+      "size": 8893,
+      "sha256": "0838a0cd7194677b07809d1845e5b3a462aac62e8b37f65fb8423e3a37431c43"
     },
     {
       "path": ".agents/agentos/mcp_schema_mapping_gateway.py",
@@ -369,6 +379,11 @@
       "sha256": "e2be22b25ff97faf5d04d21655f4332d7c36220d86538c488ff995caafb50d2d"
     },
     {
+      "path": ".agents/agentos/mcp_v0254.py",
+      "size": 1871,
+      "sha256": "3e07b1afc4153b541958949fdedf067382998f528fdb2660a6e11b5758473430"
+    },
+    {
       "path": ".agents/agentos/memory.py",
       "size": 6048,
       "sha256": "4273f29d357b5d595a9b6c135f8af0abb6d3afdd79e27ae56c498f17519e2448"
@@ -385,8 +400,8 @@
     },
     {
       "path": ".agents/agentos/planning.py",
-      "size": 5512,
-      "sha256": "b562fd30c380879d9959db516cf6d85349332a7db9dedb2b8f66b9bb8f6c47aa"
+      "size": 5975,
+      "sha256": "b073cffa900474582435411e31883630d0fd21dff816f38ecf1ebffd0d7668b6"
     },
     {
       "path": ".agents/agentos/policy.py",
@@ -455,8 +470,8 @@
     },
     {
       "path": ".agents/agentos/release_integrity.py",
-      "size": 25604,
-      "sha256": "e0ef6cdb6a67a26a6053a81ff0c89cde604d515f24a34f16a3afead868158c6e"
+      "size": 26079,
+      "sha256": "00691200b91098be32e7f9e89fd918fee17351e88b2e8ab25f5c134a9631b6e6"
     },
     {
       "path": ".agents/agentos/release_integrity_cli.py",
@@ -501,7 +516,7 @@
     {
       "path": ".agents/agentos/schema_version.py",
       "size": 312,
-      "sha256": "caa23274025ff7a21996abac66bf665416e8a5d2be2d6ba914ccc32740bd8ab6"
+      "sha256": "d41293980858a2855077bf6f38fbeaf68a666b9e1bd4b0a498545035b4a9f934"
     },
     {
       "path": ".agents/agentos/secret_lineage.py",
@@ -600,8 +615,8 @@
     },
     {
       "path": ".agents/config/agentos_distribution.lock.json",
-      "size": 31381,
-      "sha256": "6f8d997ab92b7c782067e4fda1a55deeeac4a106d4a70bf4489c595972723219"
+      "size": 32474,
+      "sha256": "ad3138f38893d60564252b7c21263ee14f0f2e1f3127738c308962d9f42bf40e"
     },
     {
       "path": ".agents/config/controlled_target_insert_policy.v0220.json",
@@ -615,8 +630,8 @@
     },
     {
       "path": ".agents/config/governance.json",
-      "size": 44177,
-      "sha256": "1633abaadca009ee169ae6ac9ddbd88de1da35045fc303d967ea2432a70fd433"
+      "size": 45306,
+      "sha256": "890f67aae83b71a2460418200589f7c02c30ca30343c7748ed6d60160454574b"
     },
     {
       "path": ".agents/config/identity_resolution_policy.v0221.json",
@@ -659,6 +674,11 @@
       "sha256": "9cfe57f2873052a6d65b89d493db9b1a4b8ddf6688c77dae3f50ab526aae1443"
     },
     {
+      "path": ".agents/config/update_ownership.v0254.json",
+      "size": 854,
+      "sha256": "90ba53c988c388aa6645facedeba72c1cf7b253c3f7a1fd1166326b855e77af5"
+    },
+    {
       "path": ".agents/docs/ADAPTIVE_TOKEN_BUDGET_MODEL_PROFILES_V0231.md",
       "size": 3258,
       "sha256": "b482f7ef95c09421078cd8290bf0572da403edef4e10598bd9f648752bc5b110"
@@ -672,6 +692,11 @@
       "path": ".agents/docs/ARCHITECTURE_DISCOVERY_EVIDENCE_V0253.md",
       "size": 4613,
       "sha256": "ef05350a387845e3a6cfc74c7ae6cd98310b3d8b4b46369ee833d9d272f5d4e4"
+    },
+    {
+      "path": ".agents/docs/ARCHITECTURE_DRIFT_COMPLIANCE_V0254.md",
+      "size": 3353,
+      "sha256": "d78e31c1eda1bc3684f383cf9290f275ad3aeece48cab7a2164698f978b850c2"
     },
     {
       "path": ".agents/docs/CONSOLIDATION_COCKPIT_PERFORMANCE_BASELINE_V0233.md",
@@ -770,8 +795,8 @@
     },
     {
       "path": ".agents/docs/RULES_WORKFLOW_CHANGELOG.md",
-      "size": 18239,
-      "sha256": "ecbb6e76bb53eb27666a05ece5241b3ac9268a08de93cf18f4d79246bc272bc1"
+      "size": 18663,
+      "sha256": "4737fa38aabe154467b9c56c40e8dc3f2e448adf29eb703060a0840a77093e81"
     },
     {
       "path": ".agents/docs/SCHEMA_BOOTSTRAP_BASELINE_V0250.md",
@@ -854,6 +879,11 @@
       "sha256": "35995e2b960cf82bf786bda72af237e1de22ed33c0a9943d5ca2dabbc9f2cacf"
     },
     {
+      "path": ".agents/docs/UPGRADE_FROM_0.25.3.md",
+      "size": 1171,
+      "sha256": "9eafe0d6ff4735fe4eb6457b16cea234915d14ce4b43a210b1171fa0d48e4750"
+    },
+    {
       "path": ".agents/docs/USAGE.md",
       "size": 10687,
       "sha256": "24b1d353a1c4ddd4599ecfba4275854b2ff4aee1c90a50aef615b9adbdf19038"
@@ -887,6 +917,11 @@
       "path": ".agents/tests/test_agentos.py",
       "size": 39227,
       "sha256": "5ec4c5f12876cfbba4ad96271026c91b4bcb6996db6e514088913392356e63f2"
+    },
+    {
+      "path": ".agents/tests/test_architecture_compliance_v0254.py",
+      "size": 6282,
+      "sha256": "643d25274032404918e200308f2d1dae0480d7794a9939c4b9bad2952db7fd6e"
     },
     {
       "path": ".agents/tests/test_architecture_contract_v0252.py",
@@ -1070,8 +1105,8 @@
     },
     {
       "path": "PACKAGE_COMPLETENESS.json",
-      "size": 1066,
-      "sha256": "befd76b656b2f85da76fc1706d18236a920153f747a8179dc7d71772cac7ee3e"
+      "size": 1140,
+      "sha256": "3aaac5296c9788e076ed4b3786fe7f2b2239f8438b06e2f9e5f477bd2cf4a462"
     },
     {
       "path": "PERFORMANCE_BASELINE_V0233.json",
@@ -1106,7 +1141,7 @@
     {
       "path": "VERSION",
       "size": 7,
-      "sha256": "98c9e27ccefc72e9fe151671f865b91b381eac25a9bc03baa7db45a8658781e3"
+      "sha256": "3f2be9bca37af466485828dfb077d440fdc0891e7f7b9721aae1fb2b3c5b709c"
     },
     {
       "path": "huong_dan.en.md",

@@ -116,6 +116,12 @@ def check_write(root: Path, task_id: str, target: str) -> dict[str, Any]:
                     if architecture.get("enforced") and not architecture.get("allowed", True):
                         allowed = False
                         reason = str(architecture.get("reason") or "architecture_structural_blocked")
+                    if allowed:
+                        from .architecture_runtime import architecture_runtime_target_check
+                        runtime_boundary = architecture_runtime_target_check(root, rel)
+                        if runtime_boundary.get("enforced") and not runtime_boundary.get("allowed", True):
+                            allowed = False
+                            reason = str(runtime_boundary.get("reason") or "architecture_runtime_blocked")
     with connect(root) as c:
         c.execute("INSERT INTO write_audit(task_id,target,allowed,reason) VALUES(?,?,?,?)", (task_id, target, int(allowed), reason))
     return {"allowed": allowed, "reason": reason, "target": rel or target}

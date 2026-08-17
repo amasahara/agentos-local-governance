@@ -127,6 +127,9 @@
     "improvement_proposal_authority_mode": "proposal_only",
     "mcp_architecture_mutation_allowed": false,
     "registry_version": 1,
+    "runtime_boundary_llm_authority": false,
+    "runtime_boundary_mcp_mutation_allowed": false,
+    "runtime_data_api_business_enforcement_enabled_v0262": true,
     "section_count": 27,
     "single_active_baseline_required": true,
     "version": 1,
@@ -188,6 +191,35 @@
     "source_authority": "human_activated_architecture_contract",
     "unknown_affected_sections_stale_conservatively": true,
     "version": 1
+  },
+  "architecture_runtime_policy": {
+    "architecture_mutation_allowed": false,
+    "database_schema": 56,
+    "deterministic_static_analysis_only": true,
+    "enabled": true,
+    "llm_runtime_authority": false,
+    "mcp_mutation_allowed": false,
+    "mcp_read_tools": [
+      "agentos.architecture_runtime_status_get",
+      "agentos.architecture_runtime_findings_get",
+      "agentos.architecture_runtime_target_get"
+    ],
+    "network_access_allowed": false,
+    "plan_declaration_gate_required": true,
+    "precommit_gate_required": true,
+    "project_code_execution_allowed": false,
+    "sections": [
+      "ARCH-06",
+      "ARCH-07",
+      "ARCH-08",
+      "ARCH-09",
+      "ARCH-10",
+      "ARCH-11",
+      "ARCH-13",
+      "ARCH-14"
+    ],
+    "version": 1,
+    "waiver_authority": "human_architecture_change_only"
   },
   "architecture_structural_policy": {
     "approval_authority_exposed": false,
@@ -603,22 +635,23 @@
   },
   "documentation_policy": {
     "current_release_identity_files": [
-      ".agents/docs/ARCHITECTURE_STRUCTURAL_ENFORCEMENT_V0261.md"
+      ".agents/docs/RUNTIME_DATA_API_BUSINESS_ENFORCEMENT_V0262.md"
     ],
-    "current_release_name": "Structural Enforcement",
-    "current_schema": 55,
+    "current_release_name": "Runtime/Data/API & Business Boundary Enforcement",
+    "current_schema": 56,
     "current_schema_files": [
-      ".agents/docs/ARCHITECTURE_STRUCTURAL_ENFORCEMENT_V0261.md"
+      ".agents/docs/RUNTIME_DATA_API_BUSINESS_ENFORCEMENT_V0262.md"
     ],
-    "current_upgrade_guide": ".agents/docs/UPGRADE_FROM_0.26.0.md",
+    "current_upgrade_guide": ".agents/docs/UPGRADE_FROM_0.26.1.md",
     "current_version_files": [
-      ".agents/docs/ARCHITECTURE_STRUCTURAL_ENFORCEMENT_V0261.md"
+      ".agents/docs/RUNTIME_DATA_API_BUSINESS_ENFORCEMENT_V0262.md"
     ],
     "local_link_check_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
-      "UPGRADE_FROM_0.25.1.md"
+      ".agents/docs/UPGRADE_FROM_0.26.1.md",
+      ".agents/docs/RUNTIME_DATA_API_BUSINESS_ENFORCEMENT_V0262.md"
     ]
   },
   "drift_policy": {
@@ -1388,7 +1421,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.26.1",
+  "version": "0.26.2",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,

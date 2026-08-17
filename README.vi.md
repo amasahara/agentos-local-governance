@@ -1,11 +1,11 @@
-# AgentOS Local Governance v0.26.1 — Structural Enforcement
+# AgentOS Local Governance v0.26.2 — Runtime/Data/API & Business Boundary Enforcement
 
 [README landing](README.md) | [English](README.en.md)
 
 ## Phiên bản hiện tại
 
-- Version: **0.26.1**
-- Database schema: **55**
+- Version: **0.26.2**
+- Database schema: **56**
 - Schema bootstrap baseline: **46** (không đổi)
 
 v0.26.1 đưa **Structural Enforcement** vào các boundary thực thi hiện hữu của AgentOS. Thay vì chỉ phát hiện drift sau khi source đã thay đổi, AgentOS có thể chặn sớm một đường dẫn/module/dependency/import edge/coding structure trái với Architecture Contract đã được con người activate.
@@ -22,7 +22,7 @@ Node này chỉ tập trung vào:
 - `ARCH-22` Coding Convention
 - `ARCH-23` Design Pattern
 
-Các boundary runtime/data/API/business sẽ ở v0.26.2; quality/security/operational architecture ở v0.26.3.
+v0.26.2 hiện enforce các boundary runtime/data/API/business; quality/security/operational architecture tiếp tục ở v0.26.3.
 
 ## Luồng enforcement
 
@@ -118,4 +118,4 @@ agentos architecture-plan-status --task-id TASK-1
 agentos precommit-check --task-id TASK-1
 ```
 
-Xem [tài liệu v0.26.1](.agents/docs/ARCHITECTURE_STRUCTURAL_ENFORCEMENT_V0261.md) và [hướng dẫn nâng cấp](.agents/docs/UPGRADE_FROM_0.26.0.md).
+Xem [tài liệu v0.26.2](.agents/docs/RUNTIME_DATA_API_BUSINESS_ENFORCEMENT_V0262.md) và [hướng dẫn nâng cấp](.agents/docs/UPGRADE_FROM_0.26.1.md).

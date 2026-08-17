@@ -9,4 +9,4 @@
 7. Human dùng `decision-resolve --human-confirmed`. Nếu impact khác `none`, task approval bị thu hồi và plan active/submitted bị supersede.
 8. Sau upgrade chạy manifest, release validator, docs/instruction checks và toàn bộ pytest.
 
-Database schema: **50**; bootstrap baseline vẫn **46**.
+Database schema: **56**; bootstrap baseline vẫn **46**.

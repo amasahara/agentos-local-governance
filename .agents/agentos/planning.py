@@ -105,6 +105,8 @@ def precommit_check(root: Path, task_id: str, changed_files: list[str] | None = 
     architecture = architecture_compliance_check(root, task_id=task_id, changed_files=files, mode="precommit", refresh_scan=True, created_by="system:precommit")
     from .architecture_structural import architecture_structural_check
     structural = architecture_structural_check(root, task_id=task_id, plan_id=int(plan["id"]) if plan else None, changed_files=files, mode="precommit", created_by="system:precommit")
+    from .architecture_runtime import architecture_runtime_check
+    runtime_boundary = architecture_runtime_check(root, task_id=task_id, plan_id=int(plan["id"]) if plan else None, changed_files=files, mode="precommit", created_by="system:precommit")
     blockers = {
         "task_not_approved": not bool(task["approved"]),
         "missing_active_plan": plan is None,
@@ -116,6 +118,7 @@ def precommit_check(root: Path, task_id: str, changed_files: list[str] | None = 
         "human_decision_pending": human_gate["decisions"],
         "architecture_compliance": architecture if not architecture.get("ok", True) else None,
         "architecture_structural": structural if not structural.get("ok", True) else None,
+        "architecture_runtime": runtime_boundary if not runtime_boundary.get("ok", True) else None,
     }
-    ok = bool(task["approved"]) and plan is not None and plan_architecture["ready"] and not outside_scope and not unplanned and not wf["invalid_provenance"] and clarity_gate["ready"] and not human_gate["blocked"] and bool(architecture.get("ok", False)) and bool(structural.get("ok", False))
-    return {"ok": ok, "task_id": task_id, "changed_files": files, "active_plan_revision": plan["revision"] if plan else None, "architecture_plan": plan_architecture, "architecture_compliance": architecture, "architecture_structural": structural, "blockers": blockers}
+    ok = bool(task["approved"]) and plan is not None and plan_architecture["ready"] and not outside_scope and not unplanned and not wf["invalid_provenance"] and clarity_gate["ready"] and not human_gate["blocked"] and bool(architecture.get("ok", False)) and bool(structural.get("ok", False)) and bool(runtime_boundary.get("ok", False))
+    return {"ok": ok, "task_id": task_id, "changed_files": files, "active_plan_revision": plan["revision"] if plan else None, "architecture_plan": plan_architecture, "architecture_compliance": architecture, "architecture_structural": structural, "architecture_runtime": runtime_boundary, "blockers": blockers}

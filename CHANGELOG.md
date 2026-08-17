@@ -1,3 +1,9 @@
+## 0.26.2 — Runtime/Data/API & Business Boundary Enforcement
+
+- Enforce ARCH-06/07/08/09/10/11/13/14 at plan-time and pre-commit using deterministic static analysis.
+- Add schema 56 runtime-boundary runs/findings, target-only ARCH-09/14 write gating, and read-only MCP inspection.
+- Preserve human-only Architecture Authority; no LLM waiver/approval/activation authority is introduced.
+
 # Changelog
 
 ## 0.25.2 — 27-Section Architecture Contract & Human Clarification Gates

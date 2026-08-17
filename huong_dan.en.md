@@ -9,4 +9,4 @@
 7. A human resolves with `decision-resolve --human-confirmed`. Non-`none` impact revokes task approval and supersedes submitted/active plans.
 8. Rebuild the manifest and run release/docs/instruction/regression validation after upgrade.
 
-Database schema: **50**; bootstrap baseline remains **46**.
+Database schema: **56**; bootstrap baseline remains **46**.

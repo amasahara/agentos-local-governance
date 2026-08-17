@@ -83,7 +83,8 @@ def test_schema_55_structural_tables_exist(tmp_path: Path, monkeypatch: pytest.M
     with connect(root) as connection:
         version = connection.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0]
         tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert version == SCHEMA_VERSION == 55
+    assert version == SCHEMA_VERSION
+    assert version >= 55
     assert {"architecture_structural_runs", "architecture_structural_findings"} <= tables
 
 

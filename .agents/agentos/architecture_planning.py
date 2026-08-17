@@ -249,6 +249,12 @@ def analyze_plan_on_connection(connection: Any, task_id: str, plan: dict[str, An
     base_envelope["expected_dependencies"] = list(structural.get("expected_dependencies", expected_dependencies))
     base_envelope["expected_languages"] = list(structural.get("expected_languages", expected_languages))
     base_envelope["inferred_languages"] = list(structural.get("inferred_languages", []))
+    from .architecture_runtime import analyze_plan_runtime_on_connection
+    runtime_boundary = analyze_plan_runtime_on_connection(connection, plan, sections, affected)
+    blockers.extend(runtime_boundary.get("blockers", []))
+    base_envelope["runtime_boundary"] = runtime_boundary
+    for key, value in runtime_boundary.get("declarations", {}).items():
+        base_envelope[key] = value
     for path in expected_files:
         result = architecture_target_check_from_sections(sections, path)
         if not result.get("allowed", True):
@@ -276,6 +282,12 @@ def enrich_plan(plan: dict[str, Any], analysis: dict[str, Any]) -> dict[str, Any
     out["expected_dependency_edges"] = list(analysis["expected_dependency_edges"])
     out["expected_dependencies"] = list(analysis.get("expected_dependencies", []))
     out["expected_languages"] = list(analysis.get("expected_languages", []))
+    for key in (
+        "expected_runtime_calls", "expected_data_operations", "expected_api_routes",
+        "expected_business_calls", "expected_external_services", "expected_config_keys",
+    ):
+        if key in analysis:
+            out[key] = list(analysis.get(key, []))
     out["expected_files"] = list(analysis["expected_files"])
     out["acceptance_criteria"] = list(analysis["acceptance_criteria"])
     out["architecture_baseline_hash"] = analysis.get("architecture_baseline_hash")

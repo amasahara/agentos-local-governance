@@ -1,3 +1,9 @@
+## v0.26.2 — Runtime/Data/API & Business Boundary Enforcement
+
+- Added deterministic enforcement for ARCH-06/07/08/09/10/11/13/14.
+- Added schema 56 runtime-boundary runs/findings and three read-only MCP inspection tools.
+- Preserved human-only Architecture Authority; no LLM approval/waiver/activation authority was added.
+
 ## v0.25.3 — Architecture Discovery & Evidence Binding
 - Added schema 51 for deterministic static architecture scan runs, observations, evidence bindings, and advisory discrepancies.
 - Discovery is read-only: project code is not executed, network access and symlink traversal are forbidden, and raw source text is not persisted in AgentOS state.

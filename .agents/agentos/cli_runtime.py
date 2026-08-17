@@ -53,6 +53,7 @@ FEATURE_CLI_MODULES = (
     "architecture_change_cli",
     "architecture_planning_cli",
     "architecture_structural_cli",
+    "architecture_runtime_cli",
     "human_decision_cli",
 )
 

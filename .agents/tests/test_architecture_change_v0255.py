@@ -83,7 +83,8 @@ def test_schema_53_tables_exist(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     with connect(root) as c:
         version = c.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0]
         tables = {row[0] for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert version == SCHEMA_VERSION == 53
+    assert version == SCHEMA_VERSION
+    assert SCHEMA_VERSION >= 53
     assert {
         "architecture_change_proposals",
         "architecture_change_proposal_findings",

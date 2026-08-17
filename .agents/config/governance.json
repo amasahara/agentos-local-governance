@@ -49,6 +49,7 @@
     "adr_status_on_create": "proposed",
     "adr_status_on_human_approval": "accepted",
     "approved_proposal_requires_separate_architecture_baseline_lifecycle": true,
+    "architecture_aware_task_planning": "v0.26.0",
     "automatic_architecture_working_copy_mutation": false,
     "automatic_baseline_activation": false,
     "automatic_baseline_creation": false,
@@ -156,6 +157,36 @@
     "symlink_following_allowed": false,
     "version": 1,
     "working_copy_mutation_allowed": false
+  },
+  "architecture_planning_policy": {
+    "acceptance_criteria_required_when_enforced": true,
+    "active_baseline_plan_binding_required": true,
+    "affected_sections_declaration_required_when_enforced": true,
+    "architecture_baseline_hash_source": "system_active_baseline_only",
+    "architecture_change_bypass_allowed": false,
+    "automatic_rebase_of_plan": false,
+    "baseline_change_stales_affected_plans": true,
+    "caller_supplied_baseline_hash_mismatch": "fail_closed",
+    "database_schema": 54,
+    "enabled": true,
+    "expected_dependency_edges_declaration_required_when_enforced": true,
+    "expected_files_must_match_plan_files": true,
+    "expected_modules_declaration_required_when_enforced": true,
+    "first_baseline_activation_stales_not_evaluable_plans": true,
+    "mcp_mutation_allowed": false,
+    "mcp_read_tools": [
+      "agentos.architecture_plan_get",
+      "agentos.architecture_plan_status_get",
+      "agentos.architecture_plan_impact_get"
+    ],
+    "no_active_baseline_behavior": "not_evaluable_non_blocking",
+    "plan_approval_revalidates_architecture_baseline": true,
+    "plan_hash_includes_architecture_pin": true,
+    "precommit_requires_current_architecture_plan": true,
+    "requirements_required_when_enforced": true,
+    "source_authority": "human_activated_architecture_contract",
+    "unknown_affected_sections_stale_conservatively": true,
+    "version": 1
   },
   "claim_policy": {
     "allow_network_evidence": false,
@@ -535,16 +566,16 @@
   },
   "documentation_policy": {
     "current_release_identity_files": [
-      ".agents/docs/ARCHITECTURE_CHANGE_PROPOSAL_ADR_V0255.md"
+      ".agents/docs/ARCHITECTURE_AWARE_TASK_PLANNING_V0260.md"
     ],
-    "current_release_name": "Architecture Change Proposal & ADR Lifecycle",
-    "current_schema": 53,
+    "current_release_name": "Architecture-Aware Task Planning",
+    "current_schema": 54,
     "current_schema_files": [
-      ".agents/docs/ARCHITECTURE_CHANGE_PROPOSAL_ADR_V0255.md"
+      ".agents/docs/ARCHITECTURE_AWARE_TASK_PLANNING_V0260.md"
     ],
-    "current_upgrade_guide": ".agents/docs/UPGRADE_FROM_0.25.4.md",
+    "current_upgrade_guide": ".agents/docs/UPGRADE_FROM_0.25.5.md",
     "current_version_files": [
-      ".agents/docs/ARCHITECTURE_CHANGE_PROPOSAL_ADR_V0255.md"
+      ".agents/docs/ARCHITECTURE_AWARE_TASK_PLANNING_V0260.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -790,7 +821,7 @@
     "support_local_policy_override": true,
     "unknown_update_paths_are_project_owned": true,
     "update_mode": "staged_hash_gated_fail_closed",
-    "update_ownership_contract": ".agents/config/update_ownership.v0255.json"
+    "update_ownership_contract": ".agents/config/update_ownership.v0260.json"
   },
   "instruction_policy": {
     "forbid_model_specific_instruction_files": true,
@@ -861,7 +892,8 @@
       "architecture_discovery_policy",
       "update_preservation_policy",
       "architecture_compliance_policy",
-      "architecture_change_policy"
+      "architecture_change_policy",
+      "architecture_planning_policy"
     ]
   },
   "mcp_feature_runtime_policy": {
@@ -1132,7 +1164,7 @@
     "bootstrap_artifact_metadata": ".agents/schema/bootstrap_v46.json",
     "bootstrap_artifact_sql": ".agents/schema/bootstrap_v46.sql",
     "bootstrap_schema": 46,
-    "current_database_schema": 53,
+    "current_database_schema": 54,
     "existing_database_mode": "incremental_from_recorded_version",
     "fresh_database_mode": "bootstrap_then_incremental",
     "fresh_replay_migrations_1_to_46": false,
@@ -1156,9 +1188,10 @@
       50,
       51,
       52,
-      53
+      53,
+      54
     ],
-    "schema_change": "additive_architecture_change_proposal_adr_schema_53",
+    "schema_change": "additive_architecture_aware_task_planning_schema_54",
     "schema_fingerprint_required": true,
     "schema_migration_markers_preserved": true,
     "source_database_write_authority_changed": false,
@@ -1316,7 +1349,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.25.5",
+  "version": "0.26.0",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,

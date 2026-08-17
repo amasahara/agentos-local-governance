@@ -1,13 +1,5 @@
-"""
-File: .agents/agentos/planning.py
-
-Purpose:
-    Manage versioned task plans and Git-aware change gates for AgentOS v0.16.1.
-
-Responsibilities:
-    - Store immutable plan revisions and approval state.
-    - Compare Git changes with approved task scope and plan paths.
-    - Produce a pre-commit decision with auditable reasons.
+"""File: .agents/agentos/planning.py
+Purpose: Manage immutable task plans, architecture binding, and Git-aware change gates.
 """
 from __future__ import annotations
 
@@ -23,20 +15,31 @@ from .workflow import workflow_status
 
 
 def submit_plan(root: Path, task_id: str, session_id: str, plan: dict[str, Any]) -> dict[str, Any]:
-    """Persist a new immutable task-plan revision."""
-    canonical = json.dumps(plan, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-    digest = hashlib.sha256(canonical.encode()).hexdigest()
+    """Persist a new immutable plan revision after deterministic architecture impact analysis."""
+    from .architecture_planning import analyze_plan_on_connection, bind_plan_on_connection, enrich_plan
     with connect(root, immediate=True) as c:
+        task = c.execute("SELECT id FROM tasks WHERE id=?", (task_id,)).fetchone()
+        if not task:
+            raise RuntimeError("task not found")
+        analysis = analyze_plan_on_connection(c, task_id, plan)
+        if not analysis["ready"]:
+            codes = [str(item.get("code")) for item in analysis.get("blockers", [])]
+            raise RuntimeError("architecture_plan_blocked:" + ",".join(codes))
+        persisted = enrich_plan(plan, analysis)
+        canonical = json.dumps(persisted, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        digest = hashlib.sha256(canonical.encode()).hexdigest()
         rev = c.execute("SELECT COALESCE(MAX(revision),0)+1 AS r FROM task_plans WHERE task_id=?", (task_id,)).fetchone()["r"]
         c.execute("UPDATE task_plans SET status='superseded' WHERE task_id=? AND status IN ('draft','submitted')", (task_id,))
         c.execute("INSERT INTO task_plans(task_id,revision,status,plan_json,plan_hash,submitted_by) VALUES(?,?,'submitted',?,?,?)", (task_id, rev, canonical, digest, session_id))
-        plan_id = c.execute("SELECT last_insert_rowid() AS id").fetchone()["id"]
-    event = append_signed_event(root, "plan.submitted", {"plan_id": plan_id, "revision": rev, "plan_hash": digest}, task_id, session_id)
-    return {"ok": True, "plan_id": plan_id, "task_id": task_id, "revision": rev, "status": "submitted", "plan_hash": digest, "event_hash": event["event_hash"]}
+        plan_id = int(c.execute("SELECT last_insert_rowid() AS id").fetchone()["id"])
+        bind_plan_on_connection(c, plan_id, task_id, analysis)
+    event = append_signed_event(root, "plan.submitted", {"plan_id": plan_id, "revision": rev, "plan_hash": digest, "architecture_baseline_hash": analysis.get("architecture_baseline_hash"), "architecture_impact_hash": analysis["impact_hash"]}, task_id, session_id)
+    return {"ok": True, "plan_id": plan_id, "task_id": task_id, "revision": rev, "status": "submitted", "plan_hash": digest, "architecture": analysis, "event_hash": event["event_hash"]}
 
 
 def approve_plan(root: Path, plan_id: int, approved_by: str, note: str) -> dict[str, Any]:
-    """Approve one submitted plan revision and supersede older active plans."""
+    """Approve one submitted plan only while its architecture pin remains current."""
+    from .architecture_planning import approval_check_on_connection
     with connect(root, immediate=True) as c:
         row = c.execute("SELECT * FROM task_plans WHERE id=?", (plan_id,)).fetchone()
         if not row:
@@ -47,18 +50,26 @@ def approve_plan(root: Path, plan_id: int, approved_by: str, note: str) -> dict[
         gate = clarity_gate_status(root, row["task_id"])
         if not gate["ready"]:
             raise RuntimeError("clarity_gate_blocked")
+        architecture = approval_check_on_connection(c, plan_id)
+        if not architecture["ready"]:
+            raise RuntimeError("architecture_plan_stale:" + str(architecture["reason"]))
         c.execute("UPDATE task_plans SET status='superseded' WHERE task_id=? AND status='active'", (row["task_id"],))
         c.execute("UPDATE task_plans SET status='active',approved_by=?,approval_note=?,approved_at=CURRENT_TIMESTAMP WHERE id=?", (approved_by, note, plan_id))
-    event = append_signed_event(root, "plan.approved", {"plan_id": plan_id, "revision": row["revision"], "approved_by": approved_by, "note": note}, row["task_id"], None)
-    return {"ok": True, "plan_id": plan_id, "task_id": row["task_id"], "status": "active", "event_hash": event["event_hash"]}
+    event = append_signed_event(root, "plan.approved", {"plan_id": plan_id, "revision": row["revision"], "approved_by": approved_by, "note": note, "architecture_baseline_hash": (architecture.get("context") or {}).get("baseline_hash")}, row["task_id"], None)
+    return {"ok": True, "plan_id": plan_id, "task_id": row["task_id"], "status": "active", "architecture": architecture, "event_hash": event["event_hash"]}
 
 
 def active_plan(root: Path, task_id: str) -> dict[str, Any] | None:
-    """Return the active plan for a task, if any."""
+    """Return the active plan and its architecture context."""
+    from .architecture_planning import context_for_plan_on_connection
     with connect(root) as c:
         row = c.execute("SELECT * FROM task_plans WHERE task_id=? AND status='active' ORDER BY revision DESC LIMIT 1", (task_id,)).fetchone()
-    if not row: return None
-    result = dict(row); result["plan"] = json.loads(result.pop("plan_json")); return result
+        if not row:
+            return None
+        result = dict(row)
+        result["plan"] = json.loads(result.pop("plan_json"))
+        result["architecture"] = context_for_plan_on_connection(c, int(result["id"]))
+        return result
 
 
 def _git_changes(root: Path) -> list[str]:
@@ -69,13 +80,20 @@ def _git_changes(root: Path) -> list[str]:
 
 
 def precommit_check(root: Path, task_id: str, changed_files: list[str] | None = None) -> dict[str, Any]:
-    """Validate Git changes against task scope, active plan, and workflow state."""
-    with connect(root) as c:
+    """Validate changes against scope, current architecture-pinned plan, workflow, and compliance."""
+    from .architecture_planning import approval_check_on_connection
+    with connect(root, immediate=True) as c:
         task = c.execute("SELECT approved,approved_scope FROM tasks WHERE id=?", (task_id,)).fetchone()
-    if not task: raise RuntimeError("task not found")
+        plan_row = c.execute("SELECT * FROM task_plans WHERE task_id=? AND status='active' ORDER BY revision DESC LIMIT 1", (task_id,)).fetchone()
+        plan_architecture = approval_check_on_connection(c, int(plan_row["id"])) if plan_row else {"ready": False, "reason": "missing_active_plan"}
+        plan = None
+        if plan_row and plan_architecture["ready"]:
+            plan = dict(plan_row)
+            plan["plan"] = json.loads(plan.pop("plan_json"))
+    if not task:
+        raise RuntimeError("task not found")
     files = sorted(set(changed_files if changed_files is not None else _git_changes(root)))
     scope = json.loads(task["approved_scope"])
-    plan = active_plan(root, task_id)
     planned = set((plan or {}).get("plan", {}).get("files", []))
     outside_scope = [p for p in files if not any(p == s or p.startswith(s.rstrip("/") + "/") for s in scope)]
     unplanned = [p for p in files if planned and p not in planned]
@@ -84,17 +102,11 @@ def precommit_check(root: Path, task_id: str, changed_files: list[str] | None = 
     clarity_gate = clarity_gate_status(root, task_id)
     human_gate = decision_gate_status(root, task_id)
     from .architecture_compliance import architecture_compliance_check
-    architecture = architecture_compliance_check(
-        root,
-        task_id=task_id,
-        changed_files=files,
-        mode="precommit",
-        refresh_scan=True,
-        created_by="system:precommit",
-    )
+    architecture = architecture_compliance_check(root, task_id=task_id, changed_files=files, mode="precommit", refresh_scan=True, created_by="system:precommit")
     blockers = {
         "task_not_approved": not bool(task["approved"]),
         "missing_active_plan": plan is None,
+        "architecture_plan_stale": None if plan_architecture["ready"] else plan_architecture["reason"],
         "outside_scope": outside_scope,
         "unplanned_files": unplanned,
         "invalid_provenance": wf["invalid_provenance"],
@@ -102,5 +114,5 @@ def precommit_check(root: Path, task_id: str, changed_files: list[str] | None = 
         "human_decision_pending": human_gate["decisions"],
         "architecture_compliance": architecture if not architecture.get("ok", True) else None,
     }
-    ok = bool(task["approved"]) and plan is not None and not outside_scope and not unplanned and not wf["invalid_provenance"] and clarity_gate["ready"] and not human_gate["blocked"] and bool(architecture.get("ok", False))
-    return {"ok": ok, "task_id": task_id, "changed_files": files, "active_plan_revision": plan["revision"] if plan else None, "architecture_compliance": architecture, "blockers": blockers}
+    ok = bool(task["approved"]) and plan is not None and plan_architecture["ready"] and not outside_scope and not unplanned and not wf["invalid_provenance"] and clarity_gate["ready"] and not human_gate["blocked"] and bool(architecture.get("ok", False))
+    return {"ok": ok, "task_id": task_id, "changed_files": files, "active_plan_revision": plan["revision"] if plan else None, "architecture_plan": plan_architecture, "architecture_compliance": architecture, "blockers": blockers}

@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "release": "0.26.0",
+  "baseline_release": "0.25.5",
+  "ownership_default": "PROJECT_OWNED",
+  "agentos_managed_replacements": [
+    ".agents/agentos/__init__.py",
+    ".agents/agentos/schema_version.py",
+    ".agents/agentos/db.py",
+    ".agents/agentos/planning.py",
+    ".agents/agentos/cli_runtime.py",
+    ".agents/agentos/mcp_runtime.py",
+    ".agents/agentos/release_integrity.py",
+    ".agents/agentos/architecture_contract.py",
+    ".agents/tests/test_architecture_change_v0255.py"
+  ],
+  "agentos_managed_additions": [
+    ".agents/agentos/architecture_planning.py",
+    ".agents/agentos/architecture_planning_cli.py",
+    ".agents/agentos/mcp_v0260.py",
+    ".agents/config/update_ownership.v0260.json",
+    ".agents/docs/ARCHITECTURE_AWARE_TASK_PLANNING_V0260.md",
+    ".agents/docs/UPGRADE_FROM_0.25.5.md",
+    ".agents/tests/test_architecture_planning_v0260.py"
+  ],
+  "project_owned_never_overwrite": [
+    "AGENTS.md",
+    ".agents/config/governance.local.json",
+    ".agents/config/project.id",
+    ".agents/config/project.purpose.json",
+    ".agents/architecture/**",
+    ".agents/skills/**",
+    ".agents/workflows/**",
+    ".agents/state/**",
+    ".agents/runtime/**",
+    ".agents/cache/**",
+    "unknown project paths"
+  ],
+  "managed_conflict_policy": "fail_closed_exact_distribution_lock_sha256"
+}

@@ -493,7 +493,8 @@ def activate_baseline(root: Path, baseline_id: int, expected_baseline_hash: str,
     _human_guard(row, expected_baseline_hash, human_confirmed, {"approved"})
     with connect(root, immediate=True) as c:
         old = c.execute("SELECT id FROM architecture_baselines WHERE status='active'").fetchone()
-        if old and int(old["id"]) != baseline_id:
+        old_baseline_id = int(old["id"]) if old and int(old["id"]) != baseline_id else None
+        if old_baseline_id is not None:
             change = c.execute(
                 """SELECT p.id FROM architecture_change_proposals p
                    JOIN architecture_adrs a ON a.proposal_id=p.id
@@ -504,7 +505,12 @@ def activate_baseline(root: Path, baseline_id: int, expected_baseline_hash: str,
             ).fetchone()
             if not change:
                 raise RuntimeError("architecture_successor_baseline_requires_approved_change_proposal")
-            c.execute("UPDATE architecture_baselines SET status='superseded',superseded_by_baseline_id=? WHERE id=? AND status='active'", (baseline_id, int(old["id"])))
+            from .architecture_planning import mark_plans_stale_for_baseline_change
+            mark_plans_stale_for_baseline_change(c, old_baseline_id, baseline_id)
+            c.execute("UPDATE architecture_baselines SET status='superseded',superseded_by_baseline_id=? WHERE id=? AND status='active'", (baseline_id, old_baseline_id))
+        elif old is None:
+            from .architecture_planning import mark_plans_stale_for_baseline_change
+            mark_plans_stale_for_baseline_change(c, None, baseline_id)
         c.execute("UPDATE architecture_baselines SET status='active',activated_by=?,activated_at=CURRENT_TIMESTAMP WHERE id=? AND status='approved'", (activated_by, baseline_id))
     external = _event(root, baseline_id, None, "architecture.baseline_activated", {"baseline_id": baseline_id, "baseline_hash": expected_baseline_hash, "activated_by": activated_by})
     return {"ok": True, "baseline_id": baseline_id, "status": "active", "external_event_hash": external}

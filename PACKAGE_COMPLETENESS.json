@@ -1,8 +1,8 @@
 {
-  "release": "0.25.5",
+  "release": "0.26.0",
   "kind": "full_materialized_github_ready",
-  "schema": 53,
-  "authoritative_file_count": 242,
+  "schema": 54,
+  "authoritative_file_count": 249,
   "required_top_level": [
     "VERSION",
     "AGENTS.md",
@@ -40,5 +40,6 @@
   "coherence_contract_version": 1,
   "update_preservation": "project_owned_never_overwrite_hash_gated_distribution",
   "architecture_compliance": "active_baseline_hard_contract_fail_closed",
-  "architecture_change_lifecycle": "proposal_adr_human_approval_separate_baseline_activation"
+  "architecture_change_lifecycle": "proposal_adr_human_approval_separate_baseline_activation",
+  "architecture_aware_task_planning": "baseline_pinned_impact_hashed_stale_on_architecture_change"
 }

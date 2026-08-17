@@ -254,3 +254,11 @@ Added Primary-Project Consolidation as a directed, plan-hashed workflow:
 - Approved proposals do not edit Architecture Contract working copies or activate baselines; the existing human baseline lifecycle remains mandatory.
 - Added read-only MCP proposal/ADR inspection with no create/review/approve/reject/bind/activate tools.
 - Hardened the v0.25.4 compliance regression so schema 52 remains a historical floor while v0.25.5 advances to schema 53.
+
+## 0.26.0 — Architecture-Aware Task Planning
+- Added schema 54 architecture-bound task-plan contexts and lifecycle events.
+- Plans under an ACTIVE Architecture Baseline are system-pinned to the exact baseline hash and deterministic architecture impact hash.
+- Requirements, affected architecture sections, expected modules/dependency edges/files, and acceptance criteria become plan contract inputs.
+- Plan approval and precommit fail closed when the architecture baseline pin is stale.
+- Baseline activation marks affected plans stale instead of silently rebasing them.
+- Added three read-only MCP planning inspection tools with no plan/ADR/architecture approval authority.

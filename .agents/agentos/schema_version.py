@@ -9,4 +9,4 @@ Responsibilities:
     - Prevent feature modules from carrying divergent schema-version numbers.
 """
 
-CURRENT_SCHEMA_VERSION = 53
+CURRENT_SCHEMA_VERSION = 54

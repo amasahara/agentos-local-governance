@@ -50,6 +50,7 @@ FEATURE_CLI_MODULES = (
     "architecture_contract_cli",
     "architecture_discovery_cli",
     "architecture_compliance_cli",
+    "architecture_change_cli",
     "human_decision_cli",
 )
 
@@ -81,6 +82,7 @@ PRIVILEGED_COMMANDS = {
     "project-consolidation-batch-bundle-create", "project-consolidation-batch-review",
     "project-consolidation-mapping-review",
     "architecture-baseline-review", "architecture-baseline-approve", "architecture-baseline-activate", "architecture-baseline-reject",
+    "architecture-proposal-review", "architecture-proposal-approve", "architecture-proposal-reject", "architecture-proposal-bind-baseline",
     "decision-resolve",
 }
 

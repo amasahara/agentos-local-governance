@@ -557,6 +557,9 @@ def architecture_compliance_check(
         "warning_count": warnings,
         "blocking_count": blocking,
         "findings": findings,
+        "architecture_change_proposal_available": blocking > 0,
+        "architecture_change_proposal_source_run_id": run_id if blocking > 0 else None,
+        "architecture_change_proposal_note": "Create a proposal/ADR draft; human review/approval and a separate Architecture Baseline lifecycle remain required." if blocking > 0 else None,
     }
 
 

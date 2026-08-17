@@ -494,6 +494,16 @@ def activate_baseline(root: Path, baseline_id: int, expected_baseline_hash: str,
     with connect(root, immediate=True) as c:
         old = c.execute("SELECT id FROM architecture_baselines WHERE status='active'").fetchone()
         if old and int(old["id"]) != baseline_id:
+            change = c.execute(
+                """SELECT p.id FROM architecture_change_proposals p
+                   JOIN architecture_adrs a ON a.proposal_id=p.id
+                   WHERE p.status='approved' AND a.status='accepted'
+                     AND p.target_baseline_id=? AND p.target_baseline_hash=?
+                   ORDER BY p.id DESC LIMIT 1""",
+                (baseline_id, expected_baseline_hash),
+            ).fetchone()
+            if not change:
+                raise RuntimeError("architecture_successor_baseline_requires_approved_change_proposal")
             c.execute("UPDATE architecture_baselines SET status='superseded',superseded_by_baseline_id=? WHERE id=? AND status='active'", (baseline_id, int(old["id"])))
         c.execute("UPDATE architecture_baselines SET status='active',activated_by=?,activated_at=CURRENT_TIMESTAMP WHERE id=? AND status='approved'", (activated_by, baseline_id))
     external = _event(root, baseline_id, None, "architecture.baseline_activated", {"baseline_id": baseline_id, "baseline_hash": expected_baseline_hash, "activated_by": activated_by})

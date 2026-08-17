@@ -37,7 +37,8 @@ def test_schema_52_and_scanner_v2(tmp_path: Path) -> None:
     with connect(tmp_path) as c:
         version = c.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0]
         tables = {row[0] for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert version == SCHEMA_VERSION == 52
+    assert version == SCHEMA_VERSION
+    assert SCHEMA_VERSION >= 52
     assert SCANNER_VERSION == 2
     assert {"architecture_compliance_runs", "architecture_compliance_findings"} <= tables
 

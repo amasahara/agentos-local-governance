@@ -246,3 +246,11 @@ Added Primary-Project Consolidation as a directed, plan-hashed workflow:
 - Integrated hard architecture gates into write preparation, precommit, and final report.
 - Added scanner v2 module/domain/environment-name observations without raw secret persistence.
 - Added read-only MCP compliance inspection; no waiver/approval/architecture mutation authority.
+
+## 0.25.5 — Architecture Change Proposal & ADR Lifecycle
+- Added schema 53 immutable proposal, compliance-finding binding, ADR, and lifecycle-event records.
+- AI/system actors may draft and submit proposal-only records; no architecture approval authority is granted.
+- Human review/approval/rejection and target-baseline binding require explicit confirmation and exact proposal hash.
+- Approved proposals do not edit Architecture Contract working copies or activate baselines; the existing human baseline lifecycle remains mandatory.
+- Added read-only MCP proposal/ADR inspection with no create/review/approve/reject/bind/activate tools.
+- Hardened the v0.25.4 compliance regression so schema 52 remains a historical floor while v0.25.5 advances to schema 53.

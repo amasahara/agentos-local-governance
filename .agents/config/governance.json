@@ -44,10 +44,40 @@
     "tokenizer_auto_download_allowed": false,
     "version": 1
   },
+  "architecture_change_policy": {
+    "active_source_baseline_required": true,
+    "adr_status_on_create": "proposed",
+    "adr_status_on_human_approval": "accepted",
+    "approved_proposal_requires_separate_architecture_baseline_lifecycle": true,
+    "automatic_architecture_working_copy_mutation": false,
+    "automatic_baseline_activation": false,
+    "automatic_baseline_creation": false,
+    "database_schema": 53,
+    "enabled": true,
+    "exact_proposal_hash_required_for_human_lifecycle": true,
+    "human_approval_required": true,
+    "human_rejection_required": true,
+    "human_review_required": true,
+    "mcp_mutation_allowed": false,
+    "mcp_read_tools": [
+      "agentos.architecture_change_proposal_get",
+      "agentos.architecture_change_proposals_list",
+      "agentos.architecture_adr_get",
+      "agentos.architecture_change_status_get"
+    ],
+    "proposal_creation_authority": "ai_or_human_proposal_only",
+    "proposal_submission_is_authority": false,
+    "source_authority": "human_activated_architecture_contract",
+    "stale_source_baseline_approval": "fail_closed",
+    "successor_baseline_activation_requires_approved_proposal_and_accepted_adr": true,
+    "target_baseline_binding_human_confirmed": true,
+    "version": 1
+  },
   "architecture_compliance_policy": {
     "active_baseline_hard_violation": "block",
     "ai_waiver_allowed": false,
-    "architecture_change_proposal_deferred_to": "v0.25.5",
+    "architecture_change_proposal_deferred_to": null,
+    "architecture_change_proposal_lifecycle": "v0.25.5",
     "authority": "human_activated_architecture_contract",
     "automatic_architecture_mutation_allowed": false,
     "database_schema": 52,
@@ -505,16 +535,16 @@
   },
   "documentation_policy": {
     "current_release_identity_files": [
-      ".agents/docs/ARCHITECTURE_DRIFT_COMPLIANCE_V0254.md"
+      ".agents/docs/ARCHITECTURE_CHANGE_PROPOSAL_ADR_V0255.md"
     ],
-    "current_release_name": "Architecture Drift & Compliance Engine",
-    "current_schema": 52,
+    "current_release_name": "Architecture Change Proposal & ADR Lifecycle",
+    "current_schema": 53,
     "current_schema_files": [
-      ".agents/docs/ARCHITECTURE_DRIFT_COMPLIANCE_V0254.md"
+      ".agents/docs/ARCHITECTURE_CHANGE_PROPOSAL_ADR_V0255.md"
     ],
-    "current_upgrade_guide": ".agents/docs/UPGRADE_FROM_0.25.3.md",
+    "current_upgrade_guide": ".agents/docs/UPGRADE_FROM_0.25.4.md",
     "current_version_files": [
-      ".agents/docs/ARCHITECTURE_DRIFT_COMPLIANCE_V0254.md"
+      ".agents/docs/ARCHITECTURE_CHANGE_PROPOSAL_ADR_V0255.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -677,7 +707,11 @@
       "architecture.baseline.approve",
       "architecture.baseline.activate",
       "architecture.baseline.reject",
-      "human.decision.resolve"
+      "human.decision.resolve",
+      "architecture.change.proposal.review",
+      "architecture.change.proposal.approve",
+      "architecture.change.proposal.reject",
+      "architecture.change.proposal.bind_baseline"
     ],
     "require_initialized_baseline": true,
     "require_session_id": true,
@@ -756,7 +790,7 @@
     "support_local_policy_override": true,
     "unknown_update_paths_are_project_owned": true,
     "update_mode": "staged_hash_gated_fail_closed",
-    "update_ownership_contract": ".agents/config/update_ownership.v0254.json"
+    "update_ownership_contract": ".agents/config/update_ownership.v0255.json"
   },
   "instruction_policy": {
     "forbid_model_specific_instruction_files": true,
@@ -826,7 +860,8 @@
       "human_clarification_policy",
       "architecture_discovery_policy",
       "update_preservation_policy",
-      "architecture_compliance_policy"
+      "architecture_compliance_policy",
+      "architecture_change_policy"
     ]
   },
   "mcp_feature_runtime_policy": {
@@ -1097,7 +1132,7 @@
     "bootstrap_artifact_metadata": ".agents/schema/bootstrap_v46.json",
     "bootstrap_artifact_sql": ".agents/schema/bootstrap_v46.sql",
     "bootstrap_schema": 46,
-    "current_database_schema": 52,
+    "current_database_schema": 53,
     "existing_database_mode": "incremental_from_recorded_version",
     "fresh_database_mode": "bootstrap_then_incremental",
     "fresh_replay_migrations_1_to_46": false,
@@ -1120,9 +1155,10 @@
       49,
       50,
       51,
-      52
+      52,
+      53
     ],
-    "schema_change": "additive_architecture_compliance_schema_52",
+    "schema_change": "additive_architecture_change_proposal_adr_schema_53",
     "schema_fingerprint_required": true,
     "schema_migration_markers_preserved": true,
     "source_database_write_authority_changed": false,
@@ -1280,7 +1316,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.25.4",
+  "version": "0.25.5",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,

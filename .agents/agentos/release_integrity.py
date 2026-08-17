@@ -14,11 +14,23 @@ Responsibilities:
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
 
 from .schema_version import CURRENT_SCHEMA_VERSION
+
+ROOT_AGENTOS_README_V0260_HASHES = {
+    "README.md": "3b014b598954ce7a6d4ae1ea5c73ec0c21500ffb98f5fd285a53cae717f0b193",
+    "README.vi.md": "eda433acc61df7ab3eb01e16262ae49e991d5142e15608ca027218f450c85d72",
+    "README.en.md": "2d9d032110e4ecd1dc2129ab94f422a884b1d3f8ed9c2eddead378638ef31af0",
+}
+ROOT_AGENTOS_README_V0261_HASHES = {
+    "README.md": "81a382816cacf5af6be6c34b3dbb08a35d2cc7274b29fe3c73a43a09f7dc5117",
+    "README.vi.md": "60eb367e7490c52f116321a66e872e12ecf45e9a21b583c3ac109dd702c39de3",
+    "README.en.md": "280e4af2eaf9ded80bfc7eb6b524eb08c64feac07ecce9bf6d18a16fd76cc6cc",
+}
 
 CORE_FILES = (
     ".agents/agentos/core.py",
@@ -79,10 +91,12 @@ RELEASE_FILES = (
     ".agents/tests/test_architecture_compliance_v0254.py",
     ".agents/tests/test_architecture_change_v0255.py",
     ".agents/tests/test_architecture_planning_v0260.py",
+    ".agents/tests/test_architecture_structural_v0261.py",
     ".agents/config/update_ownership.v0253.json",
     ".agents/config/update_ownership.v0254.json",
     ".agents/config/update_ownership.v0255.json",
     ".agents/config/update_ownership.v0260.json",
+    ".agents/config/update_ownership.v0261.json",
     "UPGRADE_FROM_0.25.1.md",
 )
 EXTENSION_FILES = (
@@ -146,6 +160,9 @@ EXTENSION_FILES = (
     ".agents/agentos/architecture_planning.py",
     ".agents/agentos/architecture_planning_cli.py",
     ".agents/agentos/mcp_v0260.py",
+    ".agents/agentos/architecture_structural.py",
+    ".agents/agentos/architecture_structural_cli.py",
+    ".agents/agentos/mcp_v0261.py",
 )
 REQUIRED_POLICY_SECTIONS = (
     "language_policy",
@@ -202,6 +219,7 @@ REQUIRED_POLICY_SECTIONS = (
     "architecture_compliance_policy",
     "architecture_change_policy",
     "architecture_planning_policy",
+    "architecture_structural_policy",
 )
 
 
@@ -302,6 +320,27 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     version = (root / "VERSION").read_text(encoding="utf-8").strip() if (root / "VERSION").exists() else None
     if not version:
         findings.append(_finding("version_missing", "VERSION must be non-empty", "VERSION"))
+
+    # Root README files remain project-owned. We only govern byte-identical AgentOS
+    # release documents: the known stale v0.26.0 copies must not survive this upgrade,
+    # while custom README content is preserved and ignored by this release gate.
+    for rel in ("README.md", "README.vi.md", "README.en.md"):
+        path = root / rel
+        if not path.is_file():
+            continue
+        raw = path.read_bytes()
+        digest = hashlib.sha256(raw).hexdigest()
+        if digest == ROOT_AGENTOS_README_V0260_HASHES[rel]:
+            findings.append(_finding("root_readme_release_stale", f"{rel} is still the official v0.26.0 README and must be reconciled for v0.26.1", rel))
+            continue
+        if digest != ROOT_AGENTOS_README_V0261_HASHES[rel]:
+            continue
+        text = raw.decode("utf-8", errors="replace")
+        if version and version not in text[:1200]:
+            findings.append(_finding("root_readme_version_stale", f"{rel} must identify current release {version}", rel))
+        schema_markers = (f"Database schema: **{CURRENT_SCHEMA_VERSION}**", f"Database schema: **{CURRENT_SCHEMA_VERSION}**.")
+        if not any(marker in text[:1600] for marker in schema_markers):
+            findings.append(_finding("root_readme_schema_stale", f"{rel} must identify database schema {CURRENT_SCHEMA_VERSION}", rel))
 
     policy_path = root / ".agents/config/governance.json"
     if not policy_path.exists():
@@ -452,6 +491,7 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             V0254_TOOL_NAMES,
             V0255_TOOL_NAMES,
             V0260_TOOL_NAMES,
+            V0261_TOOL_NAMES,
         )
         if (
             len(CORE_TOOL_NAMES) != 14
@@ -461,11 +501,12 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             or len(V0254_TOOL_NAMES) != 3
             or len(V0255_TOOL_NAMES) != 4
             or len(V0260_TOOL_NAMES) != 3
-            or len(ALL_TOOLS) != 98
+            or len(V0261_TOOL_NAMES) != 3
+            or len(ALL_TOOLS) != 101
         ):
             findings.append(_finding(
                 "mcp_tool_surface_changed",
-                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + 4 v0.25.5 + 3 v0.26.0 + health = 98 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} + {len(V0255_TOOL_NAMES)} + {len(V0260_TOOL_NAMES)} / {len(ALL_TOOLS)}",
+                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + 4 v0.25.5 + 3 v0.26.0 + 3 v0.26.1 + health = 101 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} + {len(V0255_TOOL_NAMES)} + {len(V0260_TOOL_NAMES)} + {len(V0261_TOOL_NAMES)} / {len(ALL_TOOLS)}",
                 ".agents/agentos/mcp_runtime.py",
             ))
     except Exception as exc:
@@ -564,9 +605,11 @@ DOC_FILES = (
     ".agents/docs/ARCHITECTURE_DRIFT_COMPLIANCE_V0254.md",
     ".agents/docs/ARCHITECTURE_CHANGE_PROPOSAL_ADR_V0255.md",
     ".agents/docs/ARCHITECTURE_AWARE_TASK_PLANNING_V0260.md",
+    ".agents/docs/ARCHITECTURE_STRUCTURAL_ENFORCEMENT_V0261.md",
     ".agents/docs/UPGRADE_FROM_0.25.3.md",
     ".agents/docs/UPGRADE_FROM_0.25.4.md",
     ".agents/docs/UPGRADE_FROM_0.25.5.md",
+    ".agents/docs/UPGRADE_FROM_0.26.0.md",
     "UPGRADE_FROM_0.25.1.md",
 )
 

@@ -1,42 +1,39 @@
-# AgentOS Local Governance v0.25.2 — 27-Section Architecture Contract & Human Clarification Gates
+# AgentOS Local Governance v0.26.1 — Structural Enforcement
 
 [README landing](README.md) | [Tiếng Việt](README.vi.md)
 
 ## Current release
 
-- Version: **0.25.2**
-- Database schema: **50**
+- Version: **0.26.1**
+- Database schema: **55**
 - Schema bootstrap baseline: **46** (unchanged)
 
-v0.25.2 introduces two human-authority boundaries. First, project architecture is
-represented by exactly 27 fixed `ARCH-01`…`ARCH-27` sections. Files under
-`.agents/architecture/` are only a working copy; AgentOS creates deterministic,
-immutable DB baselines and only explicit human review → approval → activation can
-make a baseline authoritative. `ARCH-26 Improvement Proposal` always remains
-`proposal_only`.
+v0.26.1 adds deterministic **Structural Enforcement** to the existing planning, write, and precommit boundaries. The release focuses on `ARCH-02/03/04/05/12/22/23`: tech stack, folder structure, system/component structure, module placement, dependency graph, coding convention, and structural design-pattern artifacts.
 
-Second, **Grill Me** becomes an enforcement gate. Before task approval, the agent
-must record a structured clarity assessment. Material assumptions, ambiguities,
-undefined acceptance behavior, business choices, and architectural choices must
-be surfaced as human questions. During coding the agent may open a blocking human
-decision and recommend an option, but it cannot resolve or waive the decision.
-Dependent mutation stops while bounded read-only investigation remains available.
-Human answer text is retained locally; signed external audit receives only hashes
-and bounded authority metadata.
+No ACTIVE Architecture Baseline keeps the engine non-blocking and `not_evaluable`. Once a human-approved baseline is ACTIVE, explicit machine-readable structural rules may fail closed before a prohibited structure is committed.
 
-If a resolution changes requirements, scope, or architecture, AgentOS revokes the
-current task approval and supersedes submitted/active plans so execution must be
-revalidated.
+## Authority
 
-Fresh DBs still bootstrap schema 46 and run only migrations **47→50**; existing
-v0.25.1/schema-49 databases apply only migration **50**.
+- Architecture remains human-owned and hash-pinned.
+- AI may inspect, plan, and propose architecture changes.
+- AI may not approve, waive, rewrite, or activate architecture authority.
+- MCP structural operations are read-only.
+- A legitimate blocked structural change must go through the v0.25.5 Proposal → ADR → Human Approval → successor baseline lifecycle, then be re-planned under v0.26.0 planning.
 
-Architecture MCP is read-only. `agentos.human_decision_request` is the single
-monotonic blocker signal: it may only make the system more restrictive and cannot
-resolve, waive, approve, activate, or grant authority.
+## Structural enforcement examples
 
-Architecture discovery/evidence binding remains v0.25.3, drift/compliance v0.25.4,
-change proposals/ADR v0.25.5, and architecture-aware planning v0.26.0.
+Explicit contracts may restrict dependencies, file/module names and locations, component roots, import edges, coding-convention requirements, and required/forbidden design artifacts.
 
-See the [node document](.agents/docs/ARCHITECTURE_CONTRACT_HUMAN_CLARIFICATION_V0252.md)
-and [upgrade guide](UPGRADE_FROM_0.25.1.md).
+For example, a contract can forbid `utils.py`, require date and validation utilities to live in specific shared modules, or reject a dependency not listed in `ARCH-02.allowed_dependencies`.
+
+## Commands
+
+```bash
+agentos architecture-structural-status
+agentos architecture-structural-check --task-id TASK-1 --changed-file src/example.py
+agentos architecture-structural-findings --task-id TASK-1
+agentos architecture-plan-status --task-id TASK-1
+agentos precommit-check --task-id TASK-1
+```
+
+See [Structural Enforcement v0.26.1](.agents/docs/ARCHITECTURE_STRUCTURAL_ENFORCEMENT_V0261.md) and the [v0.26.0 → v0.26.1 upgrade guide](.agents/docs/UPGRADE_FROM_0.26.0.md).

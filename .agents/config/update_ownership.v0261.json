@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "release": "0.26.1",
+  "database_schema": 55,
+  "default_ownership": "PROJECT_OWNED",
+  "agentos_managed": [
+    ".agents/agentos/**",
+    ".agents/config/governance.json",
+    ".agents/config/update_ownership.v0261.json",
+    ".agents/docs/ARCHITECTURE_STRUCTURAL_ENFORCEMENT_V0261.md",
+    ".agents/docs/UPGRADE_FROM_0.26.0.md",
+    ".agents/tests/test_architecture_structural_v0261.py",
+    "VERSION",
+    "PACKAGE_COMPLETENESS.json",
+    "MANIFEST.json",
+    "CHECKSUMS.sha256"
+  ],
+  "project_owned_never_overwrite": [
+    "AGENTS.md",
+    ".agents/config/governance.local.json",
+    ".agents/config/project.id",
+    ".agents/config/project.purpose.json",
+    ".agents/architecture/**",
+    ".agents/skills/**",
+    ".agents/workflows/**",
+    ".agents/state/**",
+    ".agents/runtime/**",
+    ".agents/cache/**",
+    "project source and unknown paths"
+  ],
+  "root_release_document_reconciliation": {
+    "paths": ["README.md", "README.vi.md", "README.en.md"],
+    "policy": "replace_only_when_exact_official_v0.26.0_hash_matches_otherwise_preserve_custom",
+    "reason": "repair stale AgentOS release documentation without taking ownership of arbitrary project README files"
+  }
+}

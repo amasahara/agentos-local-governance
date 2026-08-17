@@ -200,6 +200,8 @@ def analyze_plan_on_connection(connection: Any, task_id: str, plan: dict[str, An
     affected = _strings(plan.get("affected_architecture_sections", architecture.get("affected_sections")), "affected_architecture_sections")
     modules = _strings(plan.get("expected_modules", architecture.get("expected_modules")), "expected_modules")
     edges = _edge_list(plan.get("expected_dependency_edges", architecture.get("expected_dependency_edges")))
+    expected_dependencies = _strings(plan.get("expected_dependencies", architecture.get("expected_dependencies")), "expected_dependencies")
+    expected_languages = _strings(plan.get("expected_languages", architecture.get("expected_languages")), "expected_languages")
     declared_expected_files = architecture.get("expected_files", plan.get("expected_files"))
     expected_files = _strings(declared_expected_files, "expected_files") if declared_expected_files is not None else list(files)
     invalid_sections = [item for item in affected if item not in SECTION_BY_ID]
@@ -214,6 +216,8 @@ def analyze_plan_on_connection(connection: Any, task_id: str, plan: dict[str, An
         "affected_architecture_sections": affected,
         "expected_modules": modules,
         "expected_dependency_edges": edges,
+        "expected_dependencies": expected_dependencies,
+        "expected_languages": expected_languages,
         "expected_files": expected_files,
         "acceptance_criteria": acceptance,
     }
@@ -239,6 +243,12 @@ def analyze_plan_on_connection(connection: Any, task_id: str, plan: dict[str, An
     if set(expected_files) != set(files):
         blockers.append({"code": "architecture_plan_expected_files_must_match_plan_files", "plan_files": files, "expected_files": expected_files})
     sections = _baseline_sections(connection, int(baseline["id"]))
+    from .architecture_structural import analyze_plan_structure_on_connection
+    structural = analyze_plan_structure_on_connection(connection, plan, sections, expected_files, modules, edges)
+    blockers.extend(structural.get("blockers", []))
+    base_envelope["expected_dependencies"] = list(structural.get("expected_dependencies", expected_dependencies))
+    base_envelope["expected_languages"] = list(structural.get("expected_languages", expected_languages))
+    base_envelope["inferred_languages"] = list(structural.get("inferred_languages", []))
     for path in expected_files:
         result = architecture_target_check_from_sections(sections, path)
         if not result.get("allowed", True):
@@ -264,6 +274,8 @@ def enrich_plan(plan: dict[str, Any], analysis: dict[str, Any]) -> dict[str, Any
     out["affected_architecture_sections"] = list(analysis["affected_architecture_sections"])
     out["expected_modules"] = list(analysis["expected_modules"])
     out["expected_dependency_edges"] = list(analysis["expected_dependency_edges"])
+    out["expected_dependencies"] = list(analysis.get("expected_dependencies", []))
+    out["expected_languages"] = list(analysis.get("expected_languages", []))
     out["expected_files"] = list(analysis["expected_files"])
     out["acceptance_criteria"] = list(analysis["acceptance_criteria"])
     out["architecture_baseline_hash"] = analysis.get("architecture_baseline_hash")

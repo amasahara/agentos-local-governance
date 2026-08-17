@@ -50,7 +50,8 @@ def test_schema_54_architecture_planning_tables_exist(tmp_path: Path, monkeypatc
     with connect(root) as c:
         version=c.execute('SELECT MAX(version) FROM schema_migrations').fetchone()[0]
         tables={r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert version == SCHEMA_VERSION == 54
+    assert version == SCHEMA_VERSION
+    assert SCHEMA_VERSION >= 54
     assert {'task_plan_architecture_contexts','task_plan_architecture_events'} <= tables
 
 

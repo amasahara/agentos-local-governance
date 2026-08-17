@@ -1,8 +1,8 @@
 {
-  "release": "0.26.0",
+  "release": "0.26.1",
   "kind": "full_materialized_github_ready",
-  "schema": 54,
-  "authoritative_file_count": 249,
+  "schema": 55,
+  "authoritative_file_count": 256,
   "required_top_level": [
     "VERSION",
     "AGENTS.md",
@@ -41,5 +41,6 @@
   "update_preservation": "project_owned_never_overwrite_hash_gated_distribution",
   "architecture_compliance": "active_baseline_hard_contract_fail_closed",
   "architecture_change_lifecycle": "proposal_adr_human_approval_separate_baseline_activation",
-  "architecture_aware_task_planning": "baseline_pinned_impact_hashed_stale_on_architecture_change"
+  "architecture_aware_task_planning": "baseline_pinned_impact_hashed_stale_on_architecture_change",
+  "architecture_structural_enforcement": "tech_stack_dependency_structure_coding_pattern_hard_contract"
 }

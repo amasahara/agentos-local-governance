@@ -262,3 +262,11 @@ Added Primary-Project Consolidation as a directed, plan-hashed workflow:
 - Plan approval and precommit fail closed when the architecture baseline pin is stale.
 - Baseline activation marks affected plans stale instead of silently rebasing them.
 - Added three read-only MCP planning inspection tools with no plan/ADR/architecture approval authority.
+
+## 0.26.1 — Structural Enforcement
+- Added schema 55 structural enforcement runs/findings for ARCH-02/03/04/05/12/22/23.
+- Added static pre-plan, pre-write, and precommit structural hard-contract gates.
+- Added explicit dependency/language/module/component/import-edge/coding-convention/design-artifact checks.
+- Structural BLOCK routes to the existing Proposal/ADR/human successor-baseline lifecycle; no automatic architecture mutation is exposed.
+- Added three read-only MCP structural inspection tools.
+- Repaired root README release/schema coherence and added fail-closed README regression checks.

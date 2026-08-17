@@ -70,6 +70,7 @@
     "proposal_submission_is_authority": false,
     "source_authority": "human_activated_architecture_contract",
     "stale_source_baseline_approval": "fail_closed",
+    "structural_enforcement": "v0.26.1",
     "successor_baseline_activation_requires_approved_proposal_and_accepted_adr": true,
     "target_baseline_binding_human_confirmed": true,
     "version": 1
@@ -167,7 +168,7 @@
     "automatic_rebase_of_plan": false,
     "baseline_change_stales_affected_plans": true,
     "caller_supplied_baseline_hash_mismatch": "fail_closed",
-    "database_schema": 54,
+    "database_schema": 55,
     "enabled": true,
     "expected_dependency_edges_declaration_required_when_enforced": true,
     "expected_files_must_match_plan_files": true,
@@ -187,6 +188,42 @@
     "source_authority": "human_activated_architecture_contract",
     "unknown_affected_sections_stale_conservatively": true,
     "version": 1
+  },
+  "architecture_structural_policy": {
+    "approval_authority_exposed": false,
+    "architecture_change_on_block": "proposal_adr_human_successor_baseline_replan",
+    "automatic_architecture_mutation": false,
+    "coding_convention_python_analysis": "ast_static_only",
+    "database_schema": 55,
+    "dependency_manifest_requires_expected_dependencies": true,
+    "enabled": true,
+    "explicit_machine_contract_only": true,
+    "mcp_mutation_allowed": false,
+    "mcp_read_tools": [
+      "agentos.architecture_structural_status_get",
+      "agentos.architecture_structural_findings_get",
+      "agentos.architecture_structural_target_get"
+    ],
+    "network_access": false,
+    "no_active_baseline_behavior": "not_evaluable_non_blocking",
+    "pre_plan_enforcement": true,
+    "pre_write_target_enforcement": true,
+    "precommit_enforcement": true,
+    "project_code_execution": false,
+    "root_agentos_readme_coherence": "exact_v0.26.0_hash_reconciliation_then_release_integrity_enforced",
+    "sections": [
+      "ARCH-02",
+      "ARCH-03",
+      "ARCH-04",
+      "ARCH-05",
+      "ARCH-12",
+      "ARCH-22",
+      "ARCH-23"
+    ],
+    "source_authority": "human_activated_architecture_contract",
+    "source_language_inference": "file_extension_deterministic",
+    "version": 1,
+    "waiver_authority_exposed": false
   },
   "claim_policy": {
     "allow_network_evidence": false,
@@ -566,16 +603,16 @@
   },
   "documentation_policy": {
     "current_release_identity_files": [
-      ".agents/docs/ARCHITECTURE_AWARE_TASK_PLANNING_V0260.md"
+      ".agents/docs/ARCHITECTURE_STRUCTURAL_ENFORCEMENT_V0261.md"
     ],
-    "current_release_name": "Architecture-Aware Task Planning",
-    "current_schema": 54,
+    "current_release_name": "Structural Enforcement",
+    "current_schema": 55,
     "current_schema_files": [
-      ".agents/docs/ARCHITECTURE_AWARE_TASK_PLANNING_V0260.md"
+      ".agents/docs/ARCHITECTURE_STRUCTURAL_ENFORCEMENT_V0261.md"
     ],
-    "current_upgrade_guide": ".agents/docs/UPGRADE_FROM_0.25.5.md",
+    "current_upgrade_guide": ".agents/docs/UPGRADE_FROM_0.26.0.md",
     "current_version_files": [
-      ".agents/docs/ARCHITECTURE_AWARE_TASK_PLANNING_V0260.md"
+      ".agents/docs/ARCHITECTURE_STRUCTURAL_ENFORCEMENT_V0261.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -821,7 +858,7 @@
     "support_local_policy_override": true,
     "unknown_update_paths_are_project_owned": true,
     "update_mode": "staged_hash_gated_fail_closed",
-    "update_ownership_contract": ".agents/config/update_ownership.v0260.json"
+    "update_ownership_contract": ".agents/config/update_ownership.v0261.json"
   },
   "instruction_policy": {
     "forbid_model_specific_instruction_files": true,
@@ -893,7 +930,8 @@
       "update_preservation_policy",
       "architecture_compliance_policy",
       "architecture_change_policy",
-      "architecture_planning_policy"
+      "architecture_planning_policy",
+      "architecture_structural_policy"
     ]
   },
   "mcp_feature_runtime_policy": {
@@ -1164,7 +1202,7 @@
     "bootstrap_artifact_metadata": ".agents/schema/bootstrap_v46.json",
     "bootstrap_artifact_sql": ".agents/schema/bootstrap_v46.sql",
     "bootstrap_schema": 46,
-    "current_database_schema": 54,
+    "current_database_schema": 55,
     "existing_database_mode": "incremental_from_recorded_version",
     "fresh_database_mode": "bootstrap_then_incremental",
     "fresh_replay_migrations_1_to_46": false,
@@ -1189,9 +1227,10 @@
       51,
       52,
       53,
-      54
+      54,
+      55
     ],
-    "schema_change": "additive_architecture_aware_task_planning_schema_54",
+    "schema_change": "additive_structural_enforcement_schema_55",
     "schema_fingerprint_required": true,
     "schema_migration_markers_preserved": true,
     "source_database_write_authority_changed": false,
@@ -1349,7 +1388,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.26.0",
+  "version": "0.26.1",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,

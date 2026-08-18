@@ -126,6 +126,9 @@
     "human_review_required": true,
     "improvement_proposal_authority_mode": "proposal_only",
     "mcp_architecture_mutation_allowed": false,
+    "quality_operational_enforcement_enabled_v0263": true,
+    "quality_operational_llm_authority": false,
+    "quality_operational_mcp_mutation_allowed": false,
     "registry_version": 1,
     "runtime_boundary_llm_authority": false,
     "runtime_boundary_mcp_mutation_allowed": false,
@@ -192,9 +195,38 @@
     "unknown_affected_sections_stale_conservatively": true,
     "version": 1
   },
+  "architecture_quality_policy": {
+    "architecture_mutation_allowed": false,
+    "database_schema": 57,
+    "deterministic_static_analysis_only": true,
+    "enabled": true,
+    "generic_best_practice_authority": false,
+    "llm_quality_authority": false,
+    "mcp_mutation_allowed": false,
+    "mcp_read_tools": [
+      "agentos.architecture_quality_status_get",
+      "agentos.architecture_quality_findings_get",
+      "agentos.architecture_quality_target_get"
+    ],
+    "network_access_allowed": false,
+    "plan_declaration_gate_required": true,
+    "precommit_gate_required": true,
+    "project_code_execution_allowed": false,
+    "sections": [
+      "ARCH-15",
+      "ARCH-16",
+      "ARCH-17",
+      "ARCH-18",
+      "ARCH-19",
+      "ARCH-20",
+      "ARCH-21"
+    ],
+    "version": 1,
+    "waiver_authority": "human_architecture_change_only"
+  },
   "architecture_runtime_policy": {
     "architecture_mutation_allowed": false,
-    "database_schema": 56,
+    "database_schema": 57,
     "deterministic_static_analysis_only": true,
     "enabled": true,
     "llm_runtime_authority": false,
@@ -635,23 +667,23 @@
   },
   "documentation_policy": {
     "current_release_identity_files": [
-      ".agents/docs/RUNTIME_DATA_API_BUSINESS_ENFORCEMENT_V0262.md"
+      ".agents/docs/QUALITY_OPERATIONAL_ENFORCEMENT_V0263.md"
     ],
-    "current_release_name": "Runtime/Data/API & Business Boundary Enforcement",
-    "current_schema": 56,
+    "current_release_name": "Quality/Operational Enforcement",
+    "current_schema": 57,
     "current_schema_files": [
-      ".agents/docs/RUNTIME_DATA_API_BUSINESS_ENFORCEMENT_V0262.md"
+      ".agents/docs/QUALITY_OPERATIONAL_ENFORCEMENT_V0263.md"
     ],
-    "current_upgrade_guide": ".agents/docs/UPGRADE_FROM_0.26.1.md",
+    "current_upgrade_guide": ".agents/docs/UPGRADE_FROM_0.26.2.md",
     "current_version_files": [
-      ".agents/docs/RUNTIME_DATA_API_BUSINESS_ENFORCEMENT_V0262.md"
+      ".agents/docs/QUALITY_OPERATIONAL_ENFORCEMENT_V0263.md"
     ],
     "local_link_check_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
-      ".agents/docs/UPGRADE_FROM_0.26.1.md",
-      ".agents/docs/RUNTIME_DATA_API_BUSINESS_ENFORCEMENT_V0262.md"
+      ".agents/docs/UPGRADE_FROM_0.26.2.md",
+      ".agents/docs/QUALITY_OPERATIONAL_ENFORCEMENT_V0263.md"
     ]
   },
   "drift_policy": {
@@ -1421,7 +1453,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.26.2",
+  "version": "0.26.3",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,

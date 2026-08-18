@@ -1,3 +1,9 @@
+## v0.26.3 — Quality/Operational Enforcement
+
+- Added deterministic quality/security/operational enforcement for ARCH-15..21.
+- Added schema 57 quality runs/findings and three read-only MCP inspection tools.
+- Generic best practices and LLM inference do not become Architecture Authority.
+
 ## v0.26.2 — Runtime/Data/API & Business Boundary Enforcement
 
 - Added deterministic enforcement for ARCH-06/07/08/09/10/11/13/14.

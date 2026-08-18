@@ -88,7 +88,8 @@ def test_schema_56_runtime_tables_exist(tmp_path: Path, monkeypatch: pytest.Monk
     with connect(root) as connection:
         version = connection.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0]
         tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert version == SCHEMA_VERSION == 56
+    assert version == SCHEMA_VERSION
+    assert version >= 56
     assert {"architecture_runtime_runs", "architecture_runtime_findings"} <= tables
 
 

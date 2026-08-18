@@ -1,10 +1,10 @@
 # AgentOS Local Governance
 
-**Current release: v0.26.2 — Runtime/Data/API & Business Boundary Enforcement**
+**Current release: v0.26.3 — Quality/Operational Enforcement**
 
 [🇻🇳 Tiếng Việt](README.vi.md) | [🇬🇧 English](README.en.md)
 
-Database schema: **56**.
+Database schema: **57**.
 
 v0.26.1 turns the structural architecture sections of the human-approved Architecture Contract into deterministic pre-write, planning, and precommit enforcement. It builds on the architecture authority chain introduced in v0.25.2 and completed through discovery/evidence, compliance, ADR/change proposals, and architecture-aware task planning in v0.26.0.
 

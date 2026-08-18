@@ -1,11 +1,11 @@
-# AgentOS Local Governance v0.26.2 — Runtime/Data/API & Business Boundary Enforcement
+# AgentOS Local Governance v0.26.3 — Quality/Operational Enforcement
 
 [README landing](README.md) | [Tiếng Việt](README.vi.md)
 
 ## Current release
 
-- Version: **0.26.2**
-- Database schema: **56**
+- Version: **0.26.3**
+- Database schema: **57**
 - Schema bootstrap baseline: **46** (unchanged)
 
 v0.26.1 adds deterministic **Structural Enforcement** to the existing planning, write, and precommit boundaries. The release focuses on `ARCH-02/03/04/05/12/22/23`: tech stack, folder structure, system/component structure, module placement, dependency graph, coding convention, and structural design-pattern artifacts.

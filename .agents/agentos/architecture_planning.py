@@ -255,6 +255,12 @@ def analyze_plan_on_connection(connection: Any, task_id: str, plan: dict[str, An
     base_envelope["runtime_boundary"] = runtime_boundary
     for key, value in runtime_boundary.get("declarations", {}).items():
         base_envelope[key] = value
+    from .architecture_quality import analyze_plan_quality_on_connection
+    quality_boundary = analyze_plan_quality_on_connection(connection, plan, sections, affected)
+    blockers.extend(quality_boundary.get("blockers", []))
+    base_envelope["quality_boundary"] = quality_boundary
+    for key, value in quality_boundary.get("declarations", {}).items():
+        base_envelope[key] = value
     for path in expected_files:
         result = architecture_target_check_from_sections(sections, path)
         if not result.get("allowed", True):
@@ -285,6 +291,13 @@ def enrich_plan(plan: dict[str, Any], analysis: dict[str, Any]) -> dict[str, Any
     for key in (
         "expected_runtime_calls", "expected_data_operations", "expected_api_routes",
         "expected_business_calls", "expected_external_services", "expected_config_keys",
+    ):
+        if key in analysis:
+            out[key] = list(analysis.get(key, []))
+    for key in (
+        "expected_logging_changes", "expected_error_handling_changes", "expected_security_changes",
+        "expected_performance_impacts", "expected_scalability_impacts", "expected_deployment_changes",
+        "expected_test_suites",
     ):
         if key in analysis:
             out[key] = list(analysis.get(key, []))

@@ -2,7 +2,7 @@
 
 [🇻🇳 Tiếng Việt](huong_dan.vi.md) | [🇬🇧 English](huong_dan.en.md)
 
-Current version: 0.26.2
+Current version: 0.26.3
 
 Before approving work, create a structured clarity assessment. Any material
 assumption or unresolved decision must be surfaced through `grill-me` and resolved

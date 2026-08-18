@@ -1,11 +1,11 @@
-# AgentOS Local Governance v0.26.2 — Runtime/Data/API & Business Boundary Enforcement
+# AgentOS Local Governance v0.26.3 — Quality/Operational Enforcement
 
 [README landing](README.md) | [English](README.en.md)
 
 ## Phiên bản hiện tại
 
-- Version: **0.26.2**
-- Database schema: **56**
+- Version: **0.26.3**
+- Database schema: **57**
 - Schema bootstrap baseline: **46** (không đổi)
 
 v0.26.1 đưa **Structural Enforcement** vào các boundary thực thi hiện hữu của AgentOS. Thay vì chỉ phát hiện drift sau khi source đã thay đổi, AgentOS có thể chặn sớm một đường dẫn/module/dependency/import edge/coding structure trái với Architecture Contract đã được con người activate.

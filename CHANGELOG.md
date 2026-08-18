@@ -1,3 +1,9 @@
+## 0.26.3 — Quality/Operational Enforcement
+
+- Enforce explicit ARCH-15..21 logging/error/security/performance/scalability/deployment/testing contracts.
+- Add schema 57 quality runs/findings, plan declarations, target safeguards, precommit gate, and read-only MCP inspection.
+- Preserve human-only Architecture Authority and deterministic static analysis.
+
 ## 0.26.2 — Runtime/Data/API & Business Boundary Enforcement
 
 - Enforce ARCH-06/07/08/09/10/11/13/14 at plan-time and pre-commit using deterministic static analysis.

@@ -1,26 +1,38 @@
-# AgentOS Local Governance v0.26.2 — Runtime/Data/API & Business Boundary Enforcement
+# AgentOS Local Governance v0.26.3 — Quality/Operational Enforcement
 
-v0.26.2 extends Architecture Authority enforcement from structural constraints into the project's runtime-facing boundaries for `ARCH-06/07/08/09/10/11/13/14`.
+## Tiếng Việt
 
-## Main changes
+v0.26.3 hoàn thiện lớp Architecture Governance enforcement cho nhóm `ARCH-15..21`:
+Logging, Error Handling, Security, Performance, Scalability, Deployment và Testing.
 
-- Adds schema **56** with `architecture_runtime_runs` and `architecture_runtime_findings`.
-- Adds a deterministic, non-executing runtime boundary engine.
-- Adds plan-time declarations and fail-closed validation for runtime calls, data operations, API routes, business calls, external services, and configuration keys.
-- Adds post-change static extraction for Python calls, SQL literals, route decorators, URL literals, and environment-variable access.
-- Integrates the runtime boundary gate into `precommit_check`.
-- Extends `check_write` with target-only ARCH-09/14 path restrictions.
-- Adds read-only CLI inspection/run commands and three read-only MCP inspection tools.
-- Keeps Architecture review/approval/activation and waiver authority human-only.
+Release bổ sung schema 57, plan-time quality/operational declarations, static precommit
+checks, write-target safeguards cho security/deployment paths, persisted findings và ba
+MCP tool read-only. AgentOS chỉ enforce các rule machine-readable đã được human architect
+đưa vào ACTIVE Architecture Contract; không tự biến best practice hoặc suy luận LLM thành authority.
 
-## Security and authority invariants
+Các kiểm tra tiêu biểu gồm sensitive logging, bare/broad exception policy, forbidden
+security calls, `shell=True`, TLS `verify=False`, literal secret policy, async blocking
+calls, Python file-size budget, scalability call boundaries, container base image/non-root/
+privileged constraints, và source-change -> required-test-change rules.
 
-- Project code is never executed by the v0.26.2 analyzer.
-- No network access is required by the analyzer.
-- LLM output is not runtime/business authority.
-- MCP does not expose scan execution, approval, waiver, contract mutation, or architecture activation.
-- A blocked boundary requires an Architecture Change Proposal/ADR or a code/plan change; the engine cannot self-waive.
+Architecture Authority vẫn thuộc con người. Violation hợp lệ về mặt nhu cầu phải đi qua
+Architecture Change Proposal + ADR + Human Approval + successor baseline + re-plan.
 
-## Upgrade
+## English
 
-Apply the overlay with `tools/apply_v0262.py`, then rebuild release metadata and run the full regression suite.
+v0.26.3 completes Architecture Governance enforcement for `ARCH-15..21`: Logging,
+Error Handling, Security, Performance, Scalability, Deployment, and Testing.
+
+The release adds schema 57, plan-time quality/operational declarations, deterministic
+static precommit checks, security/deployment target safeguards, persisted findings, and
+three read-only MCP tools. AgentOS enforces only machine-readable rules declared in the
+human-approved ACTIVE Architecture Contract; generic best practices and LLM inference do
+not become authority automatically.
+
+Representative checks cover sensitive logging, bare/broad exception policies, forbidden
+security calls, `shell=True`, TLS `verify=False`, literal-secret policy, blocking calls in
+async code, Python file-size budgets, scalability call boundaries, container base-image/
+non-root/privileged constraints, and source-change-to-test-change contracts.
+
+Architecture Authority remains human-owned. Legitimate architecture changes must use an
+Architecture Change Proposal, ADR, human approval, successor baseline, and re-planning.

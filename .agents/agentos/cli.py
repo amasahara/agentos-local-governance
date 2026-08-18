@@ -22,6 +22,7 @@ from .cache import cache_lookup, cache_store
 from .context_runtime import build_context_pack, context_compare, context_explain, context_status
 from .memory import decay_user_memory, forget_identity, query_memory, record_finding, remember, validate_memory
 from .skills import graduate_skill, list_skills, match_skills, promote_skill_candidate, revoke_skill
+from .skill_contract_v2 import set_skill_contract, skill_contract_get, skill_contract_status, validate_skill_contract
 from .retrieval import search_knowledge
 from .embeddings import build_embedding_index, rag_query
 from .knowledge_graph import build_graph, graph_neighbors, graph_path
@@ -114,6 +115,10 @@ def parser() -> argparse.ArgumentParser:
     a=s.add_parser("skill-graduate"); a.add_argument("--skill-id",required=True,type=int); a.add_argument("--approved-by",required=True); a.add_argument("--note",required=True)
     a=s.add_parser("skill-match"); a.add_argument("query"); a.add_argument("--limit",type=int,default=10)
     a=s.add_parser("skill-revoke"); a.add_argument("--skill-id",required=True,type=int); a.add_argument("--reason",required=True); a.add_argument("--revoked-by",required=True)
+    a=s.add_parser("skill-contract-set"); a.add_argument("--skill-id",required=True,type=int); a.add_argument("--contract",required=True); a.add_argument("--drafted-by",required=True)
+    a=s.add_parser("skill-contract-show"); a.add_argument("--skill-id",required=True,type=int)
+    a=s.add_parser("skill-contract-validate"); a.add_argument("--skill-id",required=True,type=int)
+    a=s.add_parser("skill-contract-status"); a.add_argument("--skill-id",type=int)
     a=s.add_parser("knowledge-search"); a.add_argument("query"); a.add_argument("--kinds",default='["memory","finding","symbol","skill"]'); a.add_argument("--limit",type=int,default=20); a.add_argument("--backend",default="lexical_structured")
     a=s.add_parser("embedding-index"); a.add_argument("--kinds",default='["memory","finding","symbol","skill"]')
     a=s.add_parser("rag-query"); a.add_argument("query"); a.add_argument("--kinds",default='["memory","finding","symbol","skill"]'); a.add_argument("--top-k",type=int,default=8); a.add_argument("--max-chars",type=int,default=12000); a.add_argument("--no-auto-index",action="store_true")
@@ -285,6 +290,10 @@ def main(argv: list[str] | None = None) -> int:
         elif args.cmd=="skill-graduate": result=graduate_skill(root,args.skill_id,args.approved_by,args.note)
         elif args.cmd=="skill-match": result=match_skills(root,args.query,args.limit)
         elif args.cmd=="skill-revoke": result=revoke_skill(root,args.skill_id,args.reason,args.revoked_by)
+        elif args.cmd=="skill-contract-set": result=set_skill_contract(root,args.skill_id,_json_arg(args.contract,"contract"),args.drafted_by)
+        elif args.cmd=="skill-contract-show": result=skill_contract_get(root,args.skill_id)
+        elif args.cmd=="skill-contract-validate": result=validate_skill_contract(root,args.skill_id)
+        elif args.cmd=="skill-contract-status": result=skill_contract_status(root,args.skill_id)
         elif args.cmd=="knowledge-search": result=search_knowledge(root,args.query,_json_arg(args.kinds,"kinds"),args.limit,args.backend)
         elif args.cmd=="embedding-index": result=build_embedding_index(root,_json_arg(args.kinds,"kinds"))
         elif args.cmd=="rag-query": result=rag_query(root,args.query,_json_arg(args.kinds,"kinds"),args.top_k,args.max_chars,not args.no_auto_index)

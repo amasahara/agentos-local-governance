@@ -1,12 +1,12 @@
 # AgentOS Local Governance
 
-**Current release: v0.26.3 — Quality/Operational Enforcement**
+**Current release: v0.27.0 — Governed Skill Contract v2**
 
 [🇻🇳 Tiếng Việt](README.vi.md) | [🇬🇧 English](README.en.md)
 
-Database schema: **57**.
+Database schema: **58**. Schema bootstrap baseline remains **46**.
 
-v0.26.1 turns the structural architecture sections of the human-approved Architecture Contract into deterministic pre-write, planning, and precommit enforcement. It builds on the architecture authority chain introduced in v0.25.2 and completed through discovery/evidence, compliance, ADR/change proposals, and architecture-aware task planning in v0.26.0.
+v0.27.0 upgrades the existing procedural-skill lifecycle into a **Governed Skill Contract v2**. New skill candidates now carry deterministic contracts for architecture sections, capabilities, tools, read/write scopes, dependencies, external services, risk, tests, preconditions, and postconditions. Human graduation/revocation authority remains unchanged; MCP remains read-only.
 
 ## Architecture governance progression
 
@@ -22,96 +22,101 @@ v0.25.5  Architecture Change Proposal & ADR
 v0.26.0  Architecture-Aware Task Planning
    ↓
 v0.26.1  Structural Enforcement
+   ↓
+v0.26.2  Runtime/Data/API & Business Boundary Enforcement
+   ↓
+v0.26.3  Quality/Operational Enforcement
+   ↓
+v0.27.0  Governed Skill Contract v2
 ```
 
-## Structural hard-contract sections
+## Governed Skill Contract v2
 
-v0.26.1 focuses only on structural architecture:
-
-- `ARCH-02` Tech Stack
-- `ARCH-03` Folder Structure
-- `ARCH-04` System Architecture
-- `ARCH-05` Module Breakdown
-- `ARCH-12` Dependency Graph
-- `ARCH-22` Coding Convention
-- `ARCH-23` Design Pattern
-
-Runtime/data/API/business boundaries remain reserved for v0.26.2. Quality/security/operational architecture remains reserved for v0.26.3.
-
-## Core invariants
-
-- `AGENTS.md` remains the only coding-agent instruction authority.
-- Architecture Authority remains human-owned and hash-pinned.
-- AI may inspect, plan, implement within the ACTIVE baseline, and propose an Architecture Change.
-- AI may not approve/waive/activate Architecture Authority.
-- No ACTIVE baseline means structural enforcement is `not_evaluable` and non-blocking.
-- With an ACTIVE baseline, structural violations fail closed before write/plan approval/precommit.
-- Structural enforcement is local, static, deterministic, and does not execute project code.
-- A blocked structural change must use the v0.25.5 Proposal → ADR → Human Approval → successor baseline lifecycle.
-- Project-owned source, rules, workflows, architecture working copies, skills, and runtime state remain protected from AgentOS updater overwrite.
-
-## Structural contract examples
-
-An ACTIVE contract may explicitly declare rules such as:
+A new candidate uses a closed deterministic contract:
 
 ```json
 {
-  "ARCH-02": {
-    "allowed_dependencies": ["requests"],
-    "forbidden_dependencies": ["sqlalchemy"]
-  },
-  "ARCH-05": {
-    "forbidden_module_names": ["utils.py"],
-    "module_location_rules": [
-      {
-        "match": "utils.py",
-        "allowed_paths": ["src/shared/date.py", "src/shared/validation.py"]
-      }
-    ]
-  },
-  "ARCH-22": {
-    "require_file_header_path": true,
-    "require_module_purpose": true,
-    "require_public_symbol_docstrings": true
-  }
+  "contract_version": 2,
+  "skill_key": "example",
+  "skill_version": 1,
+  "inputs": [],
+  "outputs": [],
+  "required_architecture_sections": [],
+  "required_capabilities": [],
+  "required_tools": [],
+  "allowed_read_scope": [],
+  "allowed_write_scope": [],
+  "allowed_dependencies": [],
+  "allowed_external_services": [],
+  "preconditions": [],
+  "postconditions": [],
+  "risk_tier": "medium",
+  "test_contract": {"required": true, "suites": []},
+  "architecture_constraints": {}
 }
 ```
 
-Only explicit machine-readable keys become hard enforcement. AgentOS does not invent architecture rules from prose.
+Core invariants:
 
-## Main commands
+- New candidates use Contract v2; existing v1 skills remain readable and are **not rewritten in place**.
+- Skill contracts cannot grant architecture, task, tool, capability, filesystem, network, database, or approval authority beyond existing AgentOS gates.
+- Architecture-sensitive contracts require an ACTIVE human-approved Architecture Baseline and pin its exact hash when validation succeeds.
+- Human approval is still required to graduate a candidate; human authority is also required to revoke a skill.
+- v0.27.0 does **not** perform automatic architecture-aware skill selection. Selection/evaluation is reserved for v0.27.1.
+- MCP exposes contract inspection only; it cannot set, validate-as-authority, graduate, revoke, approve, or mutate skills.
 
-```bash
-agentos architecture-structural-status
-agentos architecture-structural-check --task-id TASK-1 --changed-file src/example.py
-agentos architecture-structural-findings --task-id TASK-1
+## Distribution model from v0.27.0
 
-agentos architecture-plan-impact --task-id TASK-1 --plan '{...}'
-agentos architecture-plan-status --task-id TASK-1
-agentos precommit-check --task-id TASK-1
+AgentOS no longer requires version-specific `apply_v*.py` updater scripts.
+
+The release is divided into two ownership planes:
+
+```text
+AGENTOS-MANAGED DISTRIBUTION
+  .agents/agentos/**
+  release-owned policy/docs/tests/runtime launchers
+
+PROJECT-OWNED PARTITION
+  user skills
+  project workflows / workflow state
+  project source
+  architecture working copies
+  governance.local.json
+  .agents/state/**
+  .agents/runtime/**
 ```
 
-Architecture Proposal/ADR and Architecture Baseline approval/activation remain human-gated.
+Project-owned content is not part of the managed release payload. Download the latest GitHub Release/source and use the newest AgentOS-managed distribution; no version-specific updater script is required.
+
+See [Install Latest Release](.agents/docs/INSTALL_LATEST_RELEASE.md).
+
+## Main skill commands
+
+```bash
+agentos skill-promote --memory-id 12 --promoted-by human:author
+agentos skill-contract-show --skill-id 1
+agentos skill-contract-set --skill-id 1 --drafted-by human:architect --contract '{...}'
+agentos skill-contract-validate --skill-id 1
+agentos skill-contract-status
+agentos skill-graduate --skill-id 1 --approved-by human:reviewer --note "reviewed exact v2 contract"
+```
 
 ## Validation
 
 ```bash
-PYTHONPATH=.agents python -m pytest -q .agents/tests/test_architecture_structural_v0261.py
 PYTHONPATH=.agents python -m pytest -q .agents/tests -rs
-.agents/bin/agentos docs-check
-.agents/bin/agentos runtime-health
-.agents/bin/agentos manifest-verify
+python tools/build_manifest.py .
+python tools/verify_manifest.py .
+python tools/validate_release.py .
+git diff --check
 ```
-
-## Upgrade
-
-See [.agents/docs/UPGRADE_FROM_0.26.0.md](.agents/docs/UPGRADE_FROM_0.26.0.md).
 
 ## Current node documentation
 
+- [Governed Skill Contract v2](.agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md)
+- [Install Latest Release](.agents/docs/INSTALL_LATEST_RELEASE.md)
+- [Quality/Operational Enforcement v0.26.3](.agents/docs/QUALITY_OPERATIONAL_ENFORCEMENT_V0263.md)
+- [Runtime/Data/API Enforcement v0.26.2](.agents/docs/RUNTIME_DATA_API_BUSINESS_ENFORCEMENT_V0262.md)
 - [Structural Enforcement v0.26.1](.agents/docs/ARCHITECTURE_STRUCTURAL_ENFORCEMENT_V0261.md)
-- [Architecture-Aware Task Planning v0.26.0](.agents/docs/ARCHITECTURE_AWARE_TASK_PLANNING_V0260.md)
-- [Architecture Change Proposal & ADR v0.25.5](.agents/docs/ARCHITECTURE_CHANGE_PROPOSAL_ADR_V0255.md)
-- [Architecture Drift & Compliance v0.25.4](.agents/docs/ARCHITECTURE_DRIFT_COMPLIANCE_V0254.md)
-- [Architecture Discovery & Evidence v0.25.3](.agents/docs/ARCHITECTURE_DISCOVERY_EVIDENCE_V0253.md)
-- [27-Section Architecture Contract v0.25.2](.agents/docs/ARCHITECTURE_CONTRACT_HUMAN_CLARIFICATION_V0252.md)
+
+`AGENTS.md` remains the only coding-agent instruction authority. Architecture Authority remains human-owned.

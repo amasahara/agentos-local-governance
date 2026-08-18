@@ -20,6 +20,7 @@ from typing import Any
 from .db import connect
 from .external_audit import append_signed_event
 from .policy import load_policy
+from .skill_contract_v2 import default_contract, initialize_skill_contract_in_connection, validate_skill_contract
 
 
 def _slug(text: str) -> str:
@@ -55,24 +56,34 @@ def promote_skill_candidate(root: Path, memory_id: int, promoted_by: str) -> dic
         key=_slug(title)
         row=c.execute("SELECT COALESCE(MAX(version),0) v FROM promoted_skills WHERE skill_key=?",(key,)).fetchone()
         version=int(row["v"])+1
+        contract=default_contract(key,version)
         body=(f"---\nid: {key}\nversion: {version}\ntitle: {json.dumps(title,ensure_ascii=False)}\n"
-              f"status: candidate\nsource_memory_ids: [{memory_id}]\nconfidence: {memory['confidence']}\n"
-              f"evidence_hashes: {json.dumps([memory.get('evidence_hash')] if memory.get('evidence_hash') else [])}\n"
-              "inputs: []\noutputs: []\npreconditions: []\nvalidation: []\nlimitations: []\n---\n\n"
-              f"## Procedure\n\n{memory['statement']}\n")
+              f"status: candidate\ncontract_version: 2\nsource_memory_ids: [{memory_id}]\nconfidence: {memory['confidence']}\n"
+              f"evidence_hashes: {json.dumps([memory.get('evidence_hash')] if memory.get('evidence_hash') else [])}\n---\n\n"
+              f"## Procedure\n\n{memory['statement']}\n\n"
+              "## Governed Skill Contract v2\n\n```json\n"
+              + json.dumps(contract,ensure_ascii=False,sort_keys=True,indent=2) + "\n```\n")
         payload=body.encode("utf-8")
         digest=hashlib.sha256(payload).hexdigest()
         rel=Path('.agents/runtime/skills/candidates')/f"{key}-v{version}.md"
         target=root/rel; target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(payload)
-        cur=c.execute("INSERT INTO promoted_skills(skill_key,version,memory_id,title,description,candidate_path,status,content_hash,promoted_by) VALUES(?,?,?,?,?,?, 'candidate',?,?)",(key,version,memory_id,title,memory["statement"],rel.as_posix(),digest,promoted_by))
-        sid=cur.lastrowid
-    return {"ok":True,"skill_id":sid,"skill_key":key,"version":version,"status":"candidate","path":rel.as_posix(),"content_hash":digest}
+        try:
+            cur=c.execute("INSERT INTO promoted_skills(skill_key,version,memory_id,title,description,candidate_path,status,content_hash,promoted_by) VALUES(?,?,?,?,?,?, 'candidate',?,?)",(key,version,memory_id,title,memory["statement"],rel.as_posix(),digest,promoted_by))
+            sid=int(cur.lastrowid)
+            contract_state=initialize_skill_contract_in_connection(c,sid,promoted_by)
+        except Exception:
+            target.unlink(missing_ok=True)
+            raise
+    return {"ok":True,"skill_id":sid,"skill_key":key,"version":version,"status":"candidate","path":rel.as_posix(),"content_hash":digest,"contract_version":2,"contract_hash":contract_state["contract_hash"],"contract_status":"draft"}
 
 
 def graduate_skill(root: Path, skill_id: int, approved_by: str, note: str) -> dict[str, Any]:
     """Graduate a candidate skill after explicit human approval."""
     if not _human(approved_by): raise RuntimeError("skill graduation requires a human identity")
     if not note.strip(): raise RuntimeError("approval note is required")
+    contract_validation=validate_skill_contract(root,skill_id)
+    if contract_validation.get("ok") is not True:
+        raise RuntimeError(f"skill_contract_v2_not_ready:{contract_validation.get('status')}")
     with connect(root) as c:
         row=c.execute("SELECT * FROM promoted_skills WHERE id=?",(skill_id,)).fetchone()
         if not row: raise RuntimeError("skill not found")
@@ -83,10 +94,12 @@ def graduate_skill(root: Path, skill_id: int, approved_by: str, note: str) -> di
         duplicate=c.execute("SELECT id FROM promoted_skills WHERE skill_key=? AND status='graduated'",(row["skill_key"],)).fetchone()
         if duplicate: raise RuntimeError("an active graduated skill with the same key already exists; supersede it instead")
         text=source.read_text(encoding='utf-8').replace('status: candidate','status: graduated',1)
-        digest=hashlib.sha256(text.encode()).hexdigest()
+        # Keep graduated skill artifacts byte-deterministic across platforms.
+        payload=text.encode('utf-8')
+        digest=hashlib.sha256(payload).hexdigest()
         rel=Path('.agents/skills')/f"{row['skill_key']}-v{row['version']}.md"
-        target=root/rel; target.parent.mkdir(parents=True,exist_ok=True); target.write_text(text,encoding='utf-8')
-        event=append_signed_event(root,'skill.graduated',{"skill_id":skill_id,"skill_key":row["skill_key"],"version":row["version"],"content_hash":digest,"approved_by":approved_by,"note":note},None,None)
+        target=root/rel; target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(payload)
+        event=append_signed_event(root,'skill.graduated',{"skill_id":skill_id,"skill_key":row["skill_key"],"version":row["version"],"content_hash":digest,"contract_version":2,"contract_hash":row.get("contract_hash"),"architecture_baseline_hash":row.get("architecture_baseline_hash"),"approved_by":approved_by,"note":note},None,None)
         c.execute("UPDATE promoted_skills SET status='graduated',graduated_path=?,content_hash=?,approved_by=?,approval_note=?,external_event_hash=?,graduated_at=CURRENT_TIMESTAMP WHERE id=?",(rel.as_posix(),digest,approved_by,note,event["event_hash"],skill_id))
     return {"ok":True,"skill_id":skill_id,"status":"graduated","path":rel.as_posix(),"external_event_hash":event["event_hash"]}
 

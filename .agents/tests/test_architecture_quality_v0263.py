@@ -76,7 +76,7 @@ def test_schema_57_quality_tables_exist(tmp_path: Path, monkeypatch: pytest.Monk
     with connect(root) as connection:
         version = connection.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0]
         tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert version == SCHEMA_VERSION == 57
+    assert version == SCHEMA_VERSION and version >= 57
     assert {"architecture_quality_runs", "architecture_quality_findings"} <= tables
 
 

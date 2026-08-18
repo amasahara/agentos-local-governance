@@ -94,6 +94,10 @@ RELEASE_FILES = (
     ".agents/tests/test_architecture_structural_v0261.py",
     ".agents/tests/test_architecture_runtime_v0262.py",
     ".agents/tests/test_architecture_quality_v0263.py",
+    ".agents/tests/test_governed_skill_contract_v0270.py",
+    ".agents/config/release_policy.json",
+    ".agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md",
+    ".agents/docs/INSTALL_LATEST_RELEASE.md",
     ".agents/config/update_ownership.v0253.json",
     ".agents/config/update_ownership.v0254.json",
     ".agents/config/update_ownership.v0255.json",
@@ -171,6 +175,8 @@ EXTENSION_FILES = (
     ".agents/agentos/architecture_quality.py",
     ".agents/agentos/architecture_quality_cli.py",
     ".agents/agentos/mcp_v0263.py",
+    ".agents/agentos/skill_contract_v2.py",
+    ".agents/agentos/mcp_v0270.py",
 )
 REQUIRED_POLICY_SECTIONS = (
     "language_policy",
@@ -230,6 +236,7 @@ REQUIRED_POLICY_SECTIONS = (
     "architecture_structural_policy",
     "architecture_runtime_policy",
     "architecture_quality_policy",
+    "governed_skill_contract_policy",
 )
 
 
@@ -357,14 +364,18 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
         findings.append(_finding("missing_governance", "governance.json is missing", str(policy_path)))
     else:
         try:
-            policy = json.loads(policy_path.read_text(encoding="utf-8"))
+            from .policy import load_release_policy
+            policy = load_release_policy(root)
             missing = sorted(set(REQUIRED_POLICY_SECTIONS) - set(policy))
             if missing:
                 findings.append(_finding("missing_policy_sections", f"missing policy sections: {missing}", ".agents/config/governance.json"))
             if policy.get("version") != version:
-                findings.append(_finding("policy_version_mismatch", f"governance.json version must equal VERSION {version!r}", ".agents/config/governance.json"))
+                findings.append(_finding("policy_version_mismatch", f"effective governance version must equal VERSION {version!r}", ".agents/config/release_policy.json"))
+            install = policy.get("installation_policy") or {}
+            if install.get("distribution_model") != "download_latest_full_release" or install.get("updater_script_required") is not False:
+                findings.append(_finding("distribution_model_invalid", "v0.27.0+ must use latest full release without updater scripts", ".agents/config/release_policy.json"))
         except Exception as exc:
-            findings.append(_finding("invalid_governance", f"cannot parse governance.json: {exc}", ".agents/config/governance.json"))
+            findings.append(_finding("invalid_governance", f"cannot load effective governance: {exc}", ".agents/config/governance.json"))
 
     try:
         from .release_coherence import check_release_metadata_coherence
@@ -504,6 +515,7 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             V0261_TOOL_NAMES,
             V0262_TOOL_NAMES,
             V0263_TOOL_NAMES,
+            V0270_TOOL_NAMES,
         )
         if (
             len(CORE_TOOL_NAMES) != 14
@@ -516,11 +528,12 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             or len(V0261_TOOL_NAMES) != 3
             or len(V0262_TOOL_NAMES) != 3
             or len(V0263_TOOL_NAMES) != 3
-            or len(ALL_TOOLS) != 107
+            or len(V0270_TOOL_NAMES) != 3
+            or len(ALL_TOOLS) != 110
         ):
             findings.append(_finding(
                 "mcp_tool_surface_changed",
-                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + 4 v0.25.5 + 3 v0.26.0 + 3 v0.26.1 + 3 v0.26.2 + 3 v0.26.3 + health = 107 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} + {len(V0255_TOOL_NAMES)} + {len(V0260_TOOL_NAMES)} + {len(V0261_TOOL_NAMES)} + {len(V0262_TOOL_NAMES)} + {len(V0263_TOOL_NAMES)} / {len(ALL_TOOLS)}",
+                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + 4 v0.25.5 + 3 v0.26.0 + 3 v0.26.1 + 3 v0.26.2 + 3 v0.26.3 + 3 v0.27.0 + health = 110 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} + {len(V0255_TOOL_NAMES)} + {len(V0260_TOOL_NAMES)} + {len(V0261_TOOL_NAMES)} + {len(V0262_TOOL_NAMES)} + {len(V0263_TOOL_NAMES)} + {len(V0270_TOOL_NAMES)} / {len(ALL_TOOLS)}",
                 ".agents/agentos/mcp_runtime.py",
             ))
     except Exception as exc:
@@ -600,6 +613,8 @@ DOC_FILES = (
     ".agents/docs/TARGET_SCHEMA_CONTRACT_AND_FIELD_MAPPING.md",
     ".agents/docs/UNIFIED_CLI_MCP_RUNTIME_V0225.md",
     ".agents/docs/UNIFIED_GOVERNANCE_ENFORCEMENT_V0224.md",
+    ".agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md",
+    ".agents/docs/INSTALL_LATEST_RELEASE.md",
     "CHANGELOG.md",
     "DATA_SUBJECT_RIGHTS.md",
     "INDEX_INCREMENTAL_BENCHMARK_V0234.json",

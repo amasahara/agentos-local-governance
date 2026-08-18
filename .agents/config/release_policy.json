@@ -1,0 +1,72 @@
+{
+  "version": "0.27.0",
+  "documentation_policy": {
+    "current_release_identity_files": [
+      ".agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md"
+    ],
+    "current_release_name": "Governed Skill Contract v2",
+    "current_schema": 58,
+    "current_schema_files": [
+      ".agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md"
+    ],
+    "current_upgrade_guide": ".agents/docs/INSTALL_LATEST_RELEASE.md",
+    "current_version_files": [
+      ".agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md"
+    ],
+    "local_link_check_files": [
+      "README.md",
+      "README.vi.md",
+      "README.en.md",
+      ".agents/docs/INSTALL_LATEST_RELEASE.md",
+      ".agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md"
+    ]
+  },
+  "governed_skill_contract_policy": {
+    "enabled": true,
+    "database_schema": 58,
+    "contract_version": 2,
+    "new_candidates_require_v2": true,
+    "legacy_v1_preserved": true,
+    "legacy_v1_in_place_rewrite": false,
+    "human_graduation_required": true,
+    "human_revocation_required": true,
+    "contract_validation_deterministic": true,
+    "architecture_sensitive_contract_requires_active_baseline": true,
+    "architecture_baseline_hash_pin_required": true,
+    "skill_may_exceed_task_authority": false,
+    "skill_may_exceed_architecture_authority": false,
+    "mcp_mutation_allowed": false,
+    "automatic_skill_selection_enabled": false,
+    "selection_evaluation_reserved_for_v0271": true,
+    "allowed_risk_tiers": ["low", "medium", "high"]
+  },
+  "knowledge_runtime": {
+    "skill_policy": {
+      "candidate_confidence_threshold": 0.8,
+      "contract_version": 2,
+      "new_candidate_contract_required": true,
+      "human_graduation_required": true
+    }
+  },
+  "installation_policy": {
+    "distribution_model": "download_latest_full_release",
+    "updater_script_required": false,
+    "preserve_project_rules_workflows_source": true,
+    "project_owned_user_skills": true,
+    "project_owned_workflows": true,
+    "project_owned_source": true,
+    "release_payload_excludes_project_owned_content": true,
+    "update_mode": "replace_agentos_managed_distribution"
+  },
+  "update_preservation_policy": {
+    "mode": "download_latest_full_release",
+    "updater_scripts_used": false,
+    "project_owned_never_overwrite": true,
+    "skills_preserved": true,
+    "workflow_state_preserved": true,
+    "source_tree_writes_by_updater": false,
+    "architecture_working_copy_preserved": true,
+    "governance_local_preserved": true,
+    "release_payload_excludes_project_owned_content": true
+  }
+}

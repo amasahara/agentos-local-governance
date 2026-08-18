@@ -45,9 +45,14 @@ def test_upgrade_guide_uses_external_release_asset_model() -> None:
     text = guide.read_text(encoding="utf-8")
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     updater = f"apply_v{version.replace('.', '')}.py"
-    assert f"python tools/{updater}" not in text
     assert "GitHub Release" in text
-    assert updater in text
+    if tuple(int(x) for x in version.split(".")) >= (0, 27, 0):
+        assert updater not in text
+        assert "no updater script" in text.lower()
+        assert "download latest" in text.lower()
+    else:
+        assert f"python tools/{updater}" not in text
+        assert updater in text
 
 
 def test_connect_read_only_missing_database_is_fail_closed_without_creation(tmp_path: Path) -> None:

@@ -32,6 +32,22 @@ def _read_json(path: Path) -> dict[str, Any]:
     return value
 
 
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """Return a recursive dictionary merge without mutating either input.
+
+    Kept local so release-coherence can still be loaded standalone by historical
+    regression tests without requiring package-relative imports.
+    """
+
+    result = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
 def _finding(code: str, message: str, path: str | None = None) -> dict[str, str]:
     """Create one deterministic coherence finding.
 
@@ -145,11 +161,20 @@ def check_release_metadata_coherence(
     checks.append("schema_version")
 
     json_paths = {
-        "governance": repo / ".agents/config/governance.json",
         "manifest": repo / "MANIFEST.json",
         "package": repo / "PACKAGE_COMPLETENESS.json",
     }
     payloads: dict[str, dict[str, Any]] = {}
+    try:
+        governance = _read_json(repo / ".agents/config/governance.json")
+        release_policy_path = repo / ".agents/config/release_policy.json"
+        if release_policy_path.is_file():
+            governance = _deep_merge(governance, _read_json(release_policy_path))
+        payloads["governance"] = governance
+    except Exception as exc:
+        payloads["governance"] = {}
+        findings.append(_finding("governance_unreadable", str(exc), ".agents/config/governance.json"))
+    checks.append("governance")
     for key, path in json_paths.items():
         try:
             payloads[key] = _read_json(path)

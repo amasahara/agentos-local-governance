@@ -1,121 +1,89 @@
-# AgentOS Local Governance v0.26.3 — Quality/Operational Enforcement
+# AgentOS Local Governance v0.27.0 — Governed Skill Contract v2
 
 [README landing](README.md) | [English](README.en.md)
 
 ## Phiên bản hiện tại
 
-- Version: **0.26.3**
-- Database schema: **57**
+- Version: **0.27.0**
+- Database schema: **58**
 - Schema bootstrap baseline: **46** (không đổi)
 
-v0.26.1 đưa **Structural Enforcement** vào các boundary thực thi hiện hữu của AgentOS. Thay vì chỉ phát hiện drift sau khi source đã thay đổi, AgentOS có thể chặn sớm một đường dẫn/module/dependency/import edge/coding structure trái với Architecture Contract đã được con người activate.
+v0.27.0 nâng subsystem skill hiện hữu từ procedural skill đơn giản thành **Governed Skill Contract v2**. AgentOS không tạo một skill framework thứ hai; lifecycle candidate → human graduation → revoke hiện tại được giữ lại và bổ sung contract machine-readable, hash, architecture binding và authority boundaries.
 
-## Phạm vi hard contract
+## Contract v2
 
-Node này chỉ tập trung vào:
+Mỗi candidate mới khai rõ:
 
-- `ARCH-02` Tech Stack
-- `ARCH-03` Folder Structure
-- `ARCH-04` System Architecture
-- `ARCH-05` Module Breakdown
-- `ARCH-12` Dependency Graph
-- `ARCH-22` Coding Convention
-- `ARCH-23` Design Pattern
+- input/output;
+- Architecture sections bắt buộc;
+- capability/tool cần thiết;
+- read/write scope cho phép;
+- dependency và external service cho phép;
+- precondition/postcondition;
+- risk tier;
+- test contract;
+- architecture constraints;
+- deterministic contract hash.
 
-v0.26.2 hiện enforce các boundary runtime/data/API/business; quality/security/operational architecture tiếp tục ở v0.26.3.
+Skill không thể dùng contract để tự cấp thêm quyền. Mọi quyền thực thi vẫn phải đi qua task/plan/architecture/capability/tool governance hiện hữu.
 
-## Luồng enforcement
+## Legacy skill
 
-```text
-Human-approved ACTIVE Architecture Baseline
-                    ↓
-           Architecture-Aware Plan
-                    ↓
-         Structural pre-plan checks
-                    ↓
-             Human plan approval
-                    ↓
-             check_write / prepare
-                    ↓
-        Static structural enforcement
-                    ↓
-                 Precommit
-                    ↓
-            PASS hoặc BLOCK
-```
-
-Nếu `BLOCK` là một thay đổi kiến trúc hợp lệ, AI không được tự sửa contract để làm cho code pass. Luồng đúng là:
+Skill v1 đã tồn tại được giữ nguyên:
 
 ```text
-BLOCK
-  ↓
-Architecture Change Proposal
-  ↓
-ADR
-  ↓
-Human Review / Approval
-  ↓
-New candidate baseline
-  ↓
-Human activation
-  ↓
-Re-plan
+legacy v1 skill
+      ↓
+readable / usable theo lifecycle hiện hữu
+      ↓
+KHÔNG rewrite artifact đã được duyệt
 ```
 
-## Các invariant chính
+Nếu muốn đưa một skill cũ sang v2, hướng đúng là tạo successor candidate/version mới để con người review lại, không sửa âm thầm artifact cũ.
 
-- `AGENTS.md` vẫn là coding-agent instruction authority duy nhất.
-- Architecture Authority vẫn thuộc con người.
-- Không có ACTIVE baseline → `not_evaluable`, không tự block project cũ.
-- Có ACTIVE baseline → explicit structural contract có thể block write/plan/precommit.
-- AgentOS chỉ enforce các field machine-readable được khai rõ; không tự suy luận rule từ prose.
-- Không execute source project, không network, không tự cài dependency.
-- MCP structural tools chỉ read-only; không approve/waive/activate.
-- Updater không overwrite source/rules/workflows/architecture working copy của project.
+## Architecture binding
 
-## Ví dụ chống “AI vibe”
+Skill trung lập kiến trúc có thể validate mà không cần ACTIVE Architecture Baseline.
 
-Nếu architecture cấm module chung chung:
+Skill khai `required_architecture_sections`, dependency/external service hoặc architecture constraint thì cần ACTIVE human-approved baseline. Validation thành công sẽ pin `architecture_baseline_id` và `architecture_baseline_hash`.
 
-```json
-{
-  "forbidden_module_names": ["utils.py"],
-  "module_location_rules": [
-    {
-      "match": "utils.py",
-      "allowed_paths": ["src/shared/date.py", "src/shared/validation.py"]
-    }
-  ]
-}
-```
+v0.27.0 chưa tự chọn skill theo kiến trúc; phần **Architecture-Aware Skill Selection & Evaluation** thuộc v0.27.1.
 
-AI tạo `src/utils.py` sẽ bị chặn trước write/precommit.
+## Distribution mới — không dùng updater script
 
-Nếu `ARCH-02` chỉ cho phép `requests` nhưng plan/dependency manifest thêm `sqlalchemy`, plan hoặc precommit sẽ bị block và yêu cầu Architecture Change Proposal.
+Từ v0.27.0, không còn yêu cầu chạy `apply_v0270.py` hay updater theo từng version.
 
-## Coding convention
+AgentOS-managed distribution được tách khỏi dữ liệu project-owned. Release mới **không sở hữu và không overwrite**:
 
-`ARCH-22` có thể khai rõ các rule như:
+- user skills;
+- project workflows / workflow state;
+- project source;
+- architecture working copy;
+- `governance.local.json`;
+- `.agents/state/**`;
+- `.agents/runtime/**`.
 
-- `require_file_header_path`
-- `require_module_purpose`
-- `require_public_symbol_docstrings`
-- `forbid_wildcard_imports`
-- `max_module_lines`
-- `forbidden_file_names`
-
-Các rule không được khai thì không tự trở thành authority.
+Do đó chỉ cần tải **latest GitHub Release/source** để lấy AgentOS runtime mới nhất. Xem `.agents/docs/INSTALL_LATEST_RELEASE.md`.
 
 ## Command
 
 ```bash
-agentos architecture-structural-status
-agentos architecture-structural-check --task-id TASK-1 --changed-file src/example.py
-agentos architecture-structural-findings --task-id TASK-1
-
-agentos architecture-plan-impact --task-id TASK-1 --plan '{...}'
-agentos architecture-plan-status --task-id TASK-1
-agentos precommit-check --task-id TASK-1
+agentos skill-contract-show --skill-id 1
+agentos skill-contract-set --skill-id 1 --drafted-by human:architect --contract '{...}'
+agentos skill-contract-validate --skill-id 1
+agentos skill-contract-status
 ```
 
-Xem [tài liệu v0.26.2](.agents/docs/RUNTIME_DATA_API_BUSINESS_ENFORCEMENT_V0262.md) và [hướng dẫn nâng cấp](.agents/docs/UPGRADE_FROM_0.26.1.md).
+`skill-graduate` và `skill-revoke` vẫn human-gated. MCP chỉ đọc contract/status/list và không expose mutation authority.
+
+## Validation
+
+```bash
+PYTHONPATH=.agents python -m pytest -q .agents/tests -rs
+python tools/build_manifest.py .
+python tools/verify_manifest.py .
+python tools/validate_release.py .
+git diff --check
+```
+
+Xem [Governed Skill Contract v2](.agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md).

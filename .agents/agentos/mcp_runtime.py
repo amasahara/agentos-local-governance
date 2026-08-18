@@ -40,6 +40,7 @@ from .mcp_v0260 import TOOLS as V0260_TOOLS, TOOL_NAMES as V0260_TOOL_NAMES, dis
 from .mcp_v0261 import TOOLS as V0261_TOOLS, TOOL_NAMES as V0261_TOOL_NAMES, dispatch as dispatch_v0261_tool
 from .mcp_v0262 import TOOLS as V0262_TOOLS, TOOL_NAMES as V0262_TOOL_NAMES, dispatch as dispatch_v0262_tool
 from .mcp_v0263 import TOOLS as V0263_TOOLS, TOOL_NAMES as V0263_TOOL_NAMES, dispatch as dispatch_v0263_tool
+from .mcp_v0270 import TOOLS as V0270_TOOLS, TOOL_NAMES as V0270_TOOL_NAMES, dispatch as dispatch_v0270_tool
 
 VERSION = __version__
 
@@ -55,7 +56,7 @@ def _merge_tools() -> tuple[list[dict[str, Any]], set[str], set[str]]:
     tools: list[dict[str, Any]] = []
     names: set[str] = set()
     duplicates: set[str] = set()
-    for definition in [*CORE_TOOLS, *FEATURE_TOOLS, *V0252_TOOLS, *V0253_TOOLS, *V0254_TOOLS, *V0255_TOOLS, *V0260_TOOLS, *V0261_TOOLS, *V0262_TOOLS, *V0263_TOOLS, HEALTH_TOOL]:
+    for definition in [*CORE_TOOLS, *FEATURE_TOOLS, *V0252_TOOLS, *V0253_TOOLS, *V0254_TOOLS, *V0255_TOOLS, *V0260_TOOLS, *V0261_TOOLS, *V0262_TOOLS, *V0263_TOOLS, *V0270_TOOLS, HEALTH_TOOL]:
         name = str(definition["name"])
         if name in names:
             duplicates.add(name)
@@ -100,7 +101,7 @@ def _health(root: Path, task_id: str | None, session_id: str | None) -> dict[str
         "project_root_name": root.name,
         "tool_count": len(ALL_TOOLS),
         "core_proxy_tool_count": len(CORE_TOOLS),
-        "extension_readonly_tool_count": len(FEATURE_TOOLS) + len(V0252_TOOLS) + len(V0253_TOOLS) + len(V0254_TOOLS) + len(V0255_TOOLS) + len(V0260_TOOLS) + len(V0261_TOOLS) + len(V0262_TOOLS) + len(V0263_TOOLS) - 1,
+        "extension_readonly_tool_count": len(FEATURE_TOOLS) + len(V0252_TOOLS) + len(V0253_TOOLS) + len(V0254_TOOLS) + len(V0255_TOOLS) + len(V0260_TOOLS) + len(V0261_TOOLS) + len(V0262_TOOLS) + len(V0263_TOOLS) + len(V0270_TOOLS) - 1,
         "monotonic_blocker_tool_count": 1,
         "duplicate_tools": [],
         "subprocess_forwarding": False,
@@ -180,6 +181,10 @@ def serve(root: Path, task_id: str | None = None, session_id: str | None = None)
                 continue
             if name == HEALTH_TOOL["name"]:
                 _reply(identifier, _tool_result(_health(root, task_id, session_id)))
+                continue
+            if name in V0270_TOOL_NAMES:
+                value = dispatch_v0270_tool(root, name, arguments)
+                _reply(identifier, _tool_result(value))
                 continue
             if name in V0263_TOOL_NAMES:
                 value = dispatch_v0263_tool(name, arguments, root, task_id, session_id)

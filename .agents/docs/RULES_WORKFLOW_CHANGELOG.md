@@ -1,3 +1,10 @@
+## v0.27.0 — Governed Skill Contract v2
+
+- Added deterministic Skill Contract v2 with schema 58 and least-authority defaults.
+- Bound architecture-sensitive skill validation to the exact ACTIVE human-approved Architecture Baseline.
+- Preserved human-only graduation/revocation, legacy v1 artifacts, and read-only MCP inspection.
+- Switched current distribution to download-latest-full-release with no version-specific updater scripts; project-owned skills/workflows/source/state are excluded from the managed release payload.
+
 ## v0.26.3 — Quality/Operational Enforcement
 
 - Added deterministic quality/security/operational enforcement for ARCH-15..21.

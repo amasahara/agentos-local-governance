@@ -1,3 +1,11 @@
+## 0.27.0 — Governed Skill Contract v2
+
+- Upgrade the existing procedural skill lifecycle to deterministic Governed Skill Contract v2 without creating a second skill framework.
+- Add schema 58 contract state/events, architecture hash binding, least-authority scope/capability/tool declarations, and human-gated graduation.
+- Preserve legacy v1 skills without in-place rewrite; automatic architecture-aware selection remains reserved for v0.27.1.
+- Replace version-specific updater scripts with the download-latest-full-release distribution model while keeping project-owned skills/workflows/source/state isolated.
+- Synchronize README VI/EN and current developer documentation for v0.27.0.
+
 ## 0.26.3 — Quality/Operational Enforcement
 
 - Enforce explicit ARCH-15..21 logging/error/security/performance/scalability/deployment/testing contracts.

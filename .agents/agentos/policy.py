@@ -20,7 +20,7 @@ from .db import connect
 
 CLAIM_TYPES = {"business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"}
 RISK_LEVELS = {"low", "medium", "high"}
-SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy"}
+SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy", "governed_skill_contract_policy"}
 SAFE_OVERRIDE_KEYS = {"source_root", "test_path", "encoding", "runtime_paths"}
 
 
@@ -54,10 +54,33 @@ def local_override_status(root: Path) -> dict[str, Any]:
     return {"exists": True, "sensitive": sensitive, "status": row["status"] if row else ("pending" if sensitive else "safe"), "content_hash": digest, "review": dict(row) if row else None}
 
 
-def load_policy(root: Path) -> dict[str, Any]:
-    """Load governance policy and merge only approved sensitive overrides."""
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge release-owned policy data without mutating inputs."""
+    result = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+def load_release_policy(root: Path) -> dict[str, Any]:
+    """Load base governance plus the optional release-owned managed policy overlay."""
     base_path = root / ".agents" / "config" / "governance.json"
     policy = json.loads(base_path.read_text(encoding="utf-8"))
+    release_path = root / ".agents" / "config" / "release_policy.json"
+    if release_path.is_file():
+        release = json.loads(release_path.read_text(encoding="utf-8"))
+        if not isinstance(release, dict):
+            raise RuntimeError("release policy overlay must be an object")
+        policy = _deep_merge(policy, release)
+    return policy
+
+
+def load_policy(root: Path) -> dict[str, Any]:
+    """Load effective release policy and merge only approved project-local overrides."""
+    policy = load_release_policy(root)
     local_path = root / ".agents" / "config" / "governance.local.json"
     if local_path.exists():
         override = json.loads(local_path.read_text(encoding="utf-8"))
@@ -72,9 +95,21 @@ def load_policy(root: Path) -> dict[str, Any]:
     return policy
 
 
+def _policy_version_tuple(policy: dict[str, Any]) -> tuple[int, int, int]:
+    """Return the semantic policy version used for version-gated invariants."""
+    raw = str(policy.get("version", "")).strip()
+    parts = raw.split(".")
+    if len(parts) != 3 or any(not part.isdigit() for part in parts):
+        raise RuntimeError("policy version is invalid")
+    return tuple(int(part) for part in parts)  # type: ignore[return-value]
+
+
 def validate_policy(policy: dict[str, Any]) -> None:
-    """Fail closed when mandatory policy sections are absent or invalid."""
+    """Fail closed while preserving historical policy contracts by release version."""
     required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy"}
+    version = _policy_version_tuple(policy)
+    if version >= (0, 27, 0):
+        required.add("governed_skill_contract_policy")
     missing = sorted(required - policy.keys())
     if missing:
         raise RuntimeError(f"missing policy keys: {missing}")
@@ -88,6 +123,30 @@ def validate_policy(policy: dict[str, Any]) -> None:
     poisoned_architecture = [key for key in architecture_required_false if architecture.get(key) is not False]
     if poisoned_architecture:
         raise RuntimeError(f"architecture authority invariant violated: {poisoned_architecture}")
+    if version >= (0, 27, 0):
+        skill_contract = policy["governed_skill_contract_policy"]
+        skill_required_true = (
+            "enabled", "new_candidates_require_v2", "legacy_v1_preserved",
+            "human_graduation_required", "human_revocation_required",
+            "contract_validation_deterministic", "architecture_sensitive_contract_requires_active_baseline",
+            "architecture_baseline_hash_pin_required", "selection_evaluation_reserved_for_v0271",
+        )
+        disabled_skill = [key for key in skill_required_true if skill_contract.get(key) is not True]
+        if disabled_skill:
+            raise RuntimeError(f"governed skill contract invariant disabled: {disabled_skill}")
+        skill_required_false = (
+            "legacy_v1_in_place_rewrite", "skill_may_exceed_task_authority",
+            "skill_may_exceed_architecture_authority", "mcp_mutation_allowed",
+            "automatic_skill_selection_enabled",
+        )
+        poisoned_skill = [key for key in skill_required_false if skill_contract.get(key) is not False]
+        if poisoned_skill:
+            raise RuntimeError(f"governed skill contract authority invariant violated: {poisoned_skill}")
+        if int(skill_contract.get("contract_version", 0)) != 2:
+            raise RuntimeError("governed skill contract version must be 2")
+        if set(skill_contract.get("allowed_risk_tiers", [])) != {"low", "medium", "high"}:
+            raise RuntimeError("governed skill risk-tier allowlist is invalid")
+
     clarification = policy["human_clarification_policy"]
     clarification_required_true = (
         "enabled", "structured_clarity_assessment_required", "no_silent_material_assumptions",

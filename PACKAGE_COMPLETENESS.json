@@ -1,8 +1,8 @@
 {
-  "release": "0.27.0",
+  "release": "0.27.1",
   "kind": "full_materialized_github_ready",
-  "schema": 58,
-  "authoritative_file_count": 276,
+  "schema": 59,
+  "authoritative_file_count": 281,
   "required_top_level": [
     "VERSION",
     "AGENTS.md",
@@ -54,5 +54,7 @@
   "architecture_structural_enforcement": "tech_stack_dependency_structure_coding_pattern_hard_contract",
   "architecture_runtime_enforcement": "request_auth_data_api_business_external_config_hard_contract",
   "architecture_quality_enforcement": "logging_error_security_performance_scalability_deployment_testing_hard_contract",
-  "governed_skill_contract": "v2_deterministic_least_authority_human_graduation_legacy_preserved"
+  "governed_skill_contract": "v2_deterministic_least_authority_human_graduation_legacy_preserved",
+  "architecture_aware_skill_selection": "deterministic_advisory_active_plan_contract_bound_no_authority_grant",
+  "skill_evaluation": "observational_task_outcome_no_lifecycle_or_ranking_mutation"
 }

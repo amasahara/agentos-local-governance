@@ -1,3 +1,12 @@
+## v0.27.1 — Architecture-Aware Skill Selection & Evaluation
+
+- Skill selection is explicit, deterministic and advisory; it does not modify task/architecture authority.
+- Only graduated current Contract-v2 skills are selection-eligible.
+- Least-authority compatibility now checks plan architecture sections, write targets, capabilities, tools, dependencies, external services and tests.
+- Evaluation is observational only and cannot automatically mutate skill lifecycle or future ranking weights.
+- MCP adds read-only selection/evaluation inspection only.
+- Current release distribution remains Latest Full Release with no updater script and project-owned partition preservation.
+
 ## v0.27.0 — Governed Skill Contract v2
 
 - Added deterministic Skill Contract v2 with schema 58 and least-authority defaults.

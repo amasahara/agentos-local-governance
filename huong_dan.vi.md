@@ -1,12 +1,48 @@
-# Hướng dẫn AgentOS v0.27.0
+# Hướng dẫn sử dụng AgentOS v0.27.1
 
-1. Tạo/promote skill từ procedural memory như trước; candidate mới tự nhận Governed Skill Contract v2 ở trạng thái least-authority.
-2. Dùng `skill-contract-show`, sau đó `skill-contract-set` để khai input/output, ARCH sections, capabilities, tools, read/write scopes, dependencies, external services, risk và test contract.
-3. Chạy `skill-contract-validate`. Skill architecture-sensitive cần ACTIVE Architecture Baseline; validation sẽ pin exact baseline hash.
-4. Chỉ con người được `skill-graduate` và `skill-revoke`; MCP không có mutation authority.
-5. Skill v1 cũ được giữ nguyên, không rewrite in-place. Muốn lên v2 thì tạo successor candidate/version mới và review lại.
-6. v0.27.0 chưa tự chọn skill theo architecture; chức năng đó thuộc v0.27.1.
-7. Distribution từ v0.27.0 không dùng `apply_v*.py`. Tải latest full release và giữ nguyên project-owned user skills, workflows/workflow state, source, architecture working copy, `governance.local.json`, state và runtime.
-8. Khi phát hành AgentOS repository, rebuild manifest, chạy validator/docs/instruction checks và toàn bộ pytest.
+Phiên bản: **v0.27.1 — Architecture-Aware Skill Selection & Evaluation**
+Database schema: **59**
 
-Database schema: **58**; bootstrap baseline vẫn **46**.
+## Chạy selection
+
+Task phải có active architecture-aware plan trước:
+
+```powershell
+agentos skill-selection-run --task-id T-123
+```
+
+Nếu skill yêu cầu tools, truyền inventory rõ ràng:
+
+```powershell
+agentos skill-selection-run --task-id T-123 --available-tools '["pytest","ruff"]'
+```
+
+Xem kết quả:
+
+```powershell
+agentos skill-selection-status --task-id T-123
+agentos skill-selection-candidates --run-id 1
+```
+
+Sau khi task có `task_outcome`, evaluation có thể chạy:
+
+```powershell
+agentos skill-evaluation-run --selection-run-id 1
+```
+
+Selection/evaluation không cấp authority và không tự sửa lifecycle skill.
+
+## Cập nhật AgentOS
+
+Dùng latest full release; **no updater script**. Không xóa project-owned user skills, workflows, source, architecture working copy, `governance.local.json`, `.agents/state/**`, `.agents/runtime/**`.
+
+## Release gates
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path .\.agents).Path
+python tools\build_manifest.py .
+python tools\verify_manifest.py .
+python -m pytest -q .agents\tests -rs
+python tools\validate_release.py .
+git diff --check
+```

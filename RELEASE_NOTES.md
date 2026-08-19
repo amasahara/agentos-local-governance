@@ -1,60 +1,108 @@
-# AgentOS Local Governance v0.27.0 — Governed Skill Contract v2
+# AgentOS Local Governance v0.27.1 — Architecture-Aware Skill Selection & Evaluation
 
-## Tiếng Việt
+## 🇻🇳 Tiếng Việt
 
-v0.27.0 nâng subsystem skill hiện hữu thành **Governed Skill Contract v2** mà không tạo skill framework mới.
+v0.27.1 nối **Governed Skill Contract v2** với active architecture-aware task plan và bổ sung một bộ chọn skill deterministic, local, least-authority cùng lớp evaluation observational.
 
-### Thay đổi chính
+### Điểm chính
 
-- Schema **57 → 58**.
-- New candidate skill mặc định dùng Contract v2 least-authority.
-- Contract khai rõ input/output, required architecture sections, capabilities, tools, read/write scopes, dependencies, external services, pre/postconditions, risk tier, test contract và architecture constraints.
-- Contract được canonicalize và SHA-256 hash deterministic.
-- Skill architecture-sensitive cần ACTIVE human-approved Architecture Baseline; validation pin exact baseline hash.
-- Existing v1 skills giữ nguyên `legacy_v1`; không rewrite approved artifact in-place.
-- `skill-graduate` vẫn human-only và giờ yêu cầu v2 contract valid/current.
-- `skill-revoke` vẫn human-only.
-- `skill-match` vẫn lexical/deterministic; architecture-aware selection/evaluation dành cho v0.27.1.
-- MCP thêm 3 read-only tools; không expose set/validate mutation, graduate, revoke hay approval authority.
-- Distribution chuyển sang **download latest full release**, không còn yêu cầu version-specific `apply_v*.py` updater.
-- User skills, workflows/workflow state, source, architecture working copy, local governance override, state/runtime là project-owned và không thuộc managed release payload.
-- README VI/EN, developer guide và current-release docs được cập nhật cho v0.27.0.
+- Schema **58 → 59**.
+- Chỉ `graduated` Contract v2 đang `valid` mới được selection xem xét.
+- `legacy_v1`, stale/invalid contracts và architecture mismatch bị loại fail-closed.
+- Selection kiểm tra:
+  - affected architecture sections;
+  - `allowed_write_scope` với toàn bộ planned write targets;
+  - required capabilities;
+  - required tools;
+  - allowed dependencies;
+  - allowed external services;
+  - required test suites.
+- Caller capability inventory chỉ có thể thu hẹp governed proxy capability policy, không thể tạo authority mới.
+- Ranking deterministic/local; không dùng LLM, embedding, network hoặc model/provider discovery.
+- Raw user request không được copy vào selection state; chỉ hash/counts/evidence metadata được lưu.
+- Selection là **advisory only**: không sửa plan, không execute skill, không cấp capability, không approve architecture.
+- Evaluation dùng existing `task_outcomes` và phân loại `positive / mixed / negative / stale_context`.
+- Evaluation không auto-graduate, auto-revoke, sửa contract hoặc tự thay future ranking weights.
+- Model/provider selection authority vẫn ở external runtime.
 
-### Schema 58
+### Schema 59
 
-Bổ sung `skill_contracts`, `skill_contract_events` và contract metadata trên `promoted_skills`.
+```text
+skill_selection_runs
+skill_selection_candidates
+skill_evaluation_runs
+```
 
 ### CLI mới
 
 ```text
-skill-contract-set
-skill-contract-show
-skill-contract-validate
-skill-contract-status
+skill-selection-run
+skill-selection-status
+skill-selection-candidates
+skill-evaluation-run
 ```
 
-### MCP mới
+### MCP read-only mới
 
 ```text
-agentos.skill_contract_get
-agentos.skill_contract_status_get
-agentos.skill_contracts_list
+agentos.skill_selection_status_get
+agentos.skill_selection_candidates_get
+agentos.skill_evaluation_get
 ```
 
-## English
+Không có MCP tool để chạy selection/evaluation, execute skill, mutate contract, approve, graduate hoặc revoke.
 
-v0.27.0 upgrades the existing skill subsystem into **Governed Skill Contract v2** without creating a second skill framework.
+### Distribution
+
+v0.27.1 tiếp tục **Latest Full Release** model với **no updater script**. Project-owned user skills, workflows, source, architecture working copy, `governance.local.json`, `.agents/state/**` và `.agents/runtime/**` được giữ ngoài managed release partition.
+
+---
+
+## 🇬🇧 English
+
+v0.27.1 connects **Governed Skill Contract v2** to the active architecture-aware task plan and introduces deterministic local least-authority skill recommendation plus observational evaluation.
 
 ### Highlights
 
-- Database schema **57 → 58**.
-- New candidates receive a deterministic least-authority v2 contract.
-- Contracts explicitly declare inputs/outputs, Architecture sections, capabilities, tools, read/write scopes, dependencies, external services, pre/postconditions, risk tier, tests, and architecture constraints.
-- Architecture-sensitive contracts require an ACTIVE human-approved Architecture Baseline and pin its exact hash.
-- Existing v1 skills remain `legacy_v1`; approved artifacts are not rewritten in place.
-- Graduation/revocation remain human-controlled.
-- Lexical skill matching remains unchanged; architecture-aware selection/evaluation is deferred to v0.27.1.
-- Three read-only MCP tools expose contract inspection only.
-- Distribution moves to **download latest full release** with no version-specific updater scripts.
-- Project-owned skills, workflows/workflow state, source, architecture working copies, local governance overrides, state, and runtime are excluded from the managed release payload.
-- README and developer documentation are synchronized for v0.27.0.
+- Schema **58 → 59**.
+- Only current `graduated` Contract-v2 skills are considered.
+- Legacy-v1, stale/invalid contracts, and architecture mismatches fail closed.
+- Selection validates architecture sections, write scope, capabilities, tools, dependencies, external services, and required test suites.
+- Caller capability inventory can only narrow governed proxy capabilities; it cannot create authority.
+- Ranking is deterministic/local and uses no LLM, embedding, network, or model/provider discovery.
+- Raw user requests are not duplicated into selection state; only hashes, counts, blocker codes, and integrity pins are persisted.
+- Selection is advisory only and cannot mutate the active plan, execute a skill, grant a capability, or approve architecture.
+- Evaluation observes existing task outcomes and classifies results as `positive`, `mixed`, `negative`, or `stale_context`.
+- Evaluation cannot graduate/revoke skills, mutate contracts, or automatically alter future ranking weights.
+- Model/provider selection authority remains external to AgentOS.
+
+### Schema 59
+
+```text
+skill_selection_runs
+skill_selection_candidates
+skill_evaluation_runs
+```
+
+### New CLI
+
+```text
+skill-selection-run
+skill-selection-status
+skill-selection-candidates
+skill-evaluation-run
+```
+
+### New read-only MCP tools
+
+```text
+agentos.skill_selection_status_get
+agentos.skill_selection_candidates_get
+agentos.skill_evaluation_get
+```
+
+No MCP mutation, selection execution, evaluation persistence, skill execution, approval, graduation, or revocation authority is added.
+
+### Distribution
+
+v0.27.1 continues the **Latest Full Release** model with **no updater script**. Project-owned skills, workflows, source, architecture working copies, local governance overrides, state, and runtime data remain outside the managed release partition.

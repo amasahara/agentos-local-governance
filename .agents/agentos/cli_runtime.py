@@ -55,6 +55,7 @@ FEATURE_CLI_MODULES = (
     "architecture_structural_cli",
     "architecture_runtime_cli",
     "architecture_quality_cli",
+    "skill_selection_cli",
     "human_decision_cli",
 )
 

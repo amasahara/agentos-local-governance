@@ -1,9 +1,12 @@
-# AgentOS Developer Guide
+# Hướng dẫn AgentOS v0.27.1
 
-[🇻🇳 Tiếng Việt](huong_dan.vi.md) | [🇬🇧 English](huong_dan.en.md)
+**v0.27.1 — Architecture-Aware Skill Selection & Evaluation**
+Database schema: **59**
 
-Current version: **0.27.0**. Database schema: **58**; schema bootstrap baseline remains **46**.
+- [Tiếng Việt](huong_dan.vi.md)
+- [English guide](huong_dan.en.md)
+- [README](README.md)
+- [Architecture-Aware Skill Selection & Evaluation](.agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md)
+- [Install Latest Release](.agents/docs/INSTALL_LATEST_RELEASE.md)
 
-v0.27.0 adds Governed Skill Contract v2. New skill candidates receive deterministic least-authority contracts; architecture-sensitive skills require the ACTIVE human-approved baseline and pin its exact hash. Human graduation/revocation authority is unchanged and automatic architecture-aware skill selection is deferred to v0.27.1.
-
-Distribution changed in v0.27.0: download latest full release; no updater script is required. User skills, workflows/workflow state, source, architecture working copies, local governance overrides, state, and runtime artifacts remain project-owned.
+Current release model: **no updater script**. Preserve project-owned skills, workflows, source, architecture working copy, local governance overrides, state and runtime data.

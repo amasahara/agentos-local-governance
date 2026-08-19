@@ -1,89 +1,58 @@
-# AgentOS Local Governance v0.27.0 — Governed Skill Contract v2
+# AgentOS Local Governance — Tiếng Việt
 
-[README landing](README.md) | [English](README.en.md)
+**Phiên bản hiện tại: v0.27.1 — Architecture-Aware Skill Selection & Evaluation**
 
-## Phiên bản hiện tại
+Database schema: **59**. Schema bootstrap baseline vẫn là **46**.
 
-- Version: **0.27.0**
-- Database schema: **58**
-- Schema bootstrap baseline: **46** (không đổi)
+v0.27.1 nối **Governed Skill Contract v2** vào active architecture-aware task plan để AgentOS có thể đề xuất skill phù hợp một cách deterministic, local và least-authority.
 
-v0.27.0 nâng subsystem skill hiện hữu từ procedural skill đơn giản thành **Governed Skill Contract v2**. AgentOS không tạo một skill framework thứ hai; lifecycle candidate → human graduation → revoke hiện tại được giữ lại và bổ sung contract machine-readable, hash, architecture binding và authority boundaries.
-
-## Contract v2
-
-Mỗi candidate mới khai rõ:
-
-- input/output;
-- Architecture sections bắt buộc;
-- capability/tool cần thiết;
-- read/write scope cho phép;
-- dependency và external service cho phép;
-- precondition/postcondition;
-- risk tier;
-- test contract;
-- architecture constraints;
-- deterministic contract hash.
-
-Skill không thể dùng contract để tự cấp thêm quyền. Mọi quyền thực thi vẫn phải đi qua task/plan/architecture/capability/tool governance hiện hữu.
-
-## Legacy skill
-
-Skill v1 đã tồn tại được giữ nguyên:
+## Luồng lựa chọn
 
 ```text
-legacy v1 skill
+Yêu cầu người dùng
       ↓
-readable / usable theo lifecycle hiện hữu
+Requirement Ledger + ACTIVE plan
       ↓
-KHÔNG rewrite artifact đã được duyệt
+Architecture Baseline
+      ↓
+Graduated Skill Contract v2
+      ↓
+Kiểm tra contract current
+      ↓
+Architecture / scope / capability / tool / dependency / service / test gates
+      ↓
+Deterministic ranking
+      ↓
+ADVISORY RECOMMENDATION
 ```
 
-Nếu muốn đưa một skill cũ sang v2, hướng đúng là tạo successor candidate/version mới để con người review lại, không sửa âm thầm artifact cũ.
+Lựa chọn **không phải execution authority**. AgentOS không tự attach skill vào plan, không tự chạy skill, không cấp capability, không approve architecture và không chọn model/provider.
 
-## Architecture binding
+## Invariant chính
 
-Skill trung lập kiến trúc có thể validate mà không cần ACTIVE Architecture Baseline.
+- Chỉ skill `graduated` có Contract v2 current mới eligible.
+- `legacy_v1` vẫn được bảo tồn nhưng không được architecture-aware selection chọn.
+- Contract stale/invalid bị loại fail-closed.
+- Planned files phải nằm trong `allowed_write_scope`.
+- Capability phải nằm trong governed capability inventory.
+- Required tools phải được khai báo là available cho selection run.
+- Dependencies, external services, architecture sections và required test suites không được vượt contract.
+- Evaluation chỉ quan sát `task_outcomes`; không auto-graduate/revoke và không tự đổi ranking cho tương lai.
+- MCP chỉ đọc status/candidates/evaluation.
 
-Skill khai `required_architecture_sections`, dependency/external service hoặc architecture constraint thì cần ACTIVE human-approved baseline. Validation thành công sẽ pin `architecture_baseline_id` và `architecture_baseline_hash`.
+## CLI
 
-v0.27.0 chưa tự chọn skill theo kiến trúc; phần **Architecture-Aware Skill Selection & Evaluation** thuộc v0.27.1.
-
-## Distribution mới — không dùng updater script
-
-Từ v0.27.0, không còn yêu cầu chạy `apply_v0270.py` hay updater theo từng version.
-
-AgentOS-managed distribution được tách khỏi dữ liệu project-owned. Release mới **không sở hữu và không overwrite**:
-
-- user skills;
-- project workflows / workflow state;
-- project source;
-- architecture working copy;
-- `governance.local.json`;
-- `.agents/state/**`;
-- `.agents/runtime/**`.
-
-Do đó chỉ cần tải **latest GitHub Release/source** để lấy AgentOS runtime mới nhất. Xem `.agents/docs/INSTALL_LATEST_RELEASE.md`.
-
-## Command
-
-```bash
-agentos skill-contract-show --skill-id 1
-agentos skill-contract-set --skill-id 1 --drafted-by human:architect --contract '{...}'
-agentos skill-contract-validate --skill-id 1
-agentos skill-contract-status
+```powershell
+agentos skill-selection-run --task-id T-123
+agentos skill-selection-status --task-id T-123
+agentos skill-selection-candidates --run-id 1
+agentos skill-evaluation-run --selection-run-id 1
 ```
 
-`skill-graduate` và `skill-revoke` vẫn human-gated. MCP chỉ đọc contract/status/list và không expose mutation authority.
+## Distribution
 
-## Validation
+Từ v0.27.0+, AgentOS dùng **Latest Full Release** và **no updater script**. Không xóa user skills, workflows, project source, architecture working copy, `governance.local.json`, `.agents/state/**` hoặc `.agents/runtime/**` khi refresh AgentOS-managed runtime.
 
-```bash
-PYTHONPATH=.agents python -m pytest -q .agents/tests -rs
-python tools/build_manifest.py .
-python tools/verify_manifest.py .
-python tools/validate_release.py .
-git diff --check
-```
-
-Xem [Governed Skill Contract v2](.agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md).
+- [Tài liệu v0.27.1](.agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md)
+- [Cài đặt latest release](.agents/docs/INSTALL_LATEST_RELEASE.md)
+- [English](README.en.md)

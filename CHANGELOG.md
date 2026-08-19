@@ -1,3 +1,15 @@
+# Changelog
+
+## 0.27.1 — Architecture-Aware Skill Selection & Evaluation
+
+- Added schema 59 selection/evaluation observability.
+- Added deterministic advisory ranking of current graduated Skill Contract v2 skills against active architecture-aware plans.
+- Added least-authority gates for architecture sections, write scopes, capabilities, tools, dependencies, external services, and tests.
+- Added observational outcome evaluation without automatic lifecycle or ranking mutation.
+- Added 4 CLI commands and 3 read-only MCP inspection tools.
+- Preserved Latest Full Release / no-updater distribution and project-owned partitions.
+- Updated README, bilingual guides, release notes, policy, release integrity and current-node documentation.
+
 ## 0.27.0 — Governed Skill Contract v2
 
 - Upgrade the existing procedural skill lifecycle to deterministic Governed Skill Contract v2 without creating a second skill framework.

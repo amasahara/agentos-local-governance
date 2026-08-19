@@ -49,7 +49,8 @@ def test_schema_58_skill_contract_tables_and_columns_exist(tmp_path: Path, monke
         version = c.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0]
         tables = {row[0] for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         columns = {row[1] for row in c.execute("PRAGMA table_info(promoted_skills)")}
-    assert version == SCHEMA_VERSION == 58
+    assert version == SCHEMA_VERSION
+    assert SCHEMA_VERSION >= 58
     assert {"skill_contracts", "skill_contract_events"} <= tables
     assert {"contract_version", "contract_hash", "contract_status", "architecture_baseline_id", "architecture_baseline_hash"} <= columns
 

@@ -1,24 +1,24 @@
 {
-  "version": "0.27.0",
+  "version": "0.27.1",
   "documentation_policy": {
     "current_release_identity_files": [
-      ".agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md"
+      ".agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md"
     ],
-    "current_release_name": "Governed Skill Contract v2",
-    "current_schema": 58,
+    "current_release_name": "Architecture-Aware Skill Selection & Evaluation",
+    "current_schema": 59,
     "current_schema_files": [
-      ".agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md"
+      ".agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md"
     ],
     "current_upgrade_guide": ".agents/docs/INSTALL_LATEST_RELEASE.md",
     "current_version_files": [
-      ".agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md"
+      ".agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md"
     ],
     "local_link_check_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       ".agents/docs/INSTALL_LATEST_RELEASE.md",
-      ".agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md"
+      ".agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md"
     ]
   },
   "governed_skill_contract_policy": {
@@ -37,15 +37,46 @@
     "skill_may_exceed_architecture_authority": false,
     "mcp_mutation_allowed": false,
     "automatic_skill_selection_enabled": false,
-    "selection_evaluation_reserved_for_v0271": true,
+    "selection_evaluation_reserved_for_v0271": false,
+    "architecture_aware_selection_available": true,
     "allowed_risk_tiers": ["low", "medium", "high"]
+  },
+  "architecture_aware_skill_selection_policy": {
+    "enabled": true,
+    "database_schema": 59,
+    "selection_version": 1,
+    "evaluation_version": 1,
+    "deterministic_local_ranking_required": true,
+    "selection_is_advisory": true,
+    "active_plan_context_required": true,
+    "graduated_v2_only": true,
+    "legacy_v1_selection_allowed": false,
+    "stale_contract_selection_blocked": true,
+    "architecture_mismatch_selection_blocked": true,
+    "task_scope_subset_required": true,
+    "required_capabilities_must_be_available": true,
+    "required_tools_must_be_available": true,
+    "automatic_execution_allowed": false,
+    "automatic_skill_graduation_allowed": false,
+    "automatic_skill_revocation_allowed": false,
+    "selection_changes_plan_authority": false,
+    "evaluation_changes_skill_lifecycle": false,
+    "evaluation_changes_future_selection_weights": false,
+    "mcp_mutation_allowed": false,
+    "model_provider_selection_authority": false,
+    "human_authority_unchanged": true,
+    "positive_test_pass_rate_min": 0.95,
+    "negative_test_pass_rate_below": 0.8,
+    "high_rework_threshold": 3,
+    "max_candidates": 100
   },
   "knowledge_runtime": {
     "skill_policy": {
       "candidate_confidence_threshold": 0.8,
       "contract_version": 2,
       "new_candidate_contract_required": true,
-      "human_graduation_required": true
+      "human_graduation_required": true,
+      "architecture_aware_selection_version": 1
     }
   },
   "installation_policy": {

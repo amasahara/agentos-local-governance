@@ -20,7 +20,7 @@ from .db import connect
 
 CLAIM_TYPES = {"business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"}
 RISK_LEVELS = {"low", "medium", "high"}
-SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy", "governed_skill_contract_policy"}
+SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy", "governed_skill_contract_policy", "architecture_aware_skill_selection_policy"}
 SAFE_OVERRIDE_KEYS = {"source_root", "test_path", "encoding", "runtime_paths"}
 
 
@@ -110,6 +110,8 @@ def validate_policy(policy: dict[str, Any]) -> None:
     version = _policy_version_tuple(policy)
     if version >= (0, 27, 0):
         required.add("governed_skill_contract_policy")
+    if version >= (0, 27, 1):
+        required.add("architecture_aware_skill_selection_policy")
     missing = sorted(required - policy.keys())
     if missing:
         raise RuntimeError(f"missing policy keys: {missing}")
@@ -129,7 +131,7 @@ def validate_policy(policy: dict[str, Any]) -> None:
             "enabled", "new_candidates_require_v2", "legacy_v1_preserved",
             "human_graduation_required", "human_revocation_required",
             "contract_validation_deterministic", "architecture_sensitive_contract_requires_active_baseline",
-            "architecture_baseline_hash_pin_required", "selection_evaluation_reserved_for_v0271",
+            "architecture_baseline_hash_pin_required",
         )
         disabled_skill = [key for key in skill_required_true if skill_contract.get(key) is not True]
         if disabled_skill:
@@ -146,6 +148,45 @@ def validate_policy(policy: dict[str, Any]) -> None:
             raise RuntimeError("governed skill contract version must be 2")
         if set(skill_contract.get("allowed_risk_tiers", [])) != {"low", "medium", "high"}:
             raise RuntimeError("governed skill risk-tier allowlist is invalid")
+        if version == (0, 27, 0) and skill_contract.get("selection_evaluation_reserved_for_v0271") is not True:
+            raise RuntimeError("v0.27.0 must reserve skill selection/evaluation for v0.27.1")
+        if version >= (0, 27, 1):
+            if skill_contract.get("selection_evaluation_reserved_for_v0271") is not False:
+                raise RuntimeError("v0.27.1+ skill selection/evaluation reservation must be released")
+            if skill_contract.get("architecture_aware_selection_available") is not True:
+                raise RuntimeError("v0.27.1+ architecture-aware skill selection must be explicitly available")
+
+    if version >= (0, 27, 1):
+        selection = policy["architecture_aware_skill_selection_policy"]
+        selection_required_true = (
+            "enabled", "deterministic_local_ranking_required", "selection_is_advisory",
+            "active_plan_context_required", "graduated_v2_only", "stale_contract_selection_blocked",
+            "architecture_mismatch_selection_blocked", "task_scope_subset_required",
+            "required_capabilities_must_be_available", "required_tools_must_be_available",
+            "human_authority_unchanged",
+        )
+        disabled_selection = [key for key in selection_required_true if selection.get(key) is not True]
+        if disabled_selection:
+            raise RuntimeError(f"architecture-aware skill selection invariant disabled: {disabled_selection}")
+        selection_required_false = (
+            "legacy_v1_selection_allowed", "automatic_execution_allowed", "automatic_skill_graduation_allowed",
+            "automatic_skill_revocation_allowed", "selection_changes_plan_authority",
+            "evaluation_changes_skill_lifecycle", "evaluation_changes_future_selection_weights",
+            "mcp_mutation_allowed", "model_provider_selection_authority",
+        )
+        poisoned_selection = [key for key in selection_required_false if selection.get(key) is not False]
+        if poisoned_selection:
+            raise RuntimeError(f"architecture-aware skill selection authority invariant violated: {poisoned_selection}")
+        if int(selection.get("database_schema", 0)) != 59 or int(selection.get("selection_version", 0)) != 1 or int(selection.get("evaluation_version", 0)) != 1:
+            raise RuntimeError("architecture-aware skill selection version/schema is invalid")
+        positive = float(selection.get("positive_test_pass_rate_min", -1))
+        negative = float(selection.get("negative_test_pass_rate_below", -1))
+        if not (0.0 <= negative < positive <= 1.0):
+            raise RuntimeError("architecture-aware skill evaluation thresholds are invalid")
+        if int(selection.get("high_rework_threshold", 0)) < 2:
+            raise RuntimeError("architecture-aware skill evaluation rework threshold is invalid")
+        if int(selection.get("max_candidates", 0)) < 1:
+            raise RuntimeError("architecture-aware skill selection candidate limit is invalid")
 
     clarification = policy["human_clarification_policy"]
     clarification_required_true = (

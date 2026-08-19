@@ -1,3 +1,11 @@
+## v0.27.2 — Multi-Agent Worker Supervisor
+- Added schema 60 governed supervisor/worker/dependency/event state.
+- Coordinates only existing approved worker tasks, ACTIVE architecture-aware plans, capability sessions, and collaboration roles.
+- Enforces parent-plan file/architecture containment, acyclic worker dependencies, and overlapping executor planned-write blocking.
+- Optional skill binding accepts only current eligible/recommendable graduated Contract-v2 selections from v0.27.1.
+- Does not create/approve tasks or plans, issue capabilities, execute skills, select model/providers, or launch worker processes.
+- MCP adds three read-only supervisor status/workers/readiness tools; mutation remains governed CLI/operator authority.
+- Isolated workspace and controlled integration remain reserved for v0.27.3.
 ## v0.27.1 — Architecture-Aware Skill Selection & Evaluation
 
 - Skill selection is explicit, deterministic and advisory; it does not modify task/architecture authority.

@@ -1,24 +1,24 @@
 {
-  "version": "0.27.1",
+  "version": "0.27.2",
   "documentation_policy": {
     "current_release_identity_files": [
-      ".agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md"
+      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
     ],
-    "current_release_name": "Architecture-Aware Skill Selection & Evaluation",
-    "current_schema": 59,
+    "current_release_name": "Multi-Agent Worker Supervisor",
+    "current_schema": 60,
     "current_schema_files": [
-      ".agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md"
+      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
     ],
     "current_upgrade_guide": ".agents/docs/INSTALL_LATEST_RELEASE.md",
     "current_version_files": [
-      ".agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md"
+      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
     ],
     "local_link_check_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       ".agents/docs/INSTALL_LATEST_RELEASE.md",
-      ".agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md"
+      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
     ]
   },
   "governed_skill_contract_policy": {
@@ -39,7 +39,11 @@
     "automatic_skill_selection_enabled": false,
     "selection_evaluation_reserved_for_v0271": false,
     "architecture_aware_selection_available": true,
-    "allowed_risk_tiers": ["low", "medium", "high"]
+    "allowed_risk_tiers": [
+      "low",
+      "medium",
+      "high"
+    ]
   },
   "architecture_aware_skill_selection_policy": {
     "enabled": true,
@@ -99,5 +103,30 @@
     "architecture_working_copy_preserved": true,
     "governance_local_preserved": true,
     "release_payload_excludes_project_owned_content": true
+  },
+  "multi_agent_supervisor_policy": {
+    "enabled": true,
+    "database_schema": 60,
+    "supervisor_version": 1,
+    "max_workers": 8,
+    "require_existing_approved_worker_tasks": true,
+    "require_current_worker_plans": true,
+    "require_parent_active_plan": true,
+    "require_parent_plan_file_envelope": true,
+    "require_distinct_worker_sessions": true,
+    "require_active_capability_sessions": true,
+    "require_active_role_assignments": true,
+    "require_acyclic_dependencies": true,
+    "overlapping_executor_write_targets": "block",
+    "auto_task_create": false,
+    "auto_task_approve": false,
+    "auto_plan_approve": false,
+    "auto_capability_issue": false,
+    "auto_skill_execute": false,
+    "auto_model_provider_select": false,
+    "auto_process_launch": false,
+    "mcp_mutation_allowed": false,
+    "isolated_workspace_reserved_for_v0273": true,
+    "controlled_integration_reserved_for_v0273": true
   }
 }

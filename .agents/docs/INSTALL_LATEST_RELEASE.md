@@ -1,7 +1,7 @@
 # AgentOS — Cài đặt / làm mới từ Latest Full Release
 
-Current release: **v0.27.1 — Architecture-Aware Skill Selection & Evaluation**
-Database schema: **59**
+Current release: **v0.27.2 — Multi-Agent Worker Supervisor**
+Database schema: **60**
 
 > Release model invariant: **no updater script**.
 
@@ -79,8 +79,8 @@ python tools\validate_release.py .
 git diff --check
 ```
 
-## v0.27.1 runtime note
+## v0.27.2 runtime note
 
 Architecture-aware skill selection is explicit and advisory. A recommendation does not execute a skill and does not grant task, capability, tool, architecture, filesystem, network, database, model, or provider authority.
 
-See [Architecture-Aware Skill Selection & Evaluation](ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md).
+See [Multi-Agent Worker Supervisor](MULTI_AGENT_WORKER_SUPERVISOR_V0272.md).

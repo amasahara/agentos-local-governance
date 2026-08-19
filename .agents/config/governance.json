@@ -667,23 +667,23 @@
   },
   "documentation_policy": {
     "current_release_identity_files": [
-      ".agents/docs/QUALITY_OPERATIONAL_ENFORCEMENT_V0263.md"
+      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
     ],
-    "current_release_name": "Quality/Operational Enforcement",
-    "current_schema": 57,
+    "current_release_name": "Multi-Agent Worker Supervisor",
+    "current_schema": 60,
     "current_schema_files": [
-      ".agents/docs/QUALITY_OPERATIONAL_ENFORCEMENT_V0263.md"
+      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
     ],
-    "current_upgrade_guide": ".agents/docs/UPGRADE_FROM_0.26.2.md",
+    "current_upgrade_guide": ".agents/docs/INSTALL_LATEST_RELEASE.md",
     "current_version_files": [
-      ".agents/docs/QUALITY_OPERATIONAL_ENFORCEMENT_V0263.md"
+      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
     ],
     "local_link_check_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
-      ".agents/docs/UPGRADE_FROM_0.26.2.md",
-      ".agents/docs/QUALITY_OPERATIONAL_ENFORCEMENT_V0263.md"
+      ".agents/docs/INSTALL_LATEST_RELEASE.md",
+      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
     ]
   },
   "drift_policy": {
@@ -996,7 +996,8 @@
       "architecture_compliance_policy",
       "architecture_change_policy",
       "architecture_planning_policy",
-      "architecture_structural_policy"
+      "architecture_structural_policy",
+      "multi_agent_supervisor_policy"
     ]
   },
   "mcp_feature_runtime_policy": {
@@ -1032,6 +1033,31 @@
     "require_capability_sessions": true,
     "require_fresh_context_pack": true,
     "signed_messages": true
+  },
+  "multi_agent_supervisor_policy": {
+    "auto_capability_issue": false,
+    "auto_model_provider_select": false,
+    "auto_plan_approve": false,
+    "auto_process_launch": false,
+    "auto_skill_execute": false,
+    "auto_task_approve": false,
+    "auto_task_create": false,
+    "controlled_integration_reserved_for_v0273": true,
+    "database_schema": 60,
+    "enabled": true,
+    "isolated_workspace_reserved_for_v0273": true,
+    "max_workers": 8,
+    "mcp_mutation_allowed": false,
+    "overlapping_executor_write_targets": "block",
+    "require_active_capability_sessions": true,
+    "require_active_role_assignments": true,
+    "require_acyclic_dependencies": true,
+    "require_current_worker_plans": true,
+    "require_distinct_worker_sessions": true,
+    "require_existing_approved_worker_tasks": true,
+    "require_parent_active_plan": true,
+    "require_parent_plan_file_envelope": true,
+    "supervisor_version": 1
   },
   "primary_project_consolidation_policy": {
     "allowed_actions": [

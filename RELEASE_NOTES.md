@@ -1,108 +1,145 @@
-# AgentOS Local Governance v0.27.1 — Architecture-Aware Skill Selection & Evaluation
+# AgentOS Local Governance v0.27.2 — Multi-Agent Worker Supervisor
 
 ## 🇻🇳 Tiếng Việt
 
-v0.27.1 nối **Governed Skill Contract v2** với active architecture-aware task plan và bổ sung một bộ chọn skill deterministic, local, least-authority cùng lớp evaluation observational.
+v0.27.2 bổ sung **Multi-Agent Worker Supervisor** để điều phối nhiều AI worker trên cùng project mà không tạo một execution authority thứ hai.
 
 ### Điểm chính
 
-- Schema **58 → 59**.
-- Chỉ `graduated` Contract v2 đang `valid` mới được selection xem xét.
-- `legacy_v1`, stale/invalid contracts và architecture mismatch bị loại fail-closed.
-- Selection kiểm tra:
-  - affected architecture sections;
-  - `allowed_write_scope` với toàn bộ planned write targets;
-  - required capabilities;
-  - required tools;
-  - allowed dependencies;
-  - allowed external services;
-  - required test suites.
-- Caller capability inventory chỉ có thể thu hẹp governed proxy capability policy, không thể tạo authority mới.
-- Ranking deterministic/local; không dùng LLM, embedding, network hoặc model/provider discovery.
-- Raw user request không được copy vào selection state; chỉ hash/counts/evidence metadata được lưu.
-- Selection là **advisory only**: không sửa plan, không execute skill, không cấp capability, không approve architecture.
-- Evaluation dùng existing `task_outcomes` và phân loại `positive / mixed / negative / stale_context`.
-- Evaluation không auto-graduate, auto-revoke, sửa contract hoặc tự thay future ranking weights.
-- Model/provider selection authority vẫn ở external runtime.
+- Schema **59 → 60**.
+- Parent task + ACTIVE architecture-aware plan trở thành orchestration envelope.
+- Mỗi worker bind vào một **approved worker task riêng**, active plan, session, role và capability set hiện hữu.
+- Worker plan phải nằm trong parent file/architecture envelope.
+- Distinct worker sessions được enforcement; task owner đã tồn tại phải khớp worker session.
+- Dependency graph là DAG; cycle fail-closed.
+- Executor planned write targets trùng nhau block activation trước khi chạm write boundary.
+- Worker freshness được re-check trên active plan, capability session, role và optional v0.27.1 skill-selection binding.
+- Skill binding chỉ pin current `graduated` Contract-v2 candidate đã `eligible + recommendable`; supervisor không execute skill.
+- `worker_start` chỉ chuyển state sang `running`; **không launch process**.
+- Không tự tạo/approve task, plan, capability, architecture hay skill lifecycle.
+- Không chọn model/provider.
+- Không tạo worktree hoặc merge; workspace isolation/controlled integration vẫn thuộc v0.27.3.
+- Signed audit được giữ cho supervisor mutation events.
 
-### Schema 59
+### Schema 60
 
 ```text
-skill_selection_runs
-skill_selection_candidates
-skill_evaluation_runs
+multi_agent_supervisor_runs
+multi_agent_workers
+multi_agent_worker_dependencies
+multi_agent_supervisor_events
 ```
 
 ### CLI mới
 
 ```text
-skill-selection-run
-skill-selection-status
-skill-selection-candidates
-skill-evaluation-run
+multi-agent-supervisor-create
+multi-agent-supervisor-worker-add
+multi-agent-supervisor-dependency-add
+multi-agent-supervisor-activate
+multi-agent-supervisor-pause
+multi-agent-supervisor-cancel
+multi-agent-worker-start
+multi-agent-worker-update
+multi-agent-supervisor-status
+multi-agent-supervisor-workers
 ```
+
+Expected unified CLI count sau integration từ baseline v0.27.1: **310 → 320**.
 
 ### MCP read-only mới
 
 ```text
-agentos.skill_selection_status_get
-agentos.skill_selection_candidates_get
-agentos.skill_evaluation_get
+agentos.multi_agent_supervisor_status_get
+agentos.multi_agent_supervisor_workers_get
+agentos.multi_agent_supervisor_readiness_get
 ```
 
-Không có MCP tool để chạy selection/evaluation, execute skill, mutate contract, approve, graduate hoặc revoke.
+Không có MCP mutation authority cho supervisor. Expected MCP catalog từ baseline v0.27.1: **113 → 116**.
+
+### Concurrency model
+
+v0.27.2 không cho nhiều executor dùng chung một task để lách `task_single_writer`. Mô hình đúng là:
+
+```text
+Parent task / parent plan
+          ↓
+      Supervisor
+   ┌──────┼──────┐
+   ↓      ↓      ↓
+Task A  Task B  Task C
+Session A/B/C distinct
+```
+
+Runtime resource leases và stale-write protection hiện hữu tiếp tục là write authority.
+
+### Validation của development patch
+
+Development patch đã chạy focused supervisor tests trong representative SQLite runtime bám các schema contract v0.27.1 mà node sử dụng:
+
+```text
+11 passed
+Python compile: PASS
+```
+
+Không tuyên bố full historical regression của repository đã chạy trong môi trường tạo patch, vì full v0.27.1 checkout không materialize được tại runtime này. Final release phải chạy toàn bộ tests + docs/release/manifest gates trên checkout thật.
 
 ### Distribution
 
-v0.27.1 tiếp tục **Latest Full Release** model với **no updater script**. Project-owned user skills, workflows, source, architecture working copy, `governance.local.json`, `.agents/state/**` và `.agents/runtime/**` được giữ ngoài managed release partition.
+Final v0.27.2 tiếp tục **Latest Full Release / no updater script**. File `apply_v0272_dev_patch.py` trong development bundle chỉ là helper ngoài release để materialize thay đổi lên checkout v0.27.1; **không được ship trong final release payload**.
 
 ---
 
 ## 🇬🇧 English
 
-v0.27.1 connects **Governed Skill Contract v2** to the active architecture-aware task plan and introduces deterministic local least-authority skill recommendation plus observational evaluation.
+v0.27.2 adds a **Multi-Agent Worker Supervisor** that coordinates multiple AI workers without introducing a second execution authority.
 
 ### Highlights
 
-- Schema **58 → 59**.
-- Only current `graduated` Contract-v2 skills are considered.
-- Legacy-v1, stale/invalid contracts, and architecture mismatches fail closed.
-- Selection validates architecture sections, write scope, capabilities, tools, dependencies, external services, and required test suites.
-- Caller capability inventory can only narrow governed proxy capabilities; it cannot create authority.
-- Ranking is deterministic/local and uses no LLM, embedding, network, or model/provider discovery.
-- Raw user requests are not duplicated into selection state; only hashes, counts, blocker codes, and integrity pins are persisted.
-- Selection is advisory only and cannot mutate the active plan, execute a skill, grant a capability, or approve architecture.
-- Evaluation observes existing task outcomes and classifies results as `positive`, `mixed`, `negative`, or `stale_context`.
-- Evaluation cannot graduate/revoke skills, mutate contracts, or automatically alter future ranking weights.
-- Model/provider selection authority remains external to AgentOS.
+- Schema **59 → 60**.
+- The approved parent task and ACTIVE architecture-aware plan form the orchestration envelope.
+- Every worker binds to a distinct existing approved worker task, active plan, session, role, and capability set.
+- Worker plans must remain inside the parent file and architecture-section envelope.
+- Worker sessions are distinct and existing task ownership must match the assigned session.
+- Dependencies form an explicit DAG; cycles fail closed.
+- Overlapping planned executor write targets block supervisor activation.
+- Plan/session/role/optional v0.27.1 skill-selection freshness is revalidated.
+- Optional skill binding only pins a current graduated Contract-v2 eligible/recommendable candidate; it never executes the skill.
+- `worker_start` changes state only and **does not launch a process**.
+- No automatic task/plan/capability/architecture approval, skill lifecycle mutation, or model/provider selection is introduced.
+- Worktree isolation and controlled integration remain reserved for v0.27.3.
+- Supervisor mutation events retain signed-audit linkage.
 
-### Schema 59
+### Schema 60
 
 ```text
-skill_selection_runs
-skill_selection_candidates
-skill_evaluation_runs
+multi_agent_supervisor_runs
+multi_agent_workers
+multi_agent_worker_dependencies
+multi_agent_supervisor_events
 ```
 
 ### New CLI
 
-```text
-skill-selection-run
-skill-selection-status
-skill-selection-candidates
-skill-evaluation-run
-```
+Ten commands are added, for an expected full registry count of **320** from the v0.27.1 baseline of 310.
 
-### New read-only MCP tools
+### New read-only MCP
 
 ```text
-agentos.skill_selection_status_get
-agentos.skill_selection_candidates_get
-agentos.skill_evaluation_get
+agentos.multi_agent_supervisor_status_get
+agentos.multi_agent_supervisor_workers_get
+agentos.multi_agent_supervisor_readiness_get
 ```
 
-No MCP mutation, selection execution, evaluation persistence, skill execution, approval, graduation, or revocation authority is added.
+No supervisor mutation is exposed over MCP. Expected catalog: **116** from the v0.27.1 baseline of 113.
 
-### Distribution
+### Development-patch validation
 
-v0.27.1 continues the **Latest Full Release** model with **no updater script**. Project-owned skills, workflows, source, architecture working copies, local governance overrides, state, and runtime data remain outside the managed release partition.
+Focused supervisor tests passed in a representative SQLite runtime using the v0.27.1 contracts consumed by this node:
+
+```text
+11 passed
+Python compile: PASS
+```
+
+This is not a claim that the complete historical repository regression suite was run. Final release materialization must rerun the full suite and all documentation, release-integrity, manifest, and runtime-health gates on a real v0.27.1 checkout.

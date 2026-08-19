@@ -102,7 +102,8 @@ def test_schema_59_selection_and_evaluation_tables_exist(tmp_path: Path, monkeyp
     with connect(root) as c:
         version = c.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0]
         tables = {row[0] for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert version == SCHEMA_VERSION == 59
+    assert version == SCHEMA_VERSION
+    assert SCHEMA_VERSION >= 59
     assert {"skill_selection_runs", "skill_selection_candidates", "skill_evaluation_runs"} <= tables
 
 

@@ -1,58 +1,53 @@
 # AgentOS Local Governance — Tiếng Việt
 
-**Phiên bản hiện tại: v0.27.1 — Architecture-Aware Skill Selection & Evaluation**
+**Phiên bản hiện tại: v0.27.2 — Multi-Agent Worker Supervisor**
 
-Database schema: **59**. Schema bootstrap baseline vẫn là **46**.
+Database schema: **60**. Schema bootstrap baseline vẫn là **46**.
 
-v0.27.1 nối **Governed Skill Contract v2** vào active architecture-aware task plan để AgentOS có thể đề xuất skill phù hợp một cách deterministic, local và least-authority.
+v0.27.2 bổ sung **Multi-Agent Worker Supervisor** để điều phối các worker task đã được duyệt bằng DAG dependency, plan/session/role freshness và planned-write overlap gate mà không tự launch process hoặc mở rộng authority.
 
-## Luồng lựa chọn
+## Luồng supervisor
 
 ```text
-Yêu cầu người dùng
+Parent task + ACTIVE plan đã được duyệt
       ↓
-Requirement Ledger + ACTIVE plan
+Approved worker tasks + ACTIVE worker plans
       ↓
-Architecture Baseline
+Distinct capability sessions + active roles
       ↓
-Graduated Skill Contract v2
+Optional v0.27.1 skill-selection binding
       ↓
-Kiểm tra contract current
+Parent-plan subset + DAG + write-overlap gates
       ↓
-Architecture / scope / capability / tool / dependency / service / test gates
-      ↓
-Deterministic ranking
-      ↓
-ADVISORY RECOMMENDATION
+RUNNABLE WORKERS
+(no process launch)
 ```
 
-Lựa chọn **không phải execution authority**. AgentOS không tự attach skill vào plan, không tự chạy skill, không cấp capability, không approve architecture và không chọn model/provider.
+Supervisor **không phải execution authority**: không tự tạo/approve task hoặc plan, không cấp capability, không execute skill, không chọn model/provider và không merge workspace.
 
 ## Invariant chính
-
-- Chỉ skill `graduated` có Contract v2 current mới eligible.
-- `legacy_v1` vẫn được bảo tồn nhưng không được architecture-aware selection chọn.
-- Contract stale/invalid bị loại fail-closed.
-- Planned files phải nằm trong `allowed_write_scope`.
-- Capability phải nằm trong governed capability inventory.
-- Required tools phải được khai báo là available cho selection run.
-- Dependencies, external services, architecture sections và required test suites không được vượt contract.
-- Evaluation chỉ quan sát `task_outcomes`; không auto-graduate/revoke và không tự đổi ranking cho tương lai.
-- MCP chỉ đọc status/candidates/evaluation.
+- Parent task chỉ là orchestration envelope; mỗi worker dùng task/session riêng.
+- Worker plan không được vượt file/architecture envelope của parent plan.
+- Capability session, role và optional skill binding phải luôn current.
+- Dependency cycle và overlapping executor write targets fail-closed.
+- `worker_start` chỉ đổi state, không launch process.
+- MCP chỉ đọc supervisor status/workers/readiness.
+- Worktree isolation và controlled integration thuộc v0.27.3.
 
 ## CLI
 
 ```powershell
-agentos skill-selection-run --task-id T-123
-agentos skill-selection-status --task-id T-123
-agentos skill-selection-candidates --run-id 1
-agentos skill-evaluation-run --selection-run-id 1
+agentos multi-agent-supervisor-create --parent-task-id T-PARENT --created-by human:architect
+agentos multi-agent-supervisor-worker-add --supervisor-id 1 --worker-key worker-a --task-id T-A --session-id S-A --role executor
+agentos multi-agent-supervisor-activate --supervisor-id 1 --approved-by human:architect
+agentos multi-agent-supervisor-status --supervisor-id 1
 ```
 
 ## Distribution
 
 Từ v0.27.0+, AgentOS dùng **Latest Full Release** và **no updater script**. Không xóa user skills, workflows, project source, architecture working copy, `governance.local.json`, `.agents/state/**` hoặc `.agents/runtime/**` khi refresh AgentOS-managed runtime.
 
-- [Tài liệu v0.27.1](.agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md)
+- [Tài liệu v0.27.2](.agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md)
+- [Tài liệu skill-selection v0.27.1](.agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md)
 - [Cài đặt latest release](.agents/docs/INSTALL_LATEST_RELEASE.md)
 - [English](README.en.md)

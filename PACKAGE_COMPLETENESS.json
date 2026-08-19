@@ -1,8 +1,8 @@
 {
-  "release": "0.27.1",
+  "release": "0.27.2",
   "kind": "full_materialized_github_ready",
-  "schema": 59,
-  "authoritative_file_count": 281,
+  "schema": 60,
+  "authoritative_file_count": 286,
   "required_top_level": [
     "VERSION",
     "AGENTS.md",
@@ -56,5 +56,6 @@
   "architecture_quality_enforcement": "logging_error_security_performance_scalability_deployment_testing_hard_contract",
   "governed_skill_contract": "v2_deterministic_least_authority_human_graduation_legacy_preserved",
   "architecture_aware_skill_selection": "deterministic_advisory_active_plan_contract_bound_no_authority_grant",
-  "skill_evaluation": "observational_task_outcome_no_lifecycle_or_ranking_mutation"
+  "skill_evaluation": "observational_task_outcome_no_lifecycle_or_ranking_mutation",
+  "multi_agent_supervisor": "governed_existing_tasks_dag_readiness_no_process_launch"
 }

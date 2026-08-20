@@ -98,11 +98,13 @@ RELEASE_FILES = (
     ".agents/tests/test_architecture_aware_skill_selection_v0271.py",
     ".agents/tests/test_multi_agent_supervisor_v0272.py",
     ".agents/tests/test_isolated_workspace_integration_v0273.py",
+    ".agents/tests/test_architecture_agent_command_center_v0280.py",
     ".agents/config/release_policy.json",
     ".agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md",
     ".agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md",
     ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md",
     ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md",
+    ".agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md",
     ".agents/docs/INSTALL_LATEST_RELEASE.md",
     ".agents/config/update_ownership.v0253.json",
     ".agents/config/update_ownership.v0254.json",
@@ -192,6 +194,9 @@ EXTENSION_FILES = (
     ".agents/agentos/multi_agent_workspace.py",
     ".agents/agentos/multi_agent_workspace_cli.py",
     ".agents/agentos/mcp_v0273.py",
+    ".agents/agentos/command_center.py",
+    ".agents/agentos/command_center_cli.py",
+    ".agents/agentos/mcp_v0280.py",
 )
 REQUIRED_POLICY_SECTIONS = (
     "language_policy",
@@ -251,6 +256,7 @@ REQUIRED_POLICY_SECTIONS = (
     "architecture_structural_policy",
     "architecture_runtime_policy",
     "architecture_quality_policy",
+    "command_center_policy",
 )
 
 
@@ -546,6 +552,7 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             V0271_TOOL_NAMES,
             V0272_TOOL_NAMES,
             V0273_TOOL_NAMES,
+            V0280_TOOL_NAMES,
         )
         if (
             len(CORE_TOOL_NAMES) != 14
@@ -562,11 +569,12 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             or len(V0271_TOOL_NAMES) != 3
             or len(V0272_TOOL_NAMES) != 3
             or len(V0273_TOOL_NAMES) != 4
-            or len(ALL_TOOLS) != 120
+            or len(V0280_TOOL_NAMES) != 3
+            or len(ALL_TOOLS) != 123
         ):
             findings.append(_finding(
                 "mcp_tool_surface_changed",
-                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + 4 v0.25.5 + 3 v0.26.0 + 3 v0.26.1 + 3 v0.26.2 + 3 v0.26.3 + 3 v0.27.0 + 3 v0.27.1 + 3 v0.27.2 + 4 v0.27.3 + health = 120 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} + {len(V0255_TOOL_NAMES)} + {len(V0260_TOOL_NAMES)} + {len(V0261_TOOL_NAMES)} + {len(V0262_TOOL_NAMES)} + {len(V0263_TOOL_NAMES)} + {len(V0270_TOOL_NAMES)} + {len(V0271_TOOL_NAMES)} + {len(V0272_TOOL_NAMES)} + {len(V0273_TOOL_NAMES)} / {len(ALL_TOOLS)}",
+                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + 4 v0.25.5 + 3 v0.26.0 + 3 v0.26.1 + 3 v0.26.2 + 3 v0.26.3 + 3 v0.27.0 + 3 v0.27.1 + 3 v0.27.2 + 4 v0.27.3 + 3 v0.28.0 + health = 123 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} + {len(V0255_TOOL_NAMES)} + {len(V0260_TOOL_NAMES)} + {len(V0261_TOOL_NAMES)} + {len(V0262_TOOL_NAMES)} + {len(V0263_TOOL_NAMES)} + {len(V0270_TOOL_NAMES)} + {len(V0271_TOOL_NAMES)} + {len(V0272_TOOL_NAMES)} + {len(V0273_TOOL_NAMES)} + {len(V0280_TOOL_NAMES)} / {len(ALL_TOOLS)}",
                 ".agents/agentos/mcp_runtime.py",
             ))
     except Exception as exc:
@@ -650,6 +658,7 @@ DOC_FILES = (
     ".agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md",
     ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md",
     ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md",
+    ".agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md",
     ".agents/docs/INSTALL_LATEST_RELEASE.md",
     "CHANGELOG.md",
     "DATA_SUBJECT_RIGHTS.md",

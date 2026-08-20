@@ -58,6 +58,7 @@ FEATURE_CLI_MODULES = (
     "skill_selection_cli",
     "multi_agent_supervisor_cli",
     "multi_agent_workspace_cli",
+    "command_center_cli",
     "human_decision_cli",
 )
 

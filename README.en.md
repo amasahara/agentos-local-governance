@@ -1,10 +1,19 @@
 # AgentOS Local Governance — English
 
-**Current release: v0.27.3 — Isolated Workspace & Controlled Integration**
+**Current release: v0.28.0 — Architecture & Agent Command Center**
 
 Database schema: **61**. Schema bootstrap baseline remains **46**.
 
-v0.27.3 extends the supervisor with isolated detached Git worktrees and human-gated Controlled Integration while primary AgentOS remains the state, policy, lease, and audit authority.
+v0.28.0 adds a read-only Architecture & Agent Command Center that aggregates Architecture, agents/tasks, workspaces, compliance and pending human actions without creating new authority.
+
+## Command Center v0.28.0
+
+v0.28.0 uses one read-only Snapshot v1 shared by the terminal TUI, JSON CLI and MCP. It adds no mutation, approval, worker-launch or model/provider authority.
+
+```bash
+agentos command-center
+agentos command-center-actions
+```
 
 ## Workspace / integration flow
 
@@ -44,6 +53,7 @@ agentos multi-agent-integration-proposal-approve --proposal-id 1 --approved-by h
 agentos multi-agent-integration-apply --proposal-id 1 --applied-by human:integrator
 ```
 ## Distribution
+- [v0.28.0 Command Center documentation](.agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md)
 
 AgentOS uses the **Latest Full Release** model with **no updater script**. Project-owned user skills, workflows, source, architecture working copies, local governance overrides, state, and runtime data remain outside the managed release partition.
 

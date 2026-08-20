@@ -1,6 +1,6 @@
 # AgentOS — Cài đặt / làm mới từ Latest Full Release
 
-Current release: **v0.27.3 — Isolated Workspace & Controlled Integration**
+Current release: **v0.28.0 — Architecture & Agent Command Center**
 Database schema: **61**
 
 > Release model invariant: **no updater script**.
@@ -79,7 +79,13 @@ python tools\validate_release.py .
 git diff --check
 ```
 
-## v0.27.3 runtime note
+## v0.28.0 runtime note
+
+The Architecture & Agent Command Center is a strict read-only projection over the existing AgentOS state database. It does not persist dashboard state or add mutation/approval/worker-launch authority.
+
+See [Architecture & Agent Command Center](ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md).
+
+### v0.27.3 workspace/integration note
 
 Executor workspace routing and controlled integration preserve primary AgentOS state/policy/lease/audit authority. Integration remains human-reviewed/approved and never performs automatic Git merge, commit or push.
 

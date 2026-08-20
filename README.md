@@ -1,12 +1,12 @@
 # AgentOS Local Governance
 
-**Current release: v0.27.3 — Isolated Workspace & Controlled Integration**
+**Current release: v0.28.0 — Architecture & Agent Command Center**
 
 [🇻🇳 Tiếng Việt](README.vi.md) | [🇬🇧 English](README.en.md)
 
 Database schema: **61**. Schema bootstrap baseline remains **46**.
 
-v0.27.3 extends the governed **Multi-Agent Worker Supervisor** with detached per-worker Git worktrees and human-gated controlled integration. Worker filesystem/process execution is routed into the exact task/session worktree while primary AgentOS remains the sole state, policy, lease and audit authority.
+v0.28.0 adds a privacy-safe **Architecture & Agent Command Center** that projects architecture, task/agent/workspace, compliance and pending-human-action state through one strict read-only snapshot. Schema remains 61 and the Command Center has no mutation, approval, worker-launch or model/provider authority.
 
 ## Architecture governance progression
 
@@ -34,7 +34,30 @@ v0.27.1  Architecture-Aware Skill Selection & Evaluation
 v0.27.2  Multi-Agent Worker Supervisor
    ↓
 v0.27.3  Isolated Workspace & Controlled Integration
+   ↓
+v0.28.0  Architecture & Agent Command Center
 ```
+
+## v0.28.0 Command Center
+
+```text
+Architecture + Tasks/Agents + Workspaces + Compliance + Human Actions
+                              ↓
+                   read-only Snapshot v1
+                       ↓             ↓
+                  terminal TUI    MCP/JSON
+```
+
+Main commands:
+
+```bash
+agentos command-center
+agentos command-center --format json
+agentos command-center-actions
+agentos command-center-section --section compliance
+```
+
+The Command Center never persists a second dashboard state, never exposes raw source/question content or physical workspace paths, and never creates approval/integration/worker-launch authority.
 
 ## v0.27.3 workspace / integration flow
 
@@ -107,6 +130,7 @@ git diff --check
 
 ## Current node documentation
 
+- [Architecture & Agent Command Center v0.28.0](.agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md)
 - [Isolated Workspace & Controlled Integration v0.27.3](.agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md)
 - [Multi-Agent Worker Supervisor v0.27.2](.agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md)
 - [Architecture-Aware Skill Selection & Evaluation v0.27.1](.agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md)

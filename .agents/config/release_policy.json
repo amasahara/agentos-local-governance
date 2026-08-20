@@ -1,24 +1,25 @@
 {
-  "version": "0.27.3",
+  "version": "0.28.0",
   "documentation_policy": {
     "current_release_identity_files": [
-      ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md"
+      ".agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md"
     ],
-    "current_release_name": "Isolated Workspace & Controlled Integration",
+    "current_release_name": "Architecture & Agent Command Center",
     "current_schema": 61,
     "current_schema_files": [
-      ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md"
+      ".agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md"
     ],
     "current_upgrade_guide": ".agents/docs/INSTALL_LATEST_RELEASE.md",
     "current_version_files": [
-      ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md"
+      ".agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md"
     ],
     "local_link_check_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       ".agents/docs/INSTALL_LATEST_RELEASE.md",
-      ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md"
+      ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md",
+      ".agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md"
     ]
   },
   "governed_skill_contract_policy": {
@@ -156,5 +157,16 @@
     "workspace_path_exposed_over_mcp": false,
     "primary_agentos_state_authority": true,
     "human_authority_unchanged": true
+  },
+  "command_center_policy": {
+    "enabled": true,
+    "database_schema": 61,
+    "snapshot_version": 1,
+    "database_read_only": true,
+    "mutation_authority": false,
+    "mcp_mutation_allowed": false,
+    "raw_source_content_exposed": false,
+    "physical_workspace_paths_exposed": false,
+    "web_control_plane_reserved_for_v0281": true
   }
 }

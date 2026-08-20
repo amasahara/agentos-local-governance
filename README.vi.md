@@ -1,10 +1,19 @@
 # AgentOS Local Governance — Tiếng Việt
 
-**Phiên bản hiện tại: v0.27.3 — Isolated Workspace & Controlled Integration**
+**Phiên bản hiện tại: v0.28.0 — Architecture & Agent Command Center**
 
 Database schema: **61**. Schema bootstrap baseline vẫn là **46**.
 
-v0.27.3 bổ sung isolated Git worktree cho executor worker và Controlled Integration có human review/approval, trong khi primary AgentOS vẫn giữ state, policy, lease và audit authority.
+v0.28.0 bổ sung Architecture & Agent Command Center read-only để tổng hợp Architecture, agents/tasks, workspaces, compliance và human actions mà không tạo authority mới.
+
+## Command Center v0.28.0
+
+v0.28.0 dùng một read-only Snapshot v1 chung cho terminal TUI/JSON/MCP. Không có mutation/approval/worker-launch/model-provider authority.
+
+```powershell
+agentos command-center
+agentos command-center-actions
+```
 
 ## Luồng workspace / integration
 
@@ -44,6 +53,7 @@ agentos multi-agent-integration-proposal-approve --proposal-id 1 --approved-by h
 agentos multi-agent-integration-apply --proposal-id 1 --applied-by human:integrator
 ```
 ## Distribution
+- [Command Center v0.28.0](.agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md)
 
 Từ v0.27.0+, AgentOS dùng **Latest Full Release** và **no updater script**. Không xóa user skills, workflows, project source, architecture working copy, `governance.local.json`, `.agents/state/**` hoặc `.agents/runtime/**` khi refresh AgentOS-managed runtime.
 

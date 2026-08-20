@@ -1,4 +1,11 @@
 # Changelog
+## v0.28.0 — Architecture & Agent Command Center
+- Added one privacy-safe read-only Snapshot v1 across Architecture, execution, compliance and pending human/operator actions.
+- Added deterministic terminal TUI plus JSON/section/action CLI projections without persisting a second dashboard state.
+- Added three MCP read-only Command Center tools; no mutation/approval/worker-launch authority is exposed.
+- Database schema remains 61; v0.27.3 workspace/integration and all earlier governance authorities are unchanged.
+- Optional local Web Control Plane remains reserved for v0.28.1 and must consume the same read model.
+
 
 ## v0.27.3 — Isolated Workspace & Controlled Integration
 - Added schema 61 isolated worktree, diff/hash, proposal and integration event state.

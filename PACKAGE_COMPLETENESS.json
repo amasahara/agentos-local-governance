@@ -1,8 +1,8 @@
 {
-  "release": "0.27.3",
+  "release": "0.28.0",
   "kind": "full_materialized_github_ready",
   "schema": 61,
-  "authoritative_file_count": 291,
+  "authoritative_file_count": 296,
   "required_top_level": [
     "VERSION",
     "AGENTS.md",

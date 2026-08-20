@@ -1549,5 +1549,16 @@
     "workspace_path_exposed_over_mcp": false,
     "primary_agentos_state_authority": true,
     "human_authority_unchanged": true
+  },
+  "command_center_policy": {
+    "enabled": true,
+    "database_schema": 61,
+    "snapshot_version": 1,
+    "database_read_only": true,
+    "mutation_authority": false,
+    "mcp_mutation_allowed": false,
+    "raw_source_content_exposed": false,
+    "physical_workspace_paths_exposed": false,
+    "web_control_plane_reserved_for_v0281": true
   }
 }

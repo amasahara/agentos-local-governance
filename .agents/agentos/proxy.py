@@ -218,7 +218,7 @@ def _isolated_workspace(root: Path, task_id: str, cwd: Path) -> Path:
     return workspace
 
 
-def _preflight(root: Path, task_id: str, capability: str, args: dict[str, Any]) -> dict[str, Any]:
+def _preflight(root: Path, task_id: str, session_id: str, capability: str, args: dict[str, Any]) -> dict[str, Any]:
     drift = drift_check(root, task_id=task_id)
     override = local_override_status(root)
     policy = load_policy(root)
@@ -238,14 +238,21 @@ def _preflight(root: Path, task_id: str, capability: str, args: dict[str, Any]) 
         if not decision["allowed"]:
             raise RuntimeError(f"proxy blocked: {decision['reason']}")
     metadata: dict[str, Any] = {}
+    execution_root = root.resolve()
+    workspace_bound = False
+    if capability in {"filesystem.read", "filesystem.write", "process.exec"}:
+        from .multi_agent_workspace import workspace_binding, workspace_execution_root
+        execution_root = workspace_execution_root(root, task_id, session_id, for_write=capability == "filesystem.write")
+        workspace_bound = workspace_binding(root, task_id, session_id) is not None
+        metadata["workspace_bound"] = workspace_bound
     if capability == "process.exec":
         if steps.get("prepare_change") != "done":
             raise RuntimeError("proxy blocked: prepare_change is incomplete")
         metadata["command_profile"] = _command_profile(args.get("command"), policy)
-        resolved_cwd = _inside(root, str(args.get("cwd", ".")))
+        resolved_cwd = _inside(execution_root, str(args.get("cwd", ".")))
         _scan_agentos_imports(root, args.get("command", []), resolved_cwd)
-        metadata["cwd"] = resolved_cwd.relative_to(root.resolve()).as_posix() or "."
-        metadata["sandbox_profile"] = "isolated-workspace"
+        metadata["cwd"] = resolved_cwd.relative_to(execution_root).as_posix() or "."
+        metadata["sandbox_profile"] = "isolated-worker-worktree" if workspace_bound else "isolated-workspace"
     if capability == "network.http":
         _validate_url(str(args.get("url", "")), policy)
     return metadata
@@ -254,31 +261,52 @@ def _preflight(root: Path, task_id: str, capability: str, args: dict[str, Any]) 
 def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str, args: dict[str, Any], metadata: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
     policy = load_policy(root)
     if capability == "filesystem.read":
-        path = _inside(root, str(args["path"]))
+        from .multi_agent_workspace import workspace_binding, workspace_execution_root
+        binding = workspace_binding(root, task_id, session_id)
+        execution_root = workspace_execution_root(root, task_id, session_id)
+        path = _inside(execution_root, str(args["path"]))
+        logical_path = path.relative_to(execution_root).as_posix()
         start, end = int(args.get("start", 1)), int(args.get("end", 0))
         range_key = f"{start}:{end or 'EOF'}"
-        cached = cache_lookup(root, task_id, path.relative_to(root.resolve()).as_posix(), range_key)
-        if cached.get("hit"):
-            content = cached["summary"]
-            digest = hashlib.sha256(content.encode()).hexdigest()
-            cache_hit = True
-        else:
+        if binding:
             content = path.read_text(encoding=str(args.get("encoding", "utf-8")))
             if end:
                 content = "\n".join(content.splitlines()[start - 1:end])
-            cache_store(root, task_id, path.relative_to(root.resolve()).as_posix(), range_key, content)
             digest = hashlib.sha256(content.encode()).hexdigest()
             cache_hit = False
-        with connect(root) as c:
-            row = c.execute("SELECT COALESCE(MAX(version),0) AS version FROM file_versions WHERE path=?", (path.relative_to(root.resolve()).as_posix(),)).fetchone()
-        return True, {"content": content, "sha256": digest, "content_hash": digest, "version": row["version"], "cache_hit": cache_hit, "range_key": range_key}
+            with connect(root) as c:
+                row = c.execute("SELECT COUNT(*) AS version FROM multi_agent_workspace_file_versions WHERE workspace_id=? AND path=?", (int(binding["workspace_id"]), logical_path)).fetchone()
+        else:
+            cached = cache_lookup(root, task_id, logical_path, range_key)
+            if cached.get("hit"):
+                content = cached["summary"]
+                digest = hashlib.sha256(content.encode()).hexdigest()
+                cache_hit = True
+            else:
+                content = path.read_text(encoding=str(args.get("encoding", "utf-8")))
+                if end:
+                    content = "\n".join(content.splitlines()[start - 1:end])
+                cache_store(root, task_id, logical_path, range_key, content)
+                digest = hashlib.sha256(content.encode()).hexdigest()
+                cache_hit = False
+            with connect(root) as c:
+                row = c.execute("SELECT COALESCE(MAX(version),0) AS version FROM file_versions WHERE path=?", (logical_path,)).fetchone()
+        return True, {"content": content, "sha256": digest, "content_hash": digest, "version": row["version"], "cache_hit": cache_hit, "range_key": range_key, "workspace_bound": bool(binding)}
     if capability == "filesystem.write":
-        result = atomic_write(root, task_id, session_id, str(args["path"]), str(args.get("content", "")), args.get("expected_hash"), str(args.get("encoding", "utf-8")))
+        from .multi_agent_workspace import workspace_binding, workspace_atomic_write, workspace_execution_root
+        binding = workspace_binding(root, task_id, session_id)
+        workspace_execution_root(root, task_id, session_id, for_write=True)
+        if binding:
+            result = workspace_atomic_write(root, task_id, session_id, str(args["path"]), str(args.get("content", "")), args.get("expected_hash"), str(args.get("encoding", "utf-8")))
+        else:
+            result = atomic_write(root, task_id, session_id, str(args["path"]), str(args.get("content", "")), args.get("expected_hash"), str(args.get("encoding", "utf-8")))
         return bool(result.get("allowed")), result
     if capability == "process.exec":
         cfg = policy["proxy_policy"]["process_exec"]
         timeout = min(int(args.get("timeout", 120)), int(cfg.get("max_timeout_seconds", 600)))
-        source_cwd = _inside(root, str(args.get("cwd", ".")))
+        from .multi_agent_workspace import workspace_execution_root
+        execution_root = workspace_execution_root(root, task_id, session_id)
+        source_cwd = _inside(execution_root, str(args.get("cwd", ".")))
         cwd = _isolated_workspace(root, task_id, source_cwd)
         command = list(args["command"])
         env = _filtered_env(args.get("env")); env.pop("PYTHONPATH", None)
@@ -286,7 +314,7 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
         command_hash = hashlib.sha256(json.dumps(command, sort_keys=True).encode()).hexdigest()
         environment_hash = hashlib.sha256(json.dumps(env, sort_keys=True).encode()).hexdigest()
         with connect(root) as c:
-            c.execute("INSERT INTO execution_manifests(task_id,session_id,command_hash,cwd,sandbox_profile,workspace_path,environment_hash,decision) VALUES(?,?,?,?,?,?,?,?)", (task_id,session_id,command_hash,metadata["cwd"],"isolated-workspace",str(cwd),environment_hash,"allowed"))
+            c.execute("INSERT INTO execution_manifests(task_id,session_id,command_hash,cwd,sandbox_profile,workspace_path,environment_hash,decision) VALUES(?,?,?,?,?,?,?,?)", (task_id,session_id,command_hash,metadata["cwd"],metadata.get("sandbox_profile", "isolated-workspace"),str(cwd),environment_hash,"allowed"))
         limit = int(cfg.get("max_output_bytes", 65536))
         return proc.returncode == 0, {"exit_code": proc.returncode, "profile": metadata["command_profile"], "cwd": metadata["cwd"], "stdout": proc.stdout[:limit], "stderr": proc.stderr[:limit]}
     if capability == "network.http":
@@ -317,7 +345,7 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
 def proxy_execute(root: Path, task_id: str, session_id: str, tool_name: str, args: dict[str, Any], reason_code: str | None = None, justification: str | None = None, target: str | None = None) -> dict[str, Any]:
     """Evaluate and execute one tool request through the enforced proxy."""
     capability = normalize_capability(tool_name)
-    metadata = _preflight(root, task_id, capability, args)
+    metadata = _preflight(root, task_id, session_id, capability, args)
     canonical_tool = TOOL_NAMES[capability]
     requested = {"tool": tool_name, "capability": capability, "args": redact_value(args), "metadata": metadata}
     append_audit_event(root, "proxy.request", requested, task_id, session_id)

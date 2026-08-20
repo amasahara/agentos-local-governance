@@ -1,12 +1,12 @@
 # AgentOS Local Governance
 
-**Current release: v0.27.2 — Multi-Agent Worker Supervisor**
+**Current release: v0.27.3 — Isolated Workspace & Controlled Integration**
 
 [🇻🇳 Tiếng Việt](README.vi.md) | [🇬🇧 English](README.en.md)
 
-Database schema: **60**. Schema bootstrap baseline remains **46**.
+Database schema: **61**. Schema bootstrap baseline remains **46**.
 
-v0.27.2 adds a governed **Multi-Agent Worker Supervisor** above the existing task/session/role/lease primitives. It coordinates existing approved worker tasks as an acyclic dependency graph, revalidates architecture/plan/session/role/optional-skill freshness, blocks overlapping executor write targets, and reports runnable workers without launching processes or expanding authority.
+v0.27.3 extends the governed **Multi-Agent Worker Supervisor** with detached per-worker Git worktrees and human-gated controlled integration. Worker filesystem/process execution is routed into the exact task/session worktree while primary AgentOS remains the sole state, policy, lease and audit authority.
 
 ## Architecture governance progression
 
@@ -32,57 +32,61 @@ v0.27.0  Governed Skill Contract v2
 v0.27.1  Architecture-Aware Skill Selection & Evaluation
    ↓
 v0.27.2  Multi-Agent Worker Supervisor
+   ↓
+v0.27.3  Isolated Workspace & Controlled Integration
 ```
 
-## v0.27.2 supervisor flow
+## v0.27.3 workspace / integration flow
 
 ```text
-Human-approved parent task + ACTIVE plan
+Approved supervisor worker (task + session)
         ↓
-Existing approved worker tasks + ACTIVE plans
+detached worker worktree
         ↓
-Distinct capability sessions + active collaboration roles
+governed read/write/test routing
         ↓
-Optional current v0.27.1 skill-selection binding
+hash-only diff collection
         ↓
-Parent-plan file / architecture subset gate
+architecture + security + test gates
         ↓
-Dependency DAG + executor write-overlap gate
+sealed workspace
         ↓
-RUNNABLE WORKERS (state only; no process launch)
+conflict analysis
+        ↓
+HUMAN REVIEW + APPROVAL
+        ↓
+parent-task controlled integration
+(no git merge / no auto-commit)
 ```
 
 Core invariants:
-- The supervisor never creates or approves tasks/plans and never grants capabilities.
-- Every worker uses a distinct worker task and session; the parent task is the orchestration envelope.
-- Worker plan files and affected architecture sections must remain subsets of the parent plan.
-- Active capability sessions and active collaboration roles are revalidated.
-- Optional skill bindings must remain current v0.27.1 eligible/recommendable graduated Contract-v2 selections.
-- Dependency cycles fail closed and overlapping executor planned write targets block activation.
-- `worker_start` changes supervisor state only; it does not launch a worker process.
-- Model/provider selection authority remains outside AgentOS.
-- MCP exposes supervisor status/readiness inspection only; no mutation authority is added.
-- Worktree isolation and controlled integration remain reserved for v0.27.3.
+- Executor workers cannot fall back to primary-tree filesystem/process execution when v0.27.3 workspace policy is enabled.
+- Workspace ownership is exact `task_id + session_id`; AgentOS state and leases remain in the primary repository.
+- Changed paths must remain inside the worker plan; raw source is not persisted in workspace/integration state.
+- Sealing requires immutable diff, architecture/security gates, and a successful governed test receipt.
+- Primary drift produces explicit conflicts and blocks review/approval/apply; conflicts are never auto-resolved.
+- Controlled apply uses parent task/session scope, leases, hashes, backup, atomic replace/delete and rollback.
+- AgentOS never invokes `git merge`, auto-commit, auto-push, or grants merge authority to MCP/AI.
 
-## Main commands
+## Main v0.27.3 commands
 
 ```bash
-agentos multi-agent-supervisor-create --parent-task-id T-PARENT --created-by human:architect
-agentos multi-agent-supervisor-worker-add --supervisor-id 1 --worker-key worker-a --task-id T-A --session-id S-A --role executor
-agentos multi-agent-supervisor-dependency-add --supervisor-id 1 --worker-key worker-b --depends-on worker-a
-agentos multi-agent-supervisor-activate --supervisor-id 1 --approved-by human:architect
-agentos multi-agent-supervisor-status --supervisor-id 1
-agentos multi-agent-supervisor-workers --supervisor-id 1
+agentos multi-agent-workspace-provision --supervisor-id 1 --worker-key worker-a --created-by human:operator
+agentos multi-agent-workspace-collect --supervisor-id 1 --worker-key worker-a
+agentos multi-agent-workspace-seal --supervisor-id 1 --worker-key worker-a
+agentos multi-agent-integration-proposal-create --supervisor-id 1 --worker-key worker-a --created-by human:operator
+agentos multi-agent-integration-proposal-review --proposal-id 1 --reviewed-by human:reviewer
+agentos multi-agent-integration-proposal-approve --proposal-id 1 --approved-by human:approver
+agentos multi-agent-integration-apply --proposal-id 1 --applied-by human:integrator
 ```
 
-Existing v0.27.1 skill-selection and Governed Skill Contract v2 commands remain available; supervisor skill binding is optional and does not execute a skill.
-
-## MCP read-only surface added in v0.27.2
+## MCP read-only surface added in v0.27.3
 
 ```text
-agentos.multi_agent_supervisor_status_get
-agentos.multi_agent_supervisor_workers_get
-agentos.multi_agent_supervisor_readiness_get
+agentos.multi_agent_workspace_status_get
+agentos.multi_agent_workspace_diff_summary_get
+agentos.multi_agent_integration_proposal_get
+agentos.multi_agent_integration_readiness_get
 ```
 
 ## Distribution model
@@ -103,6 +107,7 @@ git diff --check
 
 ## Current node documentation
 
+- [Isolated Workspace & Controlled Integration v0.27.3](.agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md)
 - [Multi-Agent Worker Supervisor v0.27.2](.agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md)
 - [Architecture-Aware Skill Selection & Evaluation v0.27.1](.agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md)
 - [Governed Skill Contract v2](.agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md)

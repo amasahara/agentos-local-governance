@@ -1,3 +1,11 @@
+## v0.27.3 — Isolated Workspace & Controlled Integration
+- Added schema 61 isolated worktree, diff/hash, proposal and integration event state.
+- Executor filesystem/process routing is bound to the exact worker task/session worktree while primary AgentOS remains state/lease/audit authority.
+- Changed files must stay within worker plan; sealed workspaces require architecture, security and governed-test gates.
+- Primary drift is checked with Git semantic diff against the pinned base commit, avoiding CRLF/LF false conflicts while remaining fail-closed; conflicts are never auto-resolved.
+- Controlled integration requires human review/approval plus parent-task scope, leases, CAS/hash verification, backup and rollback.
+- AgentOS never invokes Git merge, auto-commit or auto-push; MCP adds four read-only workspace/integration inspection tools only.
+
 ## v0.27.2 — Multi-Agent Worker Supervisor
 - Added schema 60 governed supervisor/worker/dependency/event state.
 - Coordinates only existing approved worker tasks, ACTIVE architecture-aware plans, capability sessions, and collaboration roles.

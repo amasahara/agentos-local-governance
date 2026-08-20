@@ -667,6 +667,8 @@ def supervisor_readiness(root: Path, supervisor_id: int) -> dict[str, Any]:
     elif workers and all(str(w["status"]) == "completed" for w in workers):
         effective_status = "completed"
 
+    workspace_cfg = load_policy(root).get("isolated_workspace_integration_policy", {})
+    workspace_enabled = bool(isinstance(workspace_cfg, dict) and workspace_cfg.get("enabled", False))
     return {
         "supervisor_id": int(supervisor_id),
         "stored_status": str(supervisor["status"]),
@@ -682,8 +684,8 @@ def supervisor_readiness(root: Path, supervisor_id: int) -> dict[str, Any]:
         "parent_plan_hash": str(supervisor["parent_plan_hash"]),
         "architecture_baseline_hash": str(supervisor["architecture_baseline_hash"]),
         "automatic_process_launch": False,
-        "isolated_workspace": False,
-        "controlled_integration": False,
+        "isolated_workspace": workspace_enabled,
+        "controlled_integration": workspace_enabled,
     }
 
 
@@ -742,6 +744,10 @@ def cancel_supervisor(root: Path, supervisor_id: int, approved_by: str) -> dict[
 
 def worker_start(root: Path, supervisor_id: int, worker_key: str, caller_task_id: str, caller_session_id: str) -> dict[str, Any]:
     """Mark an assigned worker running after rechecking dependency/freshness. Does not launch a process."""
+    workspace_cfg = load_policy(root).get("isolated_workspace_integration_policy", {})
+    if isinstance(workspace_cfg, dict) and workspace_cfg.get("enabled", False) and workspace_cfg.get("require_workspace_before_executor_start", True):
+        from .multi_agent_workspace import require_executor_workspace
+        require_executor_workspace(root, supervisor_id, worker_key, sealed=False)
     readiness = supervisor_readiness(root, supervisor_id)
     if readiness["effective_status"] != "active":
         raise PermissionError("supervisor_not_effectively_active")
@@ -768,6 +774,10 @@ def worker_update(root: Path, supervisor_id: int, worker_key: str, caller_task_i
     target = str(status)
     if target not in {"completed", "failed", "blocked"}:
         raise ValueError("unsupported_worker_update_status")
+    workspace_cfg = load_policy(root).get("isolated_workspace_integration_policy", {})
+    if target == "completed" and isinstance(workspace_cfg, dict) and workspace_cfg.get("enabled", False) and workspace_cfg.get("require_sealed_workspace_before_executor_complete", True):
+        from .multi_agent_workspace import require_executor_workspace
+        require_executor_workspace(root, supervisor_id, worker_key, sealed=True)
     with connect(root) as c:
         worker = _worker_row(c, supervisor_id, worker_key)
         if str(worker["task_id"]) != str(caller_task_id) or str(worker["session_id"]) != str(caller_session_id):

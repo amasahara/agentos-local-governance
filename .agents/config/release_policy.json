@@ -1,24 +1,24 @@
 {
-  "version": "0.27.2",
+  "version": "0.27.3",
   "documentation_policy": {
     "current_release_identity_files": [
-      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
+      ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md"
     ],
-    "current_release_name": "Multi-Agent Worker Supervisor",
-    "current_schema": 60,
+    "current_release_name": "Isolated Workspace & Controlled Integration",
+    "current_schema": 61,
     "current_schema_files": [
-      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
+      ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md"
     ],
     "current_upgrade_guide": ".agents/docs/INSTALL_LATEST_RELEASE.md",
     "current_version_files": [
-      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
+      ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md"
     ],
     "local_link_check_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       ".agents/docs/INSTALL_LATEST_RELEASE.md",
-      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
+      ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md"
     ]
   },
   "governed_skill_contract_policy": {
@@ -126,7 +126,35 @@
     "auto_model_provider_select": false,
     "auto_process_launch": false,
     "mcp_mutation_allowed": false,
-    "isolated_workspace_reserved_for_v0273": true,
-    "controlled_integration_reserved_for_v0273": true
+    "isolated_workspace_reserved_for_v0273": false,
+    "controlled_integration_reserved_for_v0273": false
+  },
+  "isolated_workspace_integration_policy": {
+    "enabled": true,
+    "database_schema": 61,
+    "workspace_version": 1,
+    "workspace_roles": [
+      "executor"
+    ],
+    "workspace_base": "project_sibling",
+    "require_clean_primary_on_provision": true,
+    "require_workspace_before_executor_start": true,
+    "require_sealed_workspace_before_executor_complete": true,
+    "require_worker_plan_file_subset": true,
+    "require_test_receipt_after_collection": true,
+    "require_architecture_candidate_gate": true,
+    "require_security_candidate_gate": true,
+    "symlink_changes_allowed": false,
+    "automatic_merge": false,
+    "automatic_branch_merge": false,
+    "git_merge_allowed": false,
+    "auto_commit_allowed": false,
+    "auto_push_allowed": false,
+    "human_review_required": true,
+    "human_approval_required": true,
+    "mcp_mutation_allowed": false,
+    "workspace_path_exposed_over_mcp": false,
+    "primary_agentos_state_authority": true,
+    "human_authority_unchanged": true
   }
 }

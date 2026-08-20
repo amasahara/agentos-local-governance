@@ -997,7 +997,8 @@
       "architecture_change_policy",
       "architecture_planning_policy",
       "architecture_structural_policy",
-      "multi_agent_supervisor_policy"
+      "multi_agent_supervisor_policy",
+      "isolated_workspace_integration_policy"
     ]
   },
   "mcp_feature_runtime_policy": {
@@ -1042,10 +1043,10 @@
     "auto_skill_execute": false,
     "auto_task_approve": false,
     "auto_task_create": false,
-    "controlled_integration_reserved_for_v0273": true,
+    "controlled_integration_reserved_for_v0273": false,
     "database_schema": 60,
     "enabled": true,
-    "isolated_workspace_reserved_for_v0273": true,
+    "isolated_workspace_reserved_for_v0273": false,
     "max_workers": 8,
     "mcp_mutation_allowed": false,
     "overlapping_executor_write_targets": "block",
@@ -1520,5 +1521,33 @@
       "run_checks",
       "report_matrix"
     ]
+  },
+  "isolated_workspace_integration_policy": {
+    "enabled": true,
+    "database_schema": 61,
+    "workspace_version": 1,
+    "workspace_roles": [
+      "executor"
+    ],
+    "workspace_base": "project_sibling",
+    "require_clean_primary_on_provision": true,
+    "require_workspace_before_executor_start": true,
+    "require_sealed_workspace_before_executor_complete": true,
+    "require_worker_plan_file_subset": true,
+    "require_test_receipt_after_collection": true,
+    "require_architecture_candidate_gate": true,
+    "require_security_candidate_gate": true,
+    "symlink_changes_allowed": false,
+    "automatic_merge": false,
+    "automatic_branch_merge": false,
+    "git_merge_allowed": false,
+    "auto_commit_allowed": false,
+    "auto_push_allowed": false,
+    "human_review_required": true,
+    "human_approval_required": true,
+    "mcp_mutation_allowed": false,
+    "workspace_path_exposed_over_mcp": false,
+    "primary_agentos_state_authority": true,
+    "human_authority_unchanged": true
   }
 }

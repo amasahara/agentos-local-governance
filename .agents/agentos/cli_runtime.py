@@ -57,6 +57,7 @@ FEATURE_CLI_MODULES = (
     "architecture_quality_cli",
     "skill_selection_cli",
     "multi_agent_supervisor_cli",
+    "multi_agent_workspace_cli",
     "human_decision_cli",
 )
 
@@ -72,6 +73,7 @@ SPECIAL_COMMANDS = {
 
 PRIVILEGED_COMMANDS = {
     'multi-agent-supervisor-create', 'multi-agent-supervisor-worker-add', 'multi-agent-supervisor-dependency-add', 'multi-agent-supervisor-activate', 'multi-agent-supervisor-pause', 'multi-agent-supervisor-cancel', 'multi-agent-worker-start', 'multi-agent-worker-update',
+    'multi-agent-workspace-provision', 'multi-agent-workspace-collect', 'multi-agent-workspace-seal', 'multi-agent-workspace-release', 'multi-agent-integration-proposal-create', 'multi-agent-integration-proposal-review', 'multi-agent-integration-proposal-approve', 'multi-agent-integration-proposal-reject', 'multi-agent-integration-apply',
     "db-connection-register", "db-source-verify-readonly", "db-consolidation-create", "db-consolidation-add-source",
     "db-schema-snapshot-register", "db-target-contract-create", "db-target-contract-review", "db-target-contract-approve",
     "db-field-mapping-add", "db-field-mapping-confirm", "db-field-mapping-reject",

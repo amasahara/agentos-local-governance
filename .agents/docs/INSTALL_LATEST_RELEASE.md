@@ -1,7 +1,7 @@
 # AgentOS — Cài đặt / làm mới từ Latest Full Release
 
-Current release: **v0.27.2 — Multi-Agent Worker Supervisor**
-Database schema: **60**
+Current release: **v0.27.3 — Isolated Workspace & Controlled Integration**
+Database schema: **61**
 
 > Release model invariant: **no updater script**.
 
@@ -79,8 +79,8 @@ python tools\validate_release.py .
 git diff --check
 ```
 
-## v0.27.2 runtime note
+## v0.27.3 runtime note
 
-Architecture-aware skill selection is explicit and advisory. A recommendation does not execute a skill and does not grant task, capability, tool, architecture, filesystem, network, database, model, or provider authority.
+Executor workspace routing and controlled integration preserve primary AgentOS state/policy/lease/audit authority. Integration remains human-reviewed/approved and never performs automatic Git merge, commit or push.
 
-See [Multi-Agent Worker Supervisor](MULTI_AGENT_WORKER_SUPERVISOR_V0272.md).
+See [Isolated Workspace & Controlled Integration](ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md).

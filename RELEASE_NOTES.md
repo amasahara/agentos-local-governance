@@ -1,145 +1,77 @@
-# AgentOS Local Governance v0.27.2 — Multi-Agent Worker Supervisor
+# AgentOS Local Governance v0.27.3 — Isolated Workspace & Controlled Integration
 
 ## 🇻🇳 Tiếng Việt
 
-v0.27.2 bổ sung **Multi-Agent Worker Supervisor** để điều phối nhiều AI worker trên cùng project mà không tạo một execution authority thứ hai.
+v0.27.3 mở rộng **Multi-Agent Worker Supervisor** bằng isolated Git worktree cho executor worker và pipeline **Controlled Integration** có human review/approval.
 
 ### Điểm chính
 
-- Schema **59 → 60**.
-- Parent task + ACTIVE architecture-aware plan trở thành orchestration envelope.
-- Mỗi worker bind vào một **approved worker task riêng**, active plan, session, role và capability set hiện hữu.
-- Worker plan phải nằm trong parent file/architecture envelope.
-- Distinct worker sessions được enforcement; task owner đã tồn tại phải khớp worker session.
-- Dependency graph là DAG; cycle fail-closed.
-- Executor planned write targets trùng nhau block activation trước khi chạm write boundary.
-- Worker freshness được re-check trên active plan, capability session, role và optional v0.27.1 skill-selection binding.
-- Skill binding chỉ pin current `graduated` Contract-v2 candidate đã `eligible + recommendable`; supervisor không execute skill.
-- `worker_start` chỉ chuyển state sang `running`; **không launch process**.
-- Không tự tạo/approve task, plan, capability, architecture hay skill lifecycle.
-- Không chọn model/provider.
-- Không tạo worktree hoặc merge; workspace isolation/controlled integration vẫn thuộc v0.27.3.
-- Signed audit được giữ cho supervisor mutation events.
+- Schema **60 → 61**.
+- Executor worker được bind vào detached Git worktree riêng theo đúng worker `task_id + session_id`.
+- AgentOS state, policy, leases và signed audit vẫn dùng primary repository; không tạo state DB riêng trong worktree.
+- Governed filesystem read/write và process/test execution được route vào worktree của đúng worker.
+- Executor worker fail-closed nếu workspace bắt buộc nhưng chưa được provision.
+- Worker write không chạm primary tree trước controlled integration.
+- Diff collection pin path/change type/base SHA-256/workspace SHA-256; raw source không persist trong supervisor DB/audit.
+- Changed files phải nằm trong worker plan; symlink change mặc định bị block.
+- Workspace seal yêu cầu immutable diff + architecture PASS + security/quality PASS + governed test receipt PASS.
+- Conflict analysis dùng Git semantic diff so với pinned `base_commit`, tránh false conflict do CRLF/LF hoặc clean/smudge normalization; raw SHA-256 vẫn là evidence/CAS metadata.
+- Integration proposal có lifecycle `draft → reviewed → approved → applied/rejected/failed`.
+- Human review + approval bắt buộc.
+- Apply yêu cầu parent task/session authority, parent scope, file leases, hash/CAS check, backup manifest/bytes local dưới `.agents/runtime`, và rollback.
+- Không gọi `git merge`, không auto-commit, không auto-push và không auto-resolve conflict.
+- MCP chỉ thêm 4 read-only inspection tools; không có integration mutation authority.
 
-### Schema 60
+### Schema 61
 
 ```text
-multi_agent_supervisor_runs
-multi_agent_workers
-multi_agent_worker_dependencies
-multi_agent_supervisor_events
+multi_agent_workspaces
+multi_agent_workspace_files
+multi_agent_workspace_file_versions
+multi_agent_integration_proposals
+multi_agent_integration_events
 ```
 
 ### CLI mới
 
-```text
-multi-agent-supervisor-create
-multi-agent-supervisor-worker-add
-multi-agent-supervisor-dependency-add
-multi-agent-supervisor-activate
-multi-agent-supervisor-pause
-multi-agent-supervisor-cancel
-multi-agent-worker-start
-multi-agent-worker-update
-multi-agent-supervisor-status
-multi-agent-supervisor-workers
-```
-
-Expected unified CLI count sau integration từ baseline v0.27.1: **310 → 320**.
+11 commands mới; expected unified count **320 → 331**.
 
 ### MCP read-only mới
 
-```text
-agentos.multi_agent_supervisor_status_get
-agentos.multi_agent_supervisor_workers_get
-agentos.multi_agent_supervisor_readiness_get
-```
+4 tools mới; expected catalog **116 → 120**.
 
-Không có MCP mutation authority cho supervisor. Expected MCP catalog từ baseline v0.27.1: **113 → 116**.
-
-### Concurrency model
-
-v0.27.2 không cho nhiều executor dùng chung một task để lách `task_single_writer`. Mô hình đúng là:
+### Focused validation của development patch
 
 ```text
-Parent task / parent plan
-          ↓
-      Supervisor
-   ┌──────┼──────┐
-   ↓      ↓      ↓
-Task A  Task B  Task C
-Session A/B/C distinct
-```
-
-Runtime resource leases và stale-write protection hiện hữu tiếp tục là write authority.
-
-### Validation của development patch
-
-Development patch đã chạy focused supervisor tests trong representative SQLite runtime bám các schema contract v0.27.1 mà node sử dụng:
-
-```text
-11 passed
+12 focused tests (run required on target checkout)
 Python compile: PASS
+real temporary Git worktree lifecycle: PASS
+primary isolation before integration: PASS
+plan containment: PASS
+seal gates: PASS
+conflict detection: PASS
+human review/approval: PASS
+controlled apply without git merge: PASS
+local backup manifest/bytes: PASS
+development helper dry-run/apply/rollback fixture: PASS
 ```
 
-Không tuyên bố full historical regression của repository đã chạy trong môi trường tạo patch, vì full v0.27.1 checkout không materialize được tại runtime này. Final release phải chạy toàn bộ tests + docs/release/manifest gates trên checkout thật.
-
-### Distribution
-
-Final v0.27.2 tiếp tục **Latest Full Release / no updater script**. File `apply_v0272_dev_patch.py` trong development bundle chỉ là helper ngoài release để materialize thay đổi lên checkout v0.27.1; **không được ship trong final release payload**.
+Đây chưa phải tuyên bố full historical regression. Checkout v0.27.2 thực tế phải chạy toàn bộ `.agents/tests`, docs/release/runtime/manifest gates trước khi materialize final v0.27.3 release.
 
 ---
 
 ## 🇬🇧 English
 
-v0.27.2 adds a **Multi-Agent Worker Supervisor** that coordinates multiple AI workers without introducing a second execution authority.
+v0.27.3 extends the **Multi-Agent Worker Supervisor** with isolated detached Git worktrees and a human-gated **Controlled Integration** pipeline.
 
-### Highlights
+- Schema **60 → 61**.
+- Exact worker task/session ownership routes filesystem/process execution into a dedicated worktree.
+- Primary AgentOS remains the sole state/policy/lease/audit authority.
+- Diffs are hash-only state, constrained to the worker plan.
+- Sealing requires immutable diff, architecture/security gates, and a successful governed test receipt.
+- Primary drift produces conflicts and never auto-resolves.
+- Integration requires human review and approval plus parent-task scope, leases, CAS/hash checks, local backup manifest/bytes, and rollback.
+- AgentOS never invokes `git merge`, auto-commit, auto-push, or automatic conflict resolution.
+- 11 CLI commands are added (expected total **331**); 4 read-only MCP tools are added (expected total **120**).
 
-- Schema **59 → 60**.
-- The approved parent task and ACTIVE architecture-aware plan form the orchestration envelope.
-- Every worker binds to a distinct existing approved worker task, active plan, session, role, and capability set.
-- Worker plans must remain inside the parent file and architecture-section envelope.
-- Worker sessions are distinct and existing task ownership must match the assigned session.
-- Dependencies form an explicit DAG; cycles fail closed.
-- Overlapping planned executor write targets block supervisor activation.
-- Plan/session/role/optional v0.27.1 skill-selection freshness is revalidated.
-- Optional skill binding only pins a current graduated Contract-v2 eligible/recommendable candidate; it never executes the skill.
-- `worker_start` changes state only and **does not launch a process**.
-- No automatic task/plan/capability/architecture approval, skill lifecycle mutation, or model/provider selection is introduced.
-- Worktree isolation and controlled integration remain reserved for v0.27.3.
-- Supervisor mutation events retain signed-audit linkage.
-
-### Schema 60
-
-```text
-multi_agent_supervisor_runs
-multi_agent_workers
-multi_agent_worker_dependencies
-multi_agent_supervisor_events
-```
-
-### New CLI
-
-Ten commands are added, for an expected full registry count of **320** from the v0.27.1 baseline of 310.
-
-### New read-only MCP
-
-```text
-agentos.multi_agent_supervisor_status_get
-agentos.multi_agent_supervisor_workers_get
-agentos.multi_agent_supervisor_readiness_get
-```
-
-No supervisor mutation is exposed over MCP. Expected catalog: **116** from the v0.27.1 baseline of 113.
-
-### Development-patch validation
-
-Focused supervisor tests passed in a representative SQLite runtime using the v0.27.1 contracts consumed by this node:
-
-```text
-11 passed
-Python compile: PASS
-```
-
-This is not a claim that the complete historical repository regression suite was run. Final release materialization must rerun the full suite and all documentation, release-integrity, manifest, and runtime-health gates on a real v0.27.1 checkout.
+The development bundle is not a full-release claim until the real v0.27.2 checkout passes the complete historical regression and release gates.

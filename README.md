@@ -1,161 +1,107 @@
 # AgentOS Local Governance
 
-**Current release: v0.28.1 — Optional Local Web Control Plane**
+**Local-first governance runtime for AI coding agents.**
+**Hệ thống quản trị cục bộ cho AI coding agents: policy, approval, architecture, multi-agent coordination, controlled integration và audit.**
 
-[🇻🇳 Tiếng Việt](README.vi.md) | [🇬🇧 English](README.en.md)
+[🇻🇳 Tiếng Việt](README.vi.md) · [🇬🇧 English](README.en.md) · [Latest Release](https://github.com/amasahara/agentos-local-governance/releases/latest) · [Changelog](CHANGELOG.md)
 
-Database schema: **61**. Schema bootstrap baseline remains **46**.
+---
 
-v0.28.1 adds an **optional local Web Control Plane** on top of the same privacy-safe Command Center Snapshot. It binds only to loopback, uses ephemeral browser authentication, adds no database/API authority, and keeps schema 61.
+## What is AgentOS Local Governance?
 
-## Architecture governance progression
+AgentOS Local Governance is a **project-local control and governance layer for AI coding agents**.
 
-```text
-v0.25.2  Architecture Contract + Human Clarification
-   ↓
-v0.25.3  Architecture Discovery & Evidence Binding
-   ↓
-v0.25.4  Architecture Drift & Compliance
-   ↓
-v0.25.5  Architecture Change Proposal & ADR
-   ↓
-v0.26.0  Architecture-Aware Task Planning
-   ↓
-v0.26.1  Structural Enforcement
-   ↓
-v0.26.2  Runtime/Data/API & Business Boundary Enforcement
-   ↓
-v0.26.3  Quality/Operational Enforcement
-   ↓
-v0.27.0  Governed Skill Contract v2
-   ↓
-v0.27.1  Architecture-Aware Skill Selection & Evaluation
-   ↓
-v0.27.2  Multi-Agent Worker Supervisor
-   ↓
-v0.27.3  Isolated Workspace & Controlled Integration
-   ↓
-v0.28.0  Architecture & Agent Command Center
-   ↓
-v0.28.1  Optional Local Web Control Plane
-```
+It is designed for projects where one or more AI agents can inspect, plan, modify, review, or coordinate work, but those agents must remain inside explicit project rules and human-owned authority.
 
-## v0.28.1 Optional Local Web Control Plane
+AgentOS adds reusable governance primitives around an existing project:
 
-```text
-Command Center Snapshot v1
-      ↓
-local-only HTTP presentation
-      ↓
-browser dashboard
-```
+- policy and capability boundaries;
+- human approval and clarification gates;
+- governed task / plan lifecycle;
+- architecture contracts and compliance;
+- context, knowledge and privacy controls;
+- governed skills;
+- multi-agent worker supervision;
+- isolated workspaces and controlled integration;
+- auditable state;
+- CLI, MCP, Command Center and an optional local Web Control Plane.
 
-Launch explicitly:
+> AgentOS does not replace the LLM, coding agent, IDE, Git, or human architect. It governs how those components are allowed to act inside a project.
 
-```bash
-agentos web-control-plane
-```
+For the full explanation:
 
-Default bind is `127.0.0.1:8765`. Non-loopback binds fail closed. The browser uses a one-time fragment bootstrap and an ephemeral HttpOnly/SameSite session. The web plane has no architecture approval, integration approval, worker launch, model/provider, privileged CLI, direct database, Git, or MCP mutation authority.
+- [README tiếng Việt](README.vi.md)
+- [English README](README.en.md)
 
-## v0.28.0 Command Center
+---
+
+## Download once, run the full release
+
+Current releases follow a **Latest Full Release** model.
+
+You do **not** need to install every historical updater in sequence.
 
 ```text
-Architecture + Tasks/Agents + Workspaces + Compliance + Human Actions
+GitHub Release / source archive
+            ↓
+      extract or clone
+            ↓
+       run AgentOS
+```
+
+For an existing governed project, preserve project-owned state and local overrides when refreshing the AgentOS-managed distribution.
+
+See [Install / Refresh from Latest Full Release](.agents/docs/INSTALL_LATEST_RELEASE.md).
+
+---
+
+## Current release
+
+### v0.28.1 — Optional Local Web Control Plane
+
+v0.28.1 adds an optional, loopback-only browser interface on top of the existing read-only Command Center snapshot.
+
+```text
+Architecture / Tasks / Agents / Workspaces / Compliance / Human Actions
                               ↓
-                   read-only Snapshot v1
-                       ↓             ↓
-                  terminal TUI    MCP/JSON
+                    Command Center Snapshot
+                       ↓       ↓       ↓
+                      CLI     MCP    Web UI
 ```
 
-Main commands:
+The Web Control Plane does **not** add a second governance backend or new mutation authority.
 
-```bash
-agentos command-center
-agentos command-center --format json
-agentos command-center-actions
-agentos command-center-section --section compliance
-```
+- Database schema: **61**
+- CLI commands: **336**
+- MCP tools: **123**
+- Full regression: **565 passed, 1 expected Windows skip**
+- [Release notes](RELEASE_NOTES.md)
+- [v0.28.1 technical documentation](.agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md)
 
-The Command Center never persists a second dashboard state, never exposes raw source/question content or physical workspace paths, and never creates approval/integration/worker-launch authority.
+---
 
-## v0.27.3 workspace / integration flow
+## Quick links
+
+- [Vietnamese documentation](README.vi.md)
+- [English documentation](README.en.md)
+- [Installation / latest full release](.agents/docs/INSTALL_LATEST_RELEASE.md)
+- [Current release notes](RELEASE_NOTES.md)
+- [Changelog](CHANGELOG.md)
+- [GitHub Releases](https://github.com/amasahara/agentos-local-governance/releases)
+- [GitHub Tags](https://github.com/amasahara/agentos-local-governance/tags)
+
+---
+
+## Authority principle
 
 ```text
-Approved supervisor worker (task + session)
+Human defines authority
         ↓
-detached worker worktree
+AgentOS enforces governance
         ↓
-governed read/write/test routing
+Agents execute only inside granted boundaries
         ↓
-hash-only diff collection
-        ↓
-architecture + security + test gates
-        ↓
-sealed workspace
-        ↓
-conflict analysis
-        ↓
-HUMAN REVIEW + APPROVAL
-        ↓
-parent-task controlled integration
-(no git merge / no auto-commit)
+Command Center / Web UI provide visibility
 ```
 
-Core invariants:
-- Executor workers cannot fall back to primary-tree filesystem/process execution when v0.27.3 workspace policy is enabled.
-- Workspace ownership is exact `task_id + session_id`; AgentOS state and leases remain in the primary repository.
-- Changed paths must remain inside the worker plan; raw source is not persisted in workspace/integration state.
-- Sealing requires immutable diff, architecture/security gates, and a successful governed test receipt.
-- Primary drift produces explicit conflicts and blocks review/approval/apply; conflicts are never auto-resolved.
-- Controlled apply uses parent task/session scope, leases, hashes, backup, atomic replace/delete and rollback.
-- AgentOS never invokes `git merge`, auto-commit, auto-push, or grants merge authority to MCP/AI.
-
-## Main v0.27.3 commands
-
-```bash
-agentos multi-agent-workspace-provision --supervisor-id 1 --worker-key worker-a --created-by human:operator
-agentos multi-agent-workspace-collect --supervisor-id 1 --worker-key worker-a
-agentos multi-agent-workspace-seal --supervisor-id 1 --worker-key worker-a
-agentos multi-agent-integration-proposal-create --supervisor-id 1 --worker-key worker-a --created-by human:operator
-agentos multi-agent-integration-proposal-review --proposal-id 1 --reviewed-by human:reviewer
-agentos multi-agent-integration-proposal-approve --proposal-id 1 --approved-by human:approver
-agentos multi-agent-integration-apply --proposal-id 1 --applied-by human:integrator
-```
-
-## MCP read-only surface added in v0.27.3
-
-```text
-agentos.multi_agent_workspace_status_get
-agentos.multi_agent_workspace_diff_summary_get
-agentos.multi_agent_integration_proposal_get
-agentos.multi_agent_integration_readiness_get
-```
-
-## Distribution model
-
-Current AgentOS releases use the **Latest Full Release** model with **no updater script**. AgentOS-managed runtime is separate from project-owned user skills, workflows, source, architecture working copies, `governance.local.json`, `.agents/state/**`, and `.agents/runtime/**`.
-
-See [Install Latest Release](.agents/docs/INSTALL_LATEST_RELEASE.md).
-
-## Validation
-
-```bash
-PYTHONPATH=.agents python -m pytest -q .agents/tests -rs
-python tools/build_manifest.py .
-python tools/verify_manifest.py .
-python tools/validate_release.py .
-git diff --check
-```
-
-## Current node documentation
-
-- [Optional Local Web Control Plane v0.28.1](.agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md)
-- [Architecture & Agent Command Center v0.28.0](.agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md)
-- [Isolated Workspace & Controlled Integration v0.27.3](.agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md)
-- [Multi-Agent Worker Supervisor v0.27.2](.agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md)
-- [Architecture-Aware Skill Selection & Evaluation v0.27.1](.agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md)
-- [Governed Skill Contract v2](.agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md)
-- [Install Latest Release](.agents/docs/INSTALL_LATEST_RELEASE.md)
-
-`AGENTS.md` remains the only coding-agent instruction authority. Architecture Authority remains human-owned.
+**Human authority remains authoritative. AgentOS governs execution; it does not grant itself authority.**

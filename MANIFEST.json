@@ -1430,18 +1430,18 @@
     },
     {
       "path": "README.en.md",
-      "size": 3230,
-      "sha256": "028094f9ce685d98487ff9fd90376e786eecc9671bb73d90c21c01567ccb628d"
+      "size": 11994,
+      "sha256": "72403d472270cc6b74f7f98231b5462016af539cd3a93147c1dfb4e3da612ff3"
     },
     {
       "path": "README.md",
-      "size": 5987,
-      "sha256": "105931cf0bdd8b59adf244b121444a3b29ac560956d820002d12237ebbb9aeb8"
+      "size": 3548,
+      "sha256": "d0b81274ba4d71560e9f2c11136c9f196d7abee10329f488eff4a306f5e9f383"
     },
     {
       "path": "README.vi.md",
-      "size": 3066,
-      "sha256": "28eddce9247db1fc3461f74c0ae99084e68d123fefb391c5eeeda9d87049e83f"
+      "size": 13006,
+      "sha256": "247e792b1441513e97e54d4d6316e2a84e737f524d9a7967d67e454cc3ed535f"
     },
     {
       "path": "RELEASE_NOTES.md",

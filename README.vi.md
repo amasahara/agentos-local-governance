@@ -1,10 +1,18 @@
 # AgentOS Local Governance — Tiếng Việt
 
-**Phiên bản hiện tại: v0.28.0 — Architecture & Agent Command Center**
+**Phiên bản hiện tại: v0.28.1 — Optional Local Web Control Plane**
 
 Database schema: **61**. Schema bootstrap baseline vẫn là **46**.
 
-v0.28.0 bổ sung Architecture & Agent Command Center read-only để tổng hợp Architecture, agents/tasks, workspaces, compliance và human actions mà không tạo authority mới.
+v0.28.1 bổ sung Optional Local Web Control Plane chạy local-only trên cùng Command Center Snapshot, không tạo database/API authority mới và giữ schema 61.
+
+## Web Control Plane v0.28.1
+
+```powershell
+agentos web-control-plane
+```
+
+Mặc định chỉ bind `127.0.0.1:8765`, có one-time browser bootstrap, session in-memory, không CORS/external assets và không có mutation/approval/worker-launch authority.
 
 ## Command Center v0.28.0
 
@@ -53,6 +61,7 @@ agentos multi-agent-integration-proposal-approve --proposal-id 1 --approved-by h
 agentos multi-agent-integration-apply --proposal-id 1 --applied-by human:integrator
 ```
 ## Distribution
+- [Web Control Plane v0.28.1](.agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md)
 - [Command Center v0.28.0](.agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md)
 
 Từ v0.27.0+, AgentOS dùng **Latest Full Release** và **no updater script**. Không xóa user skills, workflows, project source, architecture working copy, `governance.local.json`, `.agents/state/**` hoặc `.agents/runtime/**` khi refresh AgentOS-managed runtime.

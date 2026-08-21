@@ -1,78 +1,194 @@
-# AgentOS Local Governance v0.28.0 — Architecture & Agent Command Center
+# AgentOS Local Governance v0.28.1 — Optional Local Web Control Plane
 
-## Development patch scope
+v0.28.1 completes the Architecture Authority roadmap with an **optional local Web Control Plane** built directly on the v0.28.0 Command Center read model.
 
-v0.28.0 adds a privacy-safe, read-only Command Center on top of the existing
-Architecture Governance, skill selection, multi-agent supervisor, isolated workspace,
-and controlled-integration backends.
+The web plane is presentation only. It does not become a second governance backend and does not gain architecture, integration, worker-launch, model/provider, or database mutation authority.
 
-### Core changes
-
-- Database schema remains **61**.
-- Adds a single shared Command Center Snapshot v1 read model.
-- Adds deterministic terminal dashboard rendering.
-- Aggregates:
-  - active Architecture Baseline and section coverage;
-  - Architecture Change Proposal / ADR lifecycle counts;
-  - task/supervisor/worker/workspace state;
-  - active resource leases and integration conflicts;
-  - latest architecture compliance/structural/runtime/quality status;
-  - privacy-safe pending human/operator actions.
-- Does not persist dashboard state.
-- Uses strict `connect_read_only()` access.
-- Does not expose raw task requests, human questions, source bodies, secrets,
-  capability tokens, or physical workspace paths.
-
-### CLI
-
-Adds four read-only commands:
+## Core architecture
 
 ```text
-command-center
-command-center-snapshot
-command-center-actions
-command-center-section
+Architecture / Tasks / Agents / Workspaces / Compliance / Human Actions
+                              |
+                              v
+                   Command Center Snapshot v1
+                   /        |         \
+                 CLI       MCP      Web UI
 ```
 
-Expected unified CLI count after integration: **331 → 335**.
+All three surfaces consume the same AgentOS core/read model.
 
-### MCP
+## Schema
 
-Adds three read-only tools:
+Database schema remains **61**.
+
+No web-session or dashboard state is persisted in SQLite.
+
+## Optional local server
+
+New CLI command:
 
 ```text
-agentos.command_center_snapshot_get
-agentos.command_center_human_actions_get
-agentos.command_center_section_get
+web-control-plane
 ```
 
-Expected MCP catalog after integration: **120 → 123**.
-
-No MCP mutation authority is added.
-
-### Authority invariants
-
-The Command Center cannot:
-
-- approve/activate Architecture Baselines;
-- approve ADRs;
-- approve or apply controlled integration;
-- create/approve tasks or plans;
-- launch workers/processes;
-- select a model/provider;
-- mutate AgentOS state;
-- expose workspace physical paths.
-
-The optional local Web Control Plane remains reserved for **v0.28.1** and must use
-the same Command Center read model.
-
-### Validation of development patch
-
-Focused Command Center tests in a representative SQLite read-model fixture:
+Default:
 
 ```text
-10 passed
+host: 127.0.0.1
+port: 8765
+foreground: true
+optional: true
 ```
 
-The final v0.28.0 release must still run the full repository regression and all
-docs/release/manifest gates on the real v0.27.3 checkout.
+Expected unified CLI count: **335 → 336**.
+
+MCP remains **123 tools**. No v0.28.1 MCP mutation surface is added.
+
+## Authentication and local hardening
+
+- numeric loopback bind only;
+- `localhost` normalizes to `127.0.0.1`;
+- non-loopback binds fail closed;
+- exact Host header validation;
+- same-origin bootstrap;
+- one-time bootstrap secret in URL fragment;
+- ephemeral in-memory session;
+- HttpOnly + SameSite=Strict cookie;
+- no CORS;
+- no WebSocket;
+- no external JS/CSS assets;
+- CSP with per-response nonce;
+- `Cache-Control: no-store`;
+- frame embedding denied;
+- MIME sniffing disabled;
+- referrer disabled;
+- restrictive Permissions Policy;
+- request logging suppressed.
+
+## HTTP surface
+
+Read-only AgentOS data:
+
+```text
+GET /
+GET /healthz
+GET /api/snapshot
+GET /api/actions
+GET /api/section/{section}
+```
+
+The only POST route is:
+
+```text
+POST /api/session
+```
+
+It creates an ephemeral HTTP session in server memory only.
+
+No endpoint exists for task/plan creation, architecture approval, ADR approval,
+worker/process launch, capability issuance, model/provider selection, integration
+approval/apply, Git merge/commit/push, or direct database mutation.
+
+## Authority invariants
+
+```text
+command_center_read_model_only          true
+direct_database_access                  false
+mutation_authority                      false
+privileged_cli_execution_allowed        false
+architecture_approval_authority         false
+integration_approval_authority          false
+worker_launch_authority                 false
+model_provider_selection_authority      false
+external_assets_allowed                 false
+cors_allowed                            false
+websocket_allowed                       false
+```
+
+Human/operator actions shown in the browser remain informational. Execution stays on
+the existing governed AgentOS CLI/runtime boundary.
+
+## Final Validation
+
+v0.28.1 đã hoàn tất đầy đủ focused validation, full repository regression,
+runtime smoke tests và release gates.
+
+### Web Control Plane Focused Tests
+
+- 16 passed
+- 0 failed
+
+### Full AgentOS Regression
+
+- 565 passed
+- 1 skipped
+- 0 failed
+
+Expected Windows platform skip:
+
+.agents/tests/test_secret_lineage_v0226.py:67
+
+POSIX chmod mode-bit enforcement is not a Windows security primitive.
+
+Đây là expected platform skip, không phải regression.
+
+### Release Gates
+
+- docs-check: PASS
+- release-integrity-check: PASS
+- runtime-health: PASS
+- Command Center: PASS
+- Web Control Plane: PASS
+- Manifest verification: PASS
+- Release validation: PASS
+- git diff --check: PASS
+
+### Final Runtime Identity
+
+- Version: 0.28.1
+- Schema: 61
+- CLI commands: 336
+- MCP tools: 123
+- Manifest files: 300
+
+### Web Control Plane Runtime Validation
+
+Browser authentication flow đã được xác minh:
+
+unauthenticated request
+→ 401 web_session_required
+→ one-time same-origin bootstrap
+→ ephemeral authenticated browser session
+→ Command Center Snapshot
+→ Overall PASS
+
+Non-loopback binding tiếp tục fail-closed:
+
+--host 0.0.0.0
+→ web_control_plane_non_loopback_bind_forbidden
+
+Web Control Plane tiếp tục giữ các authority invariants:
+
+- command_center_read_model_only: true
+- database_read_only: true
+- mutation_authority: false
+- architecture_approval_authority: false
+- integration_approval_authority: false
+- worker_launch_authority: false
+- model_provider_selection_authority: false
+- mcp_mutation_allowed: false
+
+### Hardening Completed During Release Validation
+
+Các vấn đề phát hiện trong quá trình validation đã được sửa trước khi khóa release:
+
+- Windows POST rejection path được harden để tránh socket reset khi request body vẫn còn unread.
+- Cross-origin bootstrap tiếp tục trả 403 same_origin_required.
+- POST mutation routes tiếp tục fail với 405 web_mutation_surface_forbidden.
+- Browser shell hỗ trợ hashchange, cho phép fresh #bootstrap=... hoạt động ngay cả khi được paste vào Web Control Plane tab đang mở.
+- Bootstrap token vẫn one-time và same-origin.
+- Browser session vẫn ephemeral, HttpOnly và SameSite=Strict.
+- Ctrl+C được xử lý như graceful foreground shutdown; AgentOS không còn phát Python KeyboardInterrupt traceback.
+- Không có database schema migration mới.
+- Không bổ sung MCP mutation surface.
+- Không tạo authority stack thứ hai cho Web UI.

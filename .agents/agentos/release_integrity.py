@@ -99,12 +99,14 @@ RELEASE_FILES = (
     ".agents/tests/test_multi_agent_supervisor_v0272.py",
     ".agents/tests/test_isolated_workspace_integration_v0273.py",
     ".agents/tests/test_architecture_agent_command_center_v0280.py",
+    ".agents/tests/test_optional_web_control_plane_v0281.py",
     ".agents/config/release_policy.json",
     ".agents/docs/GOVERNED_SKILL_CONTRACT_V0270.md",
     ".agents/docs/ARCHITECTURE_AWARE_SKILL_SELECTION_EVALUATION_V0271.md",
     ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md",
     ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md",
     ".agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md",
+    ".agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md",
     ".agents/docs/INSTALL_LATEST_RELEASE.md",
     ".agents/config/update_ownership.v0253.json",
     ".agents/config/update_ownership.v0254.json",
@@ -197,6 +199,8 @@ EXTENSION_FILES = (
     ".agents/agentos/command_center.py",
     ".agents/agentos/command_center_cli.py",
     ".agents/agentos/mcp_v0280.py",
+    ".agents/agentos/web_control_plane.py",
+    ".agents/agentos/web_control_plane_cli.py",
 )
 REQUIRED_POLICY_SECTIONS = (
     "language_policy",
@@ -257,6 +261,7 @@ REQUIRED_POLICY_SECTIONS = (
     "architecture_runtime_policy",
     "architecture_quality_policy",
     "command_center_policy",
+    "web_control_plane_policy",
 )
 
 
@@ -659,6 +664,7 @@ DOC_FILES = (
     ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md",
     ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md",
     ".agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md",
+    ".agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md",
     ".agents/docs/INSTALL_LATEST_RELEASE.md",
     "CHANGELOG.md",
     "DATA_SUBJECT_RIGHTS.md",

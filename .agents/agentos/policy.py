@@ -112,6 +112,9 @@ def validate_policy(policy: dict[str, Any]) -> None:
         required.add("governed_skill_contract_policy")
     if version >= (0, 27, 1):
         required.add("architecture_aware_skill_selection_policy")
+    if version >= (0, 28, 1):
+        required.add("command_center_policy")
+        required.add("web_control_plane_policy")
     missing = sorted(required - policy.keys())
     if missing:
         raise RuntimeError(f"missing policy keys: {missing}")
@@ -188,6 +191,40 @@ def validate_policy(policy: dict[str, Any]) -> None:
         if int(selection.get("max_candidates", 0)) < 1:
             raise RuntimeError("architecture-aware skill selection candidate limit is invalid")
 
+    if version >= (0, 28, 1):
+        web = policy["web_control_plane_policy"]
+        web_required_true = (
+            "enabled", "optional", "loopback_only", "command_center_read_model_only",
+            "host_header_validation_required", "same_origin_bootstrap_required",
+            "one_time_bootstrap_required",
+        )
+        web_disabled = [key for key in web_required_true if web.get(key) is not True]
+        if web_disabled:
+            raise RuntimeError(f"web control plane invariant disabled: {web_disabled}")
+        web_required_false = (
+            "direct_database_access", "mutation_authority", "privileged_cli_execution_allowed",
+            "architecture_approval_authority", "integration_approval_authority",
+            "worker_launch_authority", "model_provider_selection_authority",
+            "external_assets_allowed", "cors_allowed", "websocket_allowed",
+        )
+        web_poisoned = [key for key in web_required_false if web.get(key) is not False]
+        if web_poisoned:
+            raise RuntimeError(f"web control plane authority invariant violated: {web_poisoned}")
+        if int(web.get("database_schema", 0)) != 61 or int(web.get("web_version", 0)) != 1:
+            raise RuntimeError("web control plane version/schema is invalid")
+        if str(web.get("default_host")) != "127.0.0.1":
+            raise RuntimeError("web control plane default host must be loopback")
+        port = int(web.get("default_port", 0) or 0)
+        if port < 1 or port > 65535:
+            raise RuntimeError("web control plane default port is invalid")
+        ttl = int(web.get("session_ttl_seconds", 0) or 0)
+        if ttl < 60 or ttl > 86400:
+            raise RuntimeError("web control plane session ttl is invalid")
+        command_center = policy["command_center_policy"]
+        if command_center.get("web_control_plane_reserved_for_v0281") is not False:
+            raise RuntimeError("v0.28.1 web control plane reservation must be released")
+        if command_center.get("web_control_plane_available") is not True:
+            raise RuntimeError("v0.28.1 web control plane must be explicitly available")
     clarification = policy["human_clarification_policy"]
     clarification_required_true = (
         "enabled", "structured_clarity_assessment_required", "no_silent_material_assumptions",

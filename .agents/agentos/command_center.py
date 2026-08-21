@@ -30,7 +30,8 @@ _DEFAULT_POLICY: dict[str, Any] = {
     "mcp_mutation_allowed": False,
     "raw_source_content_exposed": False,
     "physical_workspace_paths_exposed": False,
-    "web_control_plane_reserved_for_v0281": True,
+    "web_control_plane_reserved_for_v0281": False,
+    "web_control_plane_available": True,
 }
 
 
@@ -342,7 +343,8 @@ def command_center_snapshot(root: Path | str) -> dict[str, Any]:
             "mcp_mutation_allowed": False,
             "raw_source_content_exposed": False,
             "physical_workspace_paths_exposed": False,
-            "web_control_plane_reserved_for_v0281": bool(policy.get("web_control_plane_reserved_for_v0281", True)),
+            "web_control_plane_reserved_for_v0281": bool(policy.get("web_control_plane_reserved_for_v0281", False)),
+            "web_control_plane_available": bool(policy.get("web_control_plane_available", True)),
         },
     }
 

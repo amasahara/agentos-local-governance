@@ -59,6 +59,7 @@ FEATURE_CLI_MODULES = (
     "multi_agent_supervisor_cli",
     "multi_agent_workspace_cli",
     "command_center_cli",
+    "web_control_plane_cli",
     "human_decision_cli",
 )
 

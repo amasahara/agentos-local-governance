@@ -1,4 +1,12 @@
 # Changelog
+
+## v0.28.1 — Optional Local Web Control Plane
+- Added an opt-in, foreground, loopback-only local Web Control Plane on the v0.28.0 Command Center Snapshot.
+- Added one-time fragment bootstrap plus ephemeral HttpOnly/SameSite browser sessions with Host/Origin validation.
+- Added CSP/no-store/frame/referrer/CORP/Permissions-Policy hardening; no CORS, WebSocket or external assets.
+- Added no AgentOS mutation endpoints, no direct database access, no privileged CLI execution and no new MCP tools.
+- Database schema remains 61; MCP remains 123 tools.
+
 ## v0.28.0 — Architecture & Agent Command Center
 - Added one privacy-safe read-only Snapshot v1 across Architecture, execution, compliance and pending human/operator actions.
 - Added deterministic terminal TUI plus JSON/section/action CLI projections without persisting a second dashboard state.

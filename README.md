@@ -1,12 +1,12 @@
 # AgentOS Local Governance
 
-**Current release: v0.28.0 — Architecture & Agent Command Center**
+**Current release: v0.28.1 — Optional Local Web Control Plane**
 
 [🇻🇳 Tiếng Việt](README.vi.md) | [🇬🇧 English](README.en.md)
 
 Database schema: **61**. Schema bootstrap baseline remains **46**.
 
-v0.28.0 adds a privacy-safe **Architecture & Agent Command Center** that projects architecture, task/agent/workspace, compliance and pending-human-action state through one strict read-only snapshot. Schema remains 61 and the Command Center has no mutation, approval, worker-launch or model/provider authority.
+v0.28.1 adds an **optional local Web Control Plane** on top of the same privacy-safe Command Center Snapshot. It binds only to loopback, uses ephemeral browser authentication, adds no database/API authority, and keeps schema 61.
 
 ## Architecture governance progression
 
@@ -36,7 +36,27 @@ v0.27.2  Multi-Agent Worker Supervisor
 v0.27.3  Isolated Workspace & Controlled Integration
    ↓
 v0.28.0  Architecture & Agent Command Center
+   ↓
+v0.28.1  Optional Local Web Control Plane
 ```
+
+## v0.28.1 Optional Local Web Control Plane
+
+```text
+Command Center Snapshot v1
+      ↓
+local-only HTTP presentation
+      ↓
+browser dashboard
+```
+
+Launch explicitly:
+
+```bash
+agentos web-control-plane
+```
+
+Default bind is `127.0.0.1:8765`. Non-loopback binds fail closed. The browser uses a one-time fragment bootstrap and an ephemeral HttpOnly/SameSite session. The web plane has no architecture approval, integration approval, worker launch, model/provider, privileged CLI, direct database, Git, or MCP mutation authority.
 
 ## v0.28.0 Command Center
 
@@ -130,6 +150,7 @@ git diff --check
 
 ## Current node documentation
 
+- [Optional Local Web Control Plane v0.28.1](.agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md)
 - [Architecture & Agent Command Center v0.28.0](.agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md)
 - [Isolated Workspace & Controlled Integration v0.27.3](.agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md)
 - [Multi-Agent Worker Supervisor v0.27.2](.agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md)

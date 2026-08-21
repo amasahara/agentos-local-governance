@@ -1,17 +1,17 @@
 {
-  "version": "0.28.0",
+  "version": "0.28.1",
   "documentation_policy": {
     "current_release_identity_files": [
-      ".agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md"
+      ".agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md"
     ],
-    "current_release_name": "Architecture & Agent Command Center",
+    "current_release_name": "Optional Local Web Control Plane",
     "current_schema": 61,
     "current_schema_files": [
-      ".agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md"
+      ".agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md"
     ],
     "current_upgrade_guide": ".agents/docs/INSTALL_LATEST_RELEASE.md",
     "current_version_files": [
-      ".agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md"
+      ".agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -19,7 +19,8 @@
       "README.en.md",
       ".agents/docs/INSTALL_LATEST_RELEASE.md",
       ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md",
-      ".agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md"
+      ".agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md",
+      ".agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md"
     ]
   },
   "governed_skill_contract_policy": {
@@ -167,6 +168,31 @@
     "mcp_mutation_allowed": false,
     "raw_source_content_exposed": false,
     "physical_workspace_paths_exposed": false,
-    "web_control_plane_reserved_for_v0281": true
+    "web_control_plane_reserved_for_v0281": false,
+    "web_control_plane_available": true
+  },
+  "web_control_plane_policy": {
+    "enabled": true,
+    "optional": true,
+    "web_version": 1,
+    "database_schema": 61,
+    "default_host": "127.0.0.1",
+    "default_port": 8765,
+    "loopback_only": true,
+    "command_center_read_model_only": true,
+    "direct_database_access": false,
+    "mutation_authority": false,
+    "privileged_cli_execution_allowed": false,
+    "architecture_approval_authority": false,
+    "integration_approval_authority": false,
+    "worker_launch_authority": false,
+    "model_provider_selection_authority": false,
+    "external_assets_allowed": false,
+    "cors_allowed": false,
+    "websocket_allowed": false,
+    "host_header_validation_required": true,
+    "same_origin_bootstrap_required": true,
+    "one_time_bootstrap_required": true,
+    "session_ttl_seconds": 3600
   }
 }

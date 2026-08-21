@@ -1,6 +1,6 @@
 # AgentOS — Cài đặt / làm mới từ Latest Full Release
 
-Current release: **v0.28.0 — Architecture & Agent Command Center**
+Current release: **v0.28.1 — Optional Local Web Control Plane**
 Database schema: **61**
 
 > Release model invariant: **no updater script**.
@@ -78,6 +78,16 @@ python -m pytest -q .agents\tests -rs
 python tools\validate_release.py .
 git diff --check
 ```
+
+## v0.28.1 runtime note
+
+The Optional Local Web Control Plane is foreground-only and loopback-only by default. It consumes the v0.28.0 Command Center read model and adds no database or governance mutation authority.
+
+```bash
+agentos web-control-plane
+```
+
+See [Optional Local Web Control Plane](OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md).
 
 ## v0.28.0 runtime note
 

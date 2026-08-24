@@ -19,7 +19,7 @@ from typing import Any
 
 EXCLUDE = {"MANIFEST.json", "CHECKSUMS.sha256"}
 EXCLUDE_PREFIXES = (".git/", ".agents/runtime/", ".agents/state/", ".agents/cache/", ".pytest_cache/", ".vscode/", ".idea/")
-EXCLUDE_PARTS = {"__pycache__"}
+EXCLUDE_PARTS = {"__pycache__", ".pytest_cache"}
 EXCLUDE_GLOBS = (
     "apply_v*.py",
     "apply_v*.py.sha256",

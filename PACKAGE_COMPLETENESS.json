@@ -1,8 +1,8 @@
 {
-  "release": "0.28.1",
-  "kind": "full_materialized_github_ready",
+  "release": "0.28.2",
+  "kind": "agentos_distribution_repository",
   "schema": 61,
-  "authoritative_file_count": 300,
+  "authoritative_file_count": 308,
   "required_top_level": [
     "VERSION",
     "AGENTS.md",
@@ -22,9 +22,9 @@
     ".agents/agentos",
     ".agents/bin",
     ".agents/config",
+    ".agents/distribution",
     ".agents/docs",
-    ".agents/tests",
-    "tools"
+    ".agents/schema"
   ],
   "automatic_validation": ".github/workflows/agentos-release-validation.yml",
   "excluded_generated_prefixes": [
@@ -35,10 +35,10 @@
     ".pytest_cache/",
     "__pycache__/"
   ],
-  "upload_workflow": "download latest full release -> preserve project-owned partition -> use current AgentOS-managed distribution -> validate release repository",
+  "upload_workflow": "download latest distribution -> project-init for new project or project-adopt for existing project -> validate repository role",
   "manual_apply_required": false,
   "coherence_contract_version": 1,
-  "distribution_model": "download_latest_full_release_no_updater",
+  "distribution_model": "project_init_and_project_adopt",
   "project_owned_partitions": [
     "user_skills",
     "project_workflows_and_state",
@@ -57,5 +57,33 @@
   "governed_skill_contract": "v2_deterministic_least_authority_human_graduation_legacy_preserved",
   "architecture_aware_skill_selection": "deterministic_advisory_active_plan_contract_bound_no_authority_grant",
   "skill_evaluation": "observational_task_outcome_no_lifecycle_or_ranking_mutation",
-  "multi_agent_supervisor": "governed_existing_tasks_dag_readiness_no_process_launch"
+  "multi_agent_supervisor": "governed_existing_tasks_dag_readiness_no_process_launch",
+  "repository_role": "agentos_distribution",
+  "repository_validation_roots": [
+    ".agents/tests",
+    "tools"
+  ],
+  "installed_payload_roots": [
+    ".agents/agentos",
+    ".agents/bin",
+    ".agents/config",
+    ".agents/docs",
+    ".agents/schema",
+    ".agents/release",
+    ".agents/project"
+  ],
+  "installed_payload_excluded": [
+    ".agents/tests",
+    "tools",
+    "README.md",
+    "README.en.md",
+    "README.vi.md",
+    "VERSION",
+    "huong_dan.md",
+    "huong_dan.en.md",
+    "huong_dan.vi.md",
+    "historical docs",
+    "historical launchers",
+    "historical tools"
+  ]
 }

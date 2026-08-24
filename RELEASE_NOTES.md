@@ -1,194 +1,75 @@
-# AgentOS Local Governance v0.28.1 — Optional Local Web Control Plane
+# AgentOS Local Governance v0.28.2 — Project Bootstrap & Repository Normalization
 
-v0.28.1 completes the Architecture Authority roadmap with an **optional local Web Control Plane** built directly on the v0.28.0 Command Center read model.
+v0.28.2 cleans and normalizes the repository and project bootstrap foundation. It adds no new security feature.
 
-The web plane is presentation only. It does not become a second governance backend and does not gain architecture, integration, worker-launch, model/provider, or database mutation authority.
+## Release identity
 
-## Core architecture
+- AgentOS version: **0.28.2**
+- Database schema: **61**
+- Distribution role: `agentos_distribution`
+- Installed project role: `governed_project`
+- Distribution metadata authority: `.agents/distribution/metadata.json`
+- Installed metadata root: `.agents/release/`
 
-```text
-Architecture / Tasks / Agents / Workspaces / Compliance / Human Actions
-                              |
-                              v
-                   Command Center Snapshot v1
-                   /        |         \
-                 CLI       MCP      Web UI
-```
+Release coherence is checked against the current distribution metadata, package version, schema source, current README files, release notes, manifest, and checksums.
 
-All three surfaces consume the same AgentOS core/read model.
+## Project lifecycle
 
-## Schema
+The legacy installer flow is replaced by two explicit commands:
 
-Database schema remains **61**.
+- `project-init` initializes a new governed project.
+- `project-adopt` produces a read-only plan for an existing project and mutates only with `--apply --human-confirmed`.
 
-No web-session or dashboard state is persisted in SQLite.
+Every installed project receives a newly generated project UUID. Business domain and purpose begin as `UNCONFIRMED`; the distribution contains no representative Hospital Core purpose.
 
-## Optional local server
+## Ownership boundary
 
-New CLI command:
+AgentOS writes only its managed payload under the application `.agents/` directory. It does not copy or overwrite application-root:
 
-```text
-web-control-plane
-```
+- `README.md` or `README.en.md`;
+- `VERSION`;
+- `huong_dan.md`;
+- application source or tests.
 
-Default:
+Distribution metadata and installed-project metadata are separate documents with separate roles.
 
-```text
-host: 127.0.0.1
-port: 8765
-foreground: true
-optional: true
-```
+## Installed payload
 
-Expected unified CLI count: **335 → 336**.
+The current installed payload contains:
 
-MCP remains **123 tools**. No v0.28.1 MCP mutation surface is added.
+- unified runtime modules;
+- current cross-platform launchers;
+- current schema;
+- current governance baseline and modular policy sources;
+- deterministic generated effective policy;
+- current user-journey documentation.
 
-## Authentication and local hardening
+It excludes repository tests, historical launchers, historical documentation, update utilities, release-maintenance tools, runtime caches, and representative application identity.
 
-- numeric loopback bind only;
-- `localhost` normalizes to `127.0.0.1`;
-- non-loopback binds fail closed;
-- exact Host header validation;
-- same-origin bootstrap;
-- one-time bootstrap secret in URL fragment;
-- ephemeral in-memory session;
-- HttpOnly + SameSite=Strict cookie;
-- no CORS;
-- no WebSocket;
-- no external JS/CSS assets;
-- CSP with per-response nonce;
-- `Cache-Control: no-store`;
-- frame embedding denied;
-- MIME sniffing disabled;
-- referrer disabled;
-- restrictive Permissions Policy;
-- request logging suppressed.
+## Documentation
 
-## HTTP surface
+Current documentation is organized as:
 
-Read-only AgentOS data:
+- `.agents/docs/QUICKSTART.md`
+- `.agents/docs/NEW_PROJECT.md`
+- `.agents/docs/EXISTING_PROJECT.md`
+- `.agents/docs/WINDOWS.md`
+- `.agents/docs/REFERENCE.md`
 
-```text
-GET /
-GET /healthz
-GET /api/snapshot
-GET /api/actions
-GET /api/section/{section}
-```
+Historical release details remain in `CHANGELOG.md`, Git tags, and archived release artifacts.
 
-The only POST route is:
+## Policy compilation
 
-```text
-POST /api/session
-```
+The effective policy is generated deterministically from:
 
-It creates an ephemeral HTTP session in server memory only.
+1. the current governance baseline;
+2. sorted modular fragments under `.agents/config/policy/`;
+3. the optional project-owned `governance.local.json`.
 
-No endpoint exists for task/plan creation, architecture approval, ADR approval,
-worker/process launch, capability issuance, model/provider selection, integration
-approval/apply, Git merge/commit/push, or direct database mutation.
+The generated output is `.agents/config/generated/governance.effective.json`. Source paths and SHA-256 hashes are recorded with the compilation result.
 
-## Authority invariants
+## Validation
 
-```text
-command_center_read_model_only          true
-direct_database_access                  false
-mutation_authority                      false
-privileged_cli_execution_allowed        false
-architecture_approval_authority         false
-integration_approval_authority          false
-worker_launch_authority                 false
-model_provider_selection_authority      false
-external_assets_allowed                 false
-cors_allowed                            false
-websocket_allowed                       false
-```
+`repository-validate --role agentos_distribution` validates distribution identity and metadata.
 
-Human/operator actions shown in the browser remain informational. Execution stays on
-the existing governed AgentOS CLI/runtime boundary.
-
-## Final Validation
-
-v0.28.1 đã hoàn tất đầy đủ focused validation, full repository regression,
-runtime smoke tests và release gates.
-
-### Web Control Plane Focused Tests
-
-- 16 passed
-- 0 failed
-
-### Full AgentOS Regression
-
-- 565 passed
-- 1 skipped
-- 0 failed
-
-Expected Windows platform skip:
-
-.agents/tests/test_secret_lineage_v0226.py:67
-
-POSIX chmod mode-bit enforcement is not a Windows security primitive.
-
-Đây là expected platform skip, không phải regression.
-
-### Release Gates
-
-- docs-check: PASS
-- release-integrity-check: PASS
-- runtime-health: PASS
-- Command Center: PASS
-- Web Control Plane: PASS
-- Manifest verification: PASS
-- Release validation: PASS
-- git diff --check: PASS
-
-### Final Runtime Identity
-
-- Version: 0.28.1
-- Schema: 61
-- CLI commands: 336
-- MCP tools: 123
-- Manifest files: 300
-
-### Web Control Plane Runtime Validation
-
-Browser authentication flow đã được xác minh:
-
-unauthenticated request
-→ 401 web_session_required
-→ one-time same-origin bootstrap
-→ ephemeral authenticated browser session
-→ Command Center Snapshot
-→ Overall PASS
-
-Non-loopback binding tiếp tục fail-closed:
-
---host 0.0.0.0
-→ web_control_plane_non_loopback_bind_forbidden
-
-Web Control Plane tiếp tục giữ các authority invariants:
-
-- command_center_read_model_only: true
-- database_read_only: true
-- mutation_authority: false
-- architecture_approval_authority: false
-- integration_approval_authority: false
-- worker_launch_authority: false
-- model_provider_selection_authority: false
-- mcp_mutation_allowed: false
-
-### Hardening Completed During Release Validation
-
-Các vấn đề phát hiện trong quá trình validation đã được sửa trước khi khóa release:
-
-- Windows POST rejection path được harden để tránh socket reset khi request body vẫn còn unread.
-- Cross-origin bootstrap tiếp tục trả 403 same_origin_required.
-- POST mutation routes tiếp tục fail với 405 web_mutation_surface_forbidden.
-- Browser shell hỗ trợ hashchange, cho phép fresh #bootstrap=... hoạt động ngay cả khi được paste vào Web Control Plane tab đang mở.
-- Bootstrap token vẫn one-time và same-origin.
-- Browser session vẫn ephemeral, HttpOnly và SameSite=Strict.
-- Ctrl+C được xử lý như graceful foreground shutdown; AgentOS không còn phát Python KeyboardInterrupt traceback.
-- Không có database schema migration mới.
-- Không bổ sung MCP mutation surface.
-- Không tạo authority stack thứ hai cho Web UI.
+`repository-validate --role governed_project` validates installed metadata, generated identity, effective policy, and application-root ownership boundaries.

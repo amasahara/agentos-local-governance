@@ -1,0 +1,35 @@
+{
+  "release_policy": {
+    "version": "0.28.2",
+    "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
+    "identity_sources": [
+      "VERSION",
+      ".agents/agentos/__init__.py",
+      ".agents/distribution/metadata.json",
+      ".agents/config/generated/governance.effective.json"
+    ],
+    "current_docs": [
+      "README.md",
+      "README.en.md",
+      ".agents/docs/QUICKSTART.md",
+      ".agents/docs/NEW_PROJECT.md",
+      ".agents/docs/EXISTING_PROJECT.md",
+      ".agents/docs/WINDOWS.md",
+      ".agents/docs/REFERENCE.md"
+    ],
+    "current_docs_must_match_release": true,
+    "manifest_required": true,
+    "checksums_required": true,
+    "role_validation_required": [
+      "agentos_distribution",
+      "governed_project"
+    ]
+  },
+  "release_payload_policy": {
+    "tests_in_distribution_repository": true,
+    "tests_in_installed_release": false,
+    "historical_launchers_in_installed_release": false,
+    "historical_docs_in_installed_release": false,
+    "historical_tools_in_installed_release": false
+  }
+}

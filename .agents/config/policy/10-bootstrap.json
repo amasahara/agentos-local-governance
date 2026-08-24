@@ -1,0 +1,32 @@
+{
+  "project_bootstrap_policy": {
+    "new_project_command": "project-init",
+    "existing_project_command": "project-adopt",
+    "adoption_default_mode": "read_only_plan",
+    "apply_requires_human_confirmation": true,
+    "project_uuid": "generated_per_project",
+    "initial_purpose_status": "UNCONFIRMED",
+    "managed_root": ".agents",
+    "application_root_writes": [],
+    "installed_metadata_root": ".agents/release"
+  },
+  "installed_payload_policy": {
+    "include": [
+      ".agents/agentos",
+      ".agents/bin/current",
+      ".agents/schema",
+      ".agents/config/policy",
+      ".agents/docs/current"
+    ],
+    "exclude": [
+      ".agents/tests",
+      ".agents/bin/historical",
+      ".agents/docs/historical",
+      ".agents/config/historical",
+      "tools/release_history",
+      "README.md",
+      "VERSION",
+      "huong_dan.md"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "repository_role": "agentos_distribution",
+  "agentos_version": "0.28.2",
+  "schema_version": 61,
+  "payload_root": ".agents",
+  "installed_metadata_root": ".agents/release",
+  "project_identity_policy": "generated_by_project_init_or_project_adopt",
+  "copies_application_readme": false,
+  "copies_application_version": false,
+  "includes_release_tests": false
+}

@@ -264,6 +264,23 @@ def _core_accepts_task_id(command: str) -> bool:
     return bool(parser and "--task-id" in parser._option_string_actions)
 
 
+def _run_tests_with_active_python(root: Path, path: str) -> dict[str, Any]:
+    """Run pytest with the interpreter that launched the unified CLI runtime."""
+    env = {**os.environ, "PYTHONPATH": str(root / ".agents")}
+    proc = core_cli.subprocess.run(
+        [sys.executable, "-m", "pytest", path, "-q"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        env=env,
+    )
+    return {
+        "ok": proc.returncode == 0,
+        "exit_code": proc.returncode,
+        "stdout": proc.stdout,
+        "stderr": proc.stderr,
+    }
+
 def _dispatch_special(command: str, root: Path, args: list[str]) -> int:
     """Dispatch current-release utility commands in-process."""
     if command == "release-integrity-check":
@@ -335,6 +352,8 @@ def main(argv: list[str] | None = None) -> int:
             return _dispatch_special(command, root, command_args)
 
         if handler == "core":
+            if command == "run-tests":
+                core_cli._run_tests = _run_tests_with_active_python
             forwarded = ["--root", str(root)]
             if session_id:
                 forwarded += ["--session-id", session_id]

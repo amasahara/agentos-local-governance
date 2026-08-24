@@ -1,0 +1,18 @@
+{
+  "version": "0.28.2",
+  "schema_version": 61,
+  "repository_policy": {
+    "roles": [
+      "agentos_distribution",
+      "governed_project"
+    ],
+    "authoritative_distribution_metadata": ".agents/distribution/metadata.json",
+    "installed_metadata_root": ".agents/release",
+    "application_root_metadata_owned_by_agentos": false
+  },
+  "runtime_policy": {
+    "cli_entrypoint": "agentos.cli_runtime",
+    "mcp_entrypoint": "agentos.mcp_runtime",
+    "historical_version_forwarding": false
+  }
+}

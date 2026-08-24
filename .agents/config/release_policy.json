@@ -1,26 +1,32 @@
 {
-  "version": "0.28.1",
+  "version": "0.28.2",
   "documentation_policy": {
     "current_release_identity_files": [
-      ".agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md"
+      "README.md",
+      "README.en.md",
+      "RELEASE_NOTES.md"
     ],
-    "current_release_name": "Optional Local Web Control Plane",
+    "current_release_name": "Project Bootstrap & Repository Normalization",
     "current_schema": 61,
     "current_schema_files": [
-      ".agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md"
+      "README.md",
+      "README.en.md",
+      "RELEASE_NOTES.md"
     ],
-    "current_upgrade_guide": ".agents/docs/INSTALL_LATEST_RELEASE.md",
+    "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
     "current_version_files": [
-      ".agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md"
+      "README.md",
+      "README.en.md",
+      "RELEASE_NOTES.md"
     ],
     "local_link_check_files": [
       "README.md",
-      "README.vi.md",
       "README.en.md",
-      ".agents/docs/INSTALL_LATEST_RELEASE.md",
-      ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md",
-      ".agents/docs/ARCHITECTURE_AGENT_COMMAND_CENTER_V0280.md",
-      ".agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md"
+      ".agents/docs/QUICKSTART.md",
+      ".agents/docs/NEW_PROJECT.md",
+      ".agents/docs/EXISTING_PROJECT.md",
+      ".agents/docs/WINDOWS.md",
+      ".agents/docs/REFERENCE.md"
     ]
   },
   "governed_skill_contract_policy": {
@@ -93,7 +99,26 @@
     "project_owned_workflows": true,
     "project_owned_source": true,
     "release_payload_excludes_project_owned_content": true,
-    "update_mode": "replace_agentos_managed_distribution"
+    "update_mode": "replace_agentos_managed_distribution",
+    "installer_commands": [
+      "project-init",
+      "project-adopt"
+    ],
+    "distribution_metadata": ".agents/distribution/metadata.json",
+    "installed_metadata_root": ".agents/release",
+    "generated_project_identity": true,
+    "initial_purpose_status": "UNCONFIRMED",
+    "application_root_metadata_preserved": true,
+    "installed_payload_excludes": [
+      "README.md",
+      "README.en.md",
+      "VERSION",
+      "huong_dan.md",
+      ".agents/tests",
+      "historical launchers",
+      "historical docs",
+      "release-maintenance tools"
+    ]
   },
   "update_preservation_policy": {
     "mode": "download_latest_full_release",

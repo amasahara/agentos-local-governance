@@ -1,3 +1,10 @@
+## v0.28.2 — Project Bootstrap & Repository Normalization
+- Added no new security feature; normalized repository bootstrap and release payload.
+- Separated authoritative distribution metadata from installed-project metadata.
+- Added `project-init` and `project-adopt` with generated project UUID and `UNCONFIRMED` purpose.
+- Excluded AgentOS root docs, release tests, historical docs, historical launchers, and historical tools from the current installed payload.
+- Added modular policy sources, deterministic effective-policy generation, and role-aware repository validation.
+- Release is 0.28.2; database schema remains 61.
 ## v0.28.1 — Optional Local Web Control Plane
 - Added an opt-in, foreground, loopback-only local Web Control Plane on the v0.28.0 Command Center Snapshot.
 - Added one-time fragment bootstrap plus ephemeral HttpOnly/SameSite browser sessions with Host/Origin validation.

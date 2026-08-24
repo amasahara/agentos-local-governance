@@ -760,8 +760,8 @@
     },
     {
       "path": ".agents/bin/install.cmd",
-      "size": 1591,
-      "sha256": "3cb304c370f90fad6a2828c2917e5e4f82c1ebd028ccb9a72bc56d7c61ec3dd7"
+      "size": 1592,
+      "sha256": "8de50deb6c11554286a6875cc4d7779ada21b8459970b799f038c0f1583c2527"
     },
     {
       "path": ".agents/bin/install.sh",

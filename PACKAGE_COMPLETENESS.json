@@ -2,7 +2,7 @@
   "release": "0.28.2",
   "kind": "agentos_distribution_repository",
   "schema": 61,
-  "authoritative_file_count": 308,
+  "authoritative_file_count": 299,
   "required_top_level": [
     "VERSION",
     "AGENTS.md",

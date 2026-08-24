@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.28.2 — Project Bootstrap & Repository Normalization
+
+- Separated distribution metadata from installed-project metadata and introduced role-aware repository validation.
+- Replaced the legacy installer flow with `project-init` and `project-adopt`.
+- Removed representative project identity and purpose from the distribution and kept AgentOS documentation out of application roots.
+- Normalized the current release payload by removing obsolete root benchmarks and superseded upgrade documents.
+- Redesigned README as a durable project overview, including the boundary between AgentOS and user-owned source layouts.
+- Made manifest generation compile and LF-normalize deterministic effective policy before hashing release artifacts.
+- Added a CI reproducibility gate for generated policy, package metadata, manifest, and checksums.
+- Added no new security feature; schema remains 61.
+
 ## v0.28.1 — Optional Local Web Control Plane
 - Added an opt-in, foreground, loopback-only local Web Control Plane on the v0.28.0 Command Center Snapshot.
 - Added one-time fragment bootstrap plus ephemeral HttpOnly/SameSite browser sessions with Host/Origin validation.
@@ -176,7 +187,7 @@
 
 ## 0.22.6 — Secret Resolver & Lineage Key Lifecycle
 
-- Added a static trusted secret-resolver registry for `env://`, `keychain://`, `vault://`, bounded `file-secret://`, and `secret://` aliases.
+- Added a static trusted secret-resolver registry for `env://`, `keychain://`, `vault://`, bounded `file-secret=[REDACTED], and `secret=[REDACTED] aliases.
 - Added provider identity/version/implementation-hash pins, capability-scoped operator approval, fail-closed dependency/provider handling, and memory-only credential resolution.
 - Removed production callback-injection authority and forbade governance-config dynamic `importlib module:function` resolver loading.
 - Routed read-only extraction, Controlled Target Insert, and reconciliation through the shared trusted resolver boundary.

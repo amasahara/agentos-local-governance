@@ -2,13 +2,14 @@
 File: .agents/agentos/release_integrity.py
 
 Purpose:
-    Verify that a release contains both the historical governance core and the
-    v0.20-v0.22 extension branch without silent degradation.
+    Verify the normalized current AgentOS distribution without requiring
+    superseded version-specific release artifacts.
 
 Responsibilities:
-    - Validate required core files and historical regression coverage.
+    - Validate current core files and required regression coverage.
     - Validate the central schema contract and migration continuity.
     - Detect dead compatibility launchers and committed runtime cache files.
+    - Exclude superseded version-specific artifacts from the current payload.
     - Produce deterministic machine-readable integrity findings.
 """
 from __future__ import annotations
@@ -73,10 +74,6 @@ RELEASE_FILES = (
     ".agents/tests/test_secret_lineage_v0226.py",
     ".agents/tests/test_unified_runtime_v0225.py",
     ".github/workflows/agentos-release-validation.yml",
-    "ADAPTIVE_TOKEN_BUDGET_BENCHMARK.json",
-    "CONTEXT_EXPANSION_EVALUATION_BENCHMARK.json",
-    "INDEX_INCREMENTAL_BENCHMARK_V0234.json",
-    "PERFORMANCE_BASELINE_V0233.json",
     "RELEASE_NOTES.md",
     "tools/build_manifest.py",
     "tools/repository_release_cleanup.py",
@@ -113,7 +110,6 @@ RELEASE_FILES = (
     ".agents/config/update_ownership.v0255.json",
     ".agents/config/update_ownership.v0260.json",
     ".agents/config/update_ownership.v0261.json",
-    "UPGRADE_FROM_0.25.1.md",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -345,20 +341,6 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             f"cannot validate schema bootstrap baseline: {exc}",
             ".agents/agentos/schema_bootstrap.py",
         ))
-    try:
-        from .performance_baseline import check_performance_baseline
-        baseline_result = check_performance_baseline(root)
-        for code in baseline_result.get("findings", []):
-            findings.append(_finding("performance_baseline_invalid", str(code), "PERFORMANCE_BASELINE_V0233.json"))
-    except Exception as exc:
-        findings.append(_finding("performance_baseline_unloadable", f"cannot validate performance baseline: {exc}", "PERFORMANCE_BASELINE_V0233.json"))
-    try:
-        from .incremental_index_benchmark import check_incremental_index_benchmark
-        index_benchmark = check_incremental_index_benchmark(root)
-        for code in index_benchmark.get("findings", []):
-            findings.append(_finding("incremental_index_benchmark_invalid", str(code), "INDEX_INCREMENTAL_BENCHMARK_V0234.json"))
-    except Exception as exc:
-        findings.append(_finding("incremental_index_benchmark_unloadable", f"cannot validate incremental index benchmark: {exc}", "INDEX_INCREMENTAL_BENCHMARK_V0234.json"))
     version = (root / "VERSION").read_text(encoding="utf-8").strip() if (root / "VERSION").exists() else None
     if not version:
         findings.append(_finding("version_missing", "VERSION must be non-empty", "VERSION"))
@@ -667,9 +649,6 @@ DOC_FILES = (
     ".agents/docs/OPTIONAL_LOCAL_WEB_CONTROL_PLANE_V0281.md",
     ".agents/docs/INSTALL_LATEST_RELEASE.md",
     "CHANGELOG.md",
-    "DATA_SUBJECT_RIGHTS.md",
-    "INDEX_INCREMENTAL_BENCHMARK_V0234.json",
-    "PERFORMANCE_BASELINE_V0233.json",
     "README.en.md",
     "README.md",
     "README.vi.md",
@@ -694,7 +673,6 @@ DOC_FILES = (
     ".agents/docs/UPGRADE_FROM_0.25.4.md",
     ".agents/docs/UPGRADE_FROM_0.25.5.md",
     ".agents/docs/UPGRADE_FROM_0.26.0.md",
-    "UPGRADE_FROM_0.25.1.md",
 )
 
 

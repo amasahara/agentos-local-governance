@@ -13,60 +13,54 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-
       - name: Show CI environment
         run: |
           python --version
           python -c "import sqlite3,sys,platform; print('sqlite',sqlite3.sqlite_version); print(platform.platform()); print(sys.executable)"
-
       - name: Install validation dependencies
         run: python -m pip install --upgrade pip pytest cryptography
-
       - name: Restore executable launcher bits
         run: |
           chmod +x .agents/bin/agentos .agents/bin/agentos-mcp .agents/bin/hooks/pre-commit
           chmod +x tools/*.py
-
       - name: Python compile
         run: python -m compileall -q .agents/agentos tools
-
       - name: Current release core validation
         env:
           PYTHONPATH: .agents
         run: python tools/validate_release.py . --skip-manifest
-
+      - name: Generated release artifacts are current
+        env:
+          PYTHONPATH: .agents
+        run: |
+          python tools/build_manifest.py .
+          git diff --exit-code -- .agents/config/generated/governance.effective.json PACKAGE_COMPLETENESS.json MANIFEST.json CHECKSUMS.sha256
       - name: Release byte diagnostics
         run: |
-          git ls-files --eol -- .gitattributes .agents/bin/agentos.cmd .agents/bin/agentos-mcp.cmd .agents/bin/install.cmd
-          wc -c .agents/bin/agentos.cmd .agents/bin/agentos-mcp.cmd .agents/bin/install.cmd
-          sha256sum .agents/bin/agentos.cmd .agents/bin/agentos-mcp.cmd .agents/bin/install.cmd
-
+          git ls-files --eol -- .gitattributes .agents/config/generated/governance.effective.json .agents/bin/agentos.cmd .agents/bin/agentos-mcp.cmd .agents/bin/install.cmd
+          wc -c .agents/config/generated/governance.effective.json .agents/bin/agentos.cmd .agents/bin/agentos-mcp.cmd .agents/bin/install.cmd
+          sha256sum .agents/config/generated/governance.effective.json .agents/bin/agentos.cmd .agents/bin/agentos-mcp.cmd .agents/bin/install.cmd
       - name: Manifest verification
         env:
           PYTHONPATH: .agents
         run: python tools/verify_manifest.py .
-
       - name: Runtime health
         env:
           PYTHONPATH: .agents
         run: .agents/bin/agentos runtime-health
-
       - name: Documentation checks
         env:
           PYTHONPATH: .agents
         run: |
           .agents/bin/agentos docs-check
           .agents/bin/agentos instruction-check
-
       - name: Full regression suite
         env:
           PYTHONPATH: .agents

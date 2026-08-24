@@ -291,7 +291,7 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
                 cache_hit = False
             with connect(root) as c:
                 row = c.execute("SELECT COALESCE(MAX(version),0) AS version FROM file_versions WHERE path=?", (logical_path,)).fetchone()
-        return True, {"content": content, "sha256": digest, "content_hash": digest, "version": row["version"], "cache_hit": cache_hit, "range_key": range_key, "workspace_bound": bool(binding)}
+        return True, {"content": content, "sha256": digest, "content_hash": digest, "version": row[0], "cache_hit": cache_hit, "range_key": range_key, "workspace_bound": bool(binding)}
     if capability == "filesystem.write":
         from .multi_agent_workspace import workspace_binding, workspace_atomic_write, workspace_execution_root
         binding = workspace_binding(root, task_id, session_id)

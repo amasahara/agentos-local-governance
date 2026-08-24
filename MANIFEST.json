@@ -1215,8 +1215,8 @@
     },
     {
       "path": ".agents/tests/test_agentos.py",
-      "size": 39227,
-      "sha256": "5ec4c5f12876cfbba4ad96271026c91b4bcb6996db6e514088913392356e63f2"
+      "size": 39235,
+      "sha256": "3cb63b536c562b55b88834eb36cfba3780503a97f8ec4cb4727c185cfdff9ec3"
     },
     {
       "path": ".agents/tests/test_architecture_agent_command_center_v0280.py",
@@ -1310,8 +1310,8 @@
     },
     {
       "path": ".agents/tests/test_governance_enforcement_v0224.py",
-      "size": 9581,
-      "sha256": "45f134eb3d056a2393296f1823a45f17e72d89a9d8170cba0fd99e5a39e9d2d6"
+      "size": 9589,
+      "sha256": "6fd0f00d724da0a185b1c27ba7c7dd6fd56a0a16915dc3b4956c77ee11754379"
     },
     {
       "path": ".agents/tests/test_governed_skill_contract_v0270.py",
@@ -1390,8 +1390,8 @@
     },
     {
       "path": ".agents/tests/test_schema_bootstrap_v0250.py",
-      "size": 10418,
-      "sha256": "5ad5545a0121c7cb1b1afb510866468914121439a6f3117b66acb26e85d6a8ba"
+      "size": 10703,
+      "sha256": "d18b50434ca50dee873b1a66d2abc134551f4e31516cae2c91f8280730bb873e"
     },
     {
       "path": ".agents/tests/test_schema_mapping_v0211.py",

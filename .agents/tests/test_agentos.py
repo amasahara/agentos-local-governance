@@ -26,7 +26,7 @@ from agentos.workflow import complete_automated_step, current_task_id, mark_step
 
 def project(tmp_path: Path) -> Path:
     root = tmp_path / "project"
-    shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns("runtime", "agentos.db", "__pycache__", ".pytest_cache"))
+    shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns(".git", "runtime", "agentos.db", "__pycache__", ".pytest_cache"))
     (root / "src").mkdir(exist_ok=True)
     return root
 

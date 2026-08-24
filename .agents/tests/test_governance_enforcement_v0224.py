@@ -36,7 +36,7 @@ def _agentos_args(root: Path, *args: str) -> list[str]:
 
 def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / "project"
-    shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns("runtime", "agentos.db", "__pycache__", ".pytest_cache", "MANIFEST.json", "CHECKSUMS.sha256"))
+    shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns(".git", "runtime", "agentos.db", "__pycache__", ".pytest_cache", "MANIFEST.json", "CHECKSUMS.sha256"))
     monkeypatch.setenv("AGENTOS_AUDIT_HOME", str(tmp_path / "audit"))
     monkeypatch.setenv("AGENTOS_AUDIT_SINK", "jsonl")
     return root

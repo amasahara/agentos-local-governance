@@ -8,7 +8,6 @@ Purpose:
 from __future__ import annotations
 
 import json
-import shutil
 import sqlite3
 from pathlib import Path
 
@@ -43,15 +42,6 @@ def _replay_to(connection: sqlite3.Connection, version: int) -> None:
             (number,),
         )
     connection.commit()
-
-
-def _copy_identity_config(source_root: Path, target_root: Path) -> None:
-    config = target_root / ".agents/config"
-    config.mkdir(parents=True, exist_ok=True)
-    for name in ("project.id", "project.purpose.json"):
-        src = source_root / ".agents/config" / name
-        if src.is_file():
-            shutil.copy2(src, config / name)
 
 
 def _file_connection(root: Path) -> sqlite3.Connection:
@@ -128,13 +118,11 @@ def test_bootstrap_plus_post_baseline_migrations_matches_full_replay_schema() ->
         replayed.close()
 
 
-def test_file_backed_bootstrap_preserves_project_identity_semantics(
+def test_file_backed_bootstrap_preserves_fresh_project_identity_semantics(
     tmp_path: Path,
 ) -> None:
     legacy_root = tmp_path / "legacy"
     bootstrap_root = tmp_path / "bootstrap"
-    _copy_identity_config(ROOT, legacy_root)
-    _copy_identity_config(ROOT, bootstrap_root)
 
     legacy = _file_connection(legacy_root)
     bootstrapped = _file_connection(bootstrap_root)
@@ -161,7 +149,25 @@ def test_file_backed_bootstrap_preserves_project_identity_semantics(
         assert report["bootstrap"]["historical_migrations_invoked"] == 0
         assert legacy_identity is not None
         assert bootstrap_identity is not None
-        assert tuple(bootstrap_identity) == tuple(legacy_identity)
+        # v0.28.2 distributions intentionally carry no project identity.
+        # Independent fresh project roots must therefore receive distinct UUIDs,
+        # while both migration paths must preserve the same identity semantics.
+        assert bootstrap_identity["project_uuid"]
+        assert legacy_identity["project_uuid"]
+        assert (
+            bootstrap_identity["project_uuid"]
+            != legacy_identity["project_uuid"]
+        )
+        assert (
+            bootstrap_identity["identity_version"]
+            == legacy_identity["identity_version"]
+        )
+        assert (
+            bootstrap_identity["created_by"]
+            == legacy_identity["created_by"]
+        )
+        assert bootstrap_identity["identity_hash"]
+        assert legacy_identity["identity_hash"]
 
         legacy_purpose = legacy.execute(
             "SELECT project_uuid,purpose_hash FROM project_purpose WHERE singleton=1"

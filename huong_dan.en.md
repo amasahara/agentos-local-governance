@@ -1,28 +1,67 @@
-# AgentOS v0.27.1 Guide
+# AgentOS v0.28.2 User Guide
 
-Release: **v0.27.1 — Architecture-Aware Skill Selection & Evaluation**
-Database schema: **59**
+Current release: **v0.28.2 — Project Bootstrap & Repository Normalization**  
+Database schema: **61**
 
-Run explicit advisory selection only after the task has an active architecture-aware plan:
+AgentOS is a local-first governance layer between a user's repository and coding agents or LLMs. It does not replace the application's source layout: project code remains in the structure chosen by the project (`src/`, `app/`, `packages/`, or an existing layout), while the governance runtime lives under `.agents/`.
 
-```bash
-agentos skill-selection-run --task-id T-123
-agentos skill-selection-status --task-id T-123
-agentos skill-selection-candidates --run-id 1
+## Start a new project
+
+From the AgentOS distribution, run:
+
+```powershell
+.\.agents\bin\agentos.cmd project-init --project-root D:\path\to\new-project
 ```
 
-Provide an explicit tool inventory when a contract requires tools:
+The command creates governed-project metadata and installs only the required project payload. Distribution README, VERSION, and AgentOS guides are not copied into the application root.
 
-```bash
-agentos skill-selection-run --task-id T-123 --available-tools '["pytest","ruff"]'
+## Adopt an existing project
+
+Generate a read-only adoption plan first:
+
+```powershell
+.\.agents\bin\agentos.cmd project-adopt --project-root D:\path\to\existing-project
 ```
 
-After a task outcome exists:
+Review the plan and resolve conflicts before applying it with explicit human confirmation:
 
-```bash
-agentos skill-evaluation-run --selection-run-id 1
+```powershell
+.\.agents\bin\agentos.cmd project-adopt --project-root D:\path\to\existing-project --apply --human-confirmed
 ```
 
-Selection/evaluation never grants authority or mutates skill lifecycle automatically.
+AgentOS governs the existing source layout in place. The distribution does not need a representative root `src/` directory.
 
-Distribution uses the latest full release with **no updater script**. Preserve project-owned user skills, workflows, source, architecture working copies, `governance.local.json`, `.agents/state/**`, and `.agents/runtime/**`.
+## Metadata and policy
+
+- Distribution metadata: `.agents/distribution/metadata.json`
+- Installed-project identity: `.agents/project/identity.json`
+- Installed release metadata: `.agents/release/`
+- Policy baseline and modules: `.agents/config/governance.json` with `.agents/config/policy/`
+- Deterministic effective policy: `.agents/config/generated/governance.effective.json`
+
+Do not edit the effective policy directly. Change the appropriate policy source and regenerate the artifact.
+
+## Documentation by journey
+
+- Quick start: `.agents/docs/QUICKSTART.md`
+- New project: `.agents/docs/NEW_PROJECT.md`
+- Existing project: `.agents/docs/EXISTING_PROJECT.md`
+- Windows: `.agents/docs/WINDOWS.md`
+- Reference: `.agents/docs/REFERENCE.md`
+
+## Validate the distribution
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path .\.agents).Path
+python tools\build_manifest.py .
+python tools\verify_manifest.py .
+python -m pytest -q .agents\tests -rs
+python tools\validate_release.py .
+git diff --check
+```
+
+Run `tools/build_manifest.py` after any release-payload change. `tools/verify_manifest.py` must report `ok: true` before release.
+
+## v0.28.2 scope
+
+v0.28.2 normalizes bootstrap, repository layout, metadata, policy, and current documentation. It adds no new security feature. Historical changes belong in `CHANGELOG.md`; `README.en.md` remains the durable project overview.

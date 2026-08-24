@@ -760,13 +760,13 @@
     },
     {
       "path": ".agents/bin/install.cmd",
-      "size": 614,
-      "sha256": "1019bbbfffdf0db18274e5b0b75d3d5c13d758c33d669a66272b999587fc676b"
+      "size": 1591,
+      "sha256": "3cb304c370f90fad6a2828c2917e5e4f82c1ebd028ccb9a72bc56d7c61ec3dd7"
     },
     {
       "path": ".agents/bin/install.sh",
-      "size": 1254,
-      "sha256": "6b09800ed6f8b3d16a9cae1f7527ec5f75d259ae9e0dc5fad60812f80c564cf9"
+      "size": 1142,
+      "sha256": "df6911e02b187a2a2d597fdb31ada8d48b414a3c8a70b1c44f9c083d1a8173a0"
     },
     {
       "path": ".agents/config/agentos_distribution.lock.json",
@@ -1465,18 +1465,18 @@
     },
     {
       "path": "huong_dan.en.md",
-      "size": 933,
-      "sha256": "a94c2d2f2f89fccefd838e833ee5669abf55d3ee3265272ea381ddd08ae9aa8f"
+      "size": 2684,
+      "sha256": "b5718e475ab901cc53d7075f93ef8998d6b9e65c78d4dd29c22fd8b3401fb3a8"
     },
     {
       "path": "huong_dan.md",
-      "size": 834,
-      "sha256": "7d53b7a3bdb6d724dc9acb36704f624bf99fd30563487501ecb6851a050e816d"
+      "size": 3013,
+      "sha256": "f53ca1b7381d1aab54856b6ce57c76e3476cd00db0dc46921b7ae593f3a90e89"
     },
     {
       "path": "huong_dan.vi.md",
-      "size": 1268,
-      "sha256": "c3a14070b0124b4b0c2b58943e371e2b20089610a95a1ccbf9c724501c9f3ef9"
+      "size": 2919,
+      "sha256": "10d2de5d6ef00b8c1ea58ec991988ee9b69b56f42e5ec3c8ad87ef0dc520d0de"
     },
     {
       "path": "tools/build_manifest.py",

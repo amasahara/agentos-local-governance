@@ -11,6 +11,8 @@ import os
 from pathlib import Path
 import subprocess
 
+import pytest
+
 from agentos.cli_runtime import (
     CONTROL_PLANE_COMMANDS,
     DUAL_PLANE_COMMANDS,
@@ -400,4 +402,27 @@ def test_mixed_modules_use_admin_help_identity() -> None:
         assert (
             f"usage: agentos-admin {privileged_command}"
             in cp.stdout
+        )
+
+def test_posix_launchers_are_executable() -> None:
+    if os.name == "nt":
+        pytest.skip("POSIX executable-bit contract")
+
+    launchers = (
+        ".agents/bin/agentos",
+        ".agents/bin/agentos-admin",
+        ".agents/bin/agentos-audit-daemon",
+        ".agents/bin/agentos-gatewayd",
+        ".agents/bin/agentos-mcp",
+        ".agents/bin/agentosctl",
+        ".agents/bin/hooks/pre-commit",
+        ".agents/bin/install-git-hooks.sh",
+        ".agents/bin/install.sh",
+    )
+
+    for rel in launchers:
+        path = ROOT / rel
+        assert path.is_file(), rel
+        assert os.access(path, os.X_OK), (
+            f"POSIX launcher is not executable: {rel}"
         )

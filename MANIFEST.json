@@ -1370,8 +1370,8 @@
     },
     {
       "path": ".agents/tests/test_privileged_control_plane_v0283.py",
-      "size": 9707,
-      "sha256": "551b294dd438c1848ea7238c7e2646e50d5bba85693395a8fdb96b00674386ca"
+      "size": 10410,
+      "sha256": "863328b6a89eb7241052b523696ad59e3ef59af8e0c831c6461dce6a26d720b0"
     },
     {
       "path": ".agents/tests/test_project_consolidation_v0202.py",

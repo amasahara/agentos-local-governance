@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import sys
@@ -37,6 +38,8 @@ REPOSITORY_ROLES = ("agentos_distribution", "governed_project")
 CURRENT_LAUNCHERS = {
     "agentos",
     "agentos.cmd",
+    "agentos-admin",
+    "agentos-admin.cmd",
     "agentos-mcp",
     "agentos-mcp.cmd",
     "agentos-gatewayd",
@@ -491,7 +494,12 @@ def build_parser() -> argparse.ArgumentParser:
     Side effects:
         None.
     """
-    parser = argparse.ArgumentParser(prog="agentos")
+    program = (
+        "agentos-admin"
+        if os.environ.get("AGENTOS_EXECUTION_PLANE") == "control"
+        else "agentos"
+    )
+    parser = argparse.ArgumentParser(prog=program)
     parser.add_argument("--root")
     sub = parser.add_subparsers(dest="command", required=True)
 

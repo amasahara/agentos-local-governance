@@ -10,6 +10,8 @@ Responsibilities:
     - Require task/session context for worker-owned and integration-apply operations.
 """
 from __future__ import annotations
+
+from .cli_identity import cli_program
 import argparse, json, os
 from pathlib import Path
 from typing import Any
@@ -37,7 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     Returns:
         Argument parser containing exactly the isolated-workspace/integration node commands.
     """
-    parser = argparse.ArgumentParser(prog="agentos")
+    parser = argparse.ArgumentParser(prog=cli_program())
     parser.add_argument("--root")
     sub = parser.add_subparsers(dest="command", required=True)
     p=sub.add_parser("multi-agent-workspace-provision"); p.add_argument("--supervisor-id",type=int,required=True); p.add_argument("--worker-key",required=True); p.add_argument("--created-by",required=True)

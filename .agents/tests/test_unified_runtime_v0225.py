@@ -36,8 +36,37 @@ def test_unified_cli_registry_imports_all_commands_without_duplicates() -> None:
 
 def test_privileged_extension_commands_remain_context_bound(capsys) -> None:
     assert "db-target-insert-execute" in PRIVILEGED_COMMANDS
-    code = cli_main(["--root", str(ROOT), "db-target-insert-execute", "--run-id", "1"])
+
+    # v0.28.3 normal agent plane must reject privileged dispatch
+    # before governed-operation context is considered.
+    code = cli_main(
+        [
+            "--root",
+            str(ROOT),
+            "db-target-insert-execute",
+            "--run-id",
+            "1",
+        ]
+    )
     captured = capsys.readouterr()
+
+    assert code == 2
+    assert "requires privileged control plane" in captured.err
+
+    # The privileged control plane still preserves the historical
+    # task/session context requirement.
+    code = cli_main(
+        [
+            "--root",
+            str(ROOT),
+            "db-target-insert-execute",
+            "--run-id",
+            "1",
+        ],
+        plane="control",
+    )
+    captured = capsys.readouterr()
+
     assert code == 2
     assert "requires --task-id and --session-id" in captured.err
 
@@ -53,6 +82,8 @@ def test_posix_and_windows_wrappers_share_same_runtimes() -> None:
     expected = {
         ".agents/bin/agentos": "agentos.cli_runtime",
         ".agents/bin/agentos.cmd": "agentos.cli_runtime",
+        ".agents/bin/agentos-admin": "agentos.privileged_control_plane",
+        ".agents/bin/agentos-admin.cmd": "agentos.privileged_control_plane",
         ".agents/bin/agentos-mcp": "agentos.mcp_runtime",
         ".agents/bin/agentos-mcp.cmd": "agentos.mcp_runtime",
     }

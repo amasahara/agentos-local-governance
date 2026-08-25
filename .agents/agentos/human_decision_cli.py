@@ -4,6 +4,8 @@ Purpose:
     Expose structured Grill Me and human decision gates through unified CLI.
 """
 from __future__ import annotations
+
+from .cli_identity import cli_program
 import argparse,json,os
 from pathlib import Path
 from typing import Any
@@ -23,7 +25,7 @@ def build_parser()->argparse.ArgumentParser:
     Returns:
         Configured argparse parser.
     """
-    p=argparse.ArgumentParser(prog="agentos"); p.add_argument("--root"); s=p.add_subparsers(dest="command",required=True)
+    p=argparse.ArgumentParser(prog=cli_program()); p.add_argument("--root"); s=p.add_subparsers(dest="command",required=True)
     q=s.add_parser("clarity-assess"); q.add_argument("--task-id",default=os.environ.get("AGENTOS_TASK_ID")); q.add_argument("--assessed-by",required=True); q.add_argument("--objective-understood",action="store_true"); q.add_argument("--scope-understood",action="store_true"); q.add_argument("--constraints-understood",action="store_true"); q.add_argument("--acceptance-understood",action="store_true"); q.add_argument("--assumption",action="append",default=[]); q.add_argument("--ambiguity",action="append",default=[]); q.add_argument("--decision-required",action="append",default=[])
     q=s.add_parser("grill-me"); q.add_argument("--task-id",default=os.environ.get("AGENTOS_TASK_ID"))
     q=s.add_parser("decision-list"); q.add_argument("--task-id",default=os.environ.get("AGENTOS_TASK_ID"))

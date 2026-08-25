@@ -1,75 +1,41 @@
-# AgentOS Local Governance v0.28.2 — Project Bootstrap & Repository Normalization
+# AgentOS Local Governance v0.28.3 — Privileged Control Plane Separation
 
-v0.28.2 cleans and normalizes the repository and project bootstrap foundation. It adds no new security feature.
+v0.28.3 separates normal agent execution from privileged human/operator authority.
 
 ## Release identity
 
-- AgentOS version: **0.28.2**
+- AgentOS version: **0.28.3**
 - Database schema: **61**
-- Distribution role: `agentos_distribution`
-- Installed project role: `governed_project`
-- Distribution metadata authority: `.agents/distribution/metadata.json`
-- Installed metadata root: `.agents/release/`
+- MCP privileged mutation authority: **none**
+- Web mutation authority: **none**
 
-Release coherence is checked against the current distribution metadata, package version, schema source, current README files, release notes, manifest, and checksums.
+## Main changes
 
-## Project lifecycle
+- Added dedicated `agentos-admin` launchers for Windows and POSIX.
+- Removed privileged command dispatch from the normal `agentos` execution plane.
+- Added explicit agent-plane and privileged-plane registries.
+- Added fail-closed command-surface separation.
+- Added argument-level dual-plane enforcement for `project-adopt` and `architecture-init`.
+- `project-adopt` remains read-only through `agentos`; `--apply` requires `agentos-admin`.
+- `architecture-init --overwrite` requires `agentos-admin`.
+- Human/operator authority commands are isolated from the agent execution plane.
+- Installed project payloads include `agentos-admin` and `agentos-admin.cmd`.
+- `commands-list` exposes only the normal agent execution surface.
 
-The legacy installer flow is replaced by two explicit commands:
+## Preserved governance
 
-- `project-init` initializes a new governed project.
-- `project-adopt` produces a read-only plan for an existing project and mutates only with `--apply --human-confirmed`.
+Existing governed mutation enforcement remains authoritative:
 
-Every installed project receives a newly generated project UUID. Business domain and purpose begin as `UNCONFIRMED`; the distribution contains no representative Hospital Core purpose.
+task/session context → approval → owner session → workflow approval → baseline/drift checks → one-time execution token → signed audit.
 
-## Ownership boundary
+MCP remains without privileged mutation authority.
 
-AgentOS writes only its managed payload under the application `.agents/` directory. It does not copy or overwrite application-root:
+The optional Web Control Plane remains read-only and cannot execute privileged CLI operations.
 
-- `README.md` or `README.en.md`;
-- `VERSION`;
-- `huong_dan.md`;
-- application source or tests.
+## Deliberately deferred
 
-Distribution metadata and installed-project metadata are separate documents with separate roles.
+v0.28.3 establishes structural authority separation only.
 
-## Installed payload
+It does not claim hard anti-bypass, direct-module-call prevention, tool exclusivity, or enforcement attestation.
 
-The current installed payload contains:
-
-- unified runtime modules;
-- current cross-platform launchers;
-- current schema;
-- current governance baseline and modular policy sources;
-- deterministic generated effective policy;
-- current user-journey documentation.
-
-It excludes repository tests, historical launchers, historical documentation, update utilities, release-maintenance tools, runtime caches, and representative application identity.
-
-## Documentation
-
-Current documentation is organized as:
-
-- `.agents/docs/QUICKSTART.md`
-- `.agents/docs/NEW_PROJECT.md`
-- `.agents/docs/EXISTING_PROJECT.md`
-- `.agents/docs/WINDOWS.md`
-- `.agents/docs/REFERENCE.md`
-
-Historical release details remain in `CHANGELOG.md`, Git tags, and archived release artifacts.
-
-## Policy compilation
-
-The effective policy is generated deterministically from:
-
-1. the current governance baseline;
-2. sorted modular fragments under `.agents/config/policy/`;
-3. the optional project-owned `governance.local.json`.
-
-The generated output is `.agents/config/generated/governance.effective.json`. Source paths and SHA-256 hashes are recorded with the compilation result.
-
-## Validation
-
-`repository-validate --role agentos_distribution` validates distribution identity and metadata.
-
-`repository-validate --role governed_project` validates installed metadata, generated identity, effective policy, and application-root ownership boundaries.
+Those capabilities are reserved for **v0.28.4 — Tool Exclusivity & Enforcement Attestation**.

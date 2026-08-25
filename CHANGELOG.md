@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.28.3 — Privileged Control Plane Separation
+
+- Added separate `agentos` and `agentos-admin` execution planes.
+- Removed privileged command dispatch from the normal agent plane.
+- Isolated command discovery to the agent execution surface.
+- Added explicit control-plane classification and dual-plane argument enforcement.
+- Preserved MCP/Web no-mutation authority.
+- Preserved existing governed mutation and signed-audit gates.
+- Added Windows and POSIX `agentos-admin` launchers to installed payloads.
+- Database schema remains 61.
+- Tool exclusivity and anti-bypass attestation remain reserved for v0.28.4.
+
+
 ## v0.28.2 — Project Bootstrap & Repository Normalization
 
 - Separated distribution metadata from installed-project metadata and introduced role-aware repository validation.

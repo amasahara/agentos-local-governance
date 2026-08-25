@@ -1,3 +1,13 @@
+## v0.28.3 — Privileged Control Plane Separation
+
+- Separated normal agent execution from human/operator privileged authority.
+- Added `agentos-admin` as the privileged control-plane launcher.
+- Agent discovery and execution no longer expose privileged commands.
+- `project-adopt` and `architecture-init` use argument-level dual-plane enforcement.
+- MCP and Web retain no privileged mutation authority.
+- Existing task/session, approval, baseline/drift, token, and signed-audit enforcement remains authoritative.
+- Release is 0.28.3; database schema remains 61.
+
 ## v0.28.2 — Project Bootstrap & Repository Normalization
 - Added no new security feature; normalized repository bootstrap and release payload.
 - Separated authoritative distribution metadata from installed-project metadata.

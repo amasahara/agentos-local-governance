@@ -3,6 +3,8 @@ Purpose: Local/operator CLI for v0.27.2 Multi-Agent Worker Supervisor.
 """
 from __future__ import annotations
 
+from .cli_identity import cli_program
+
 import argparse
 import json
 import os
@@ -39,7 +41,7 @@ def _caller() -> tuple[str, str]:
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the unified-runtime-compatible v0.27.2 feature parser."""
-    parser = argparse.ArgumentParser(prog="agentos")
+    parser = argparse.ArgumentParser(prog=cli_program())
     parser.add_argument("--root")
     sub = parser.add_subparsers(dest="command", required=True)
 

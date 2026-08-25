@@ -51,7 +51,7 @@ A governed task preserves the original request, detects the environment, builds 
 New project:
 
 ```powershell
-.\.agents\bin\agentos.cmd project-init --target D:\path\to\project
+.\.agents\bin\agentos-admin.cmd project-init --target D:\path\to\project
 ```
 
 Existing project, generate a read-only adoption plan first:
@@ -63,7 +63,7 @@ Existing project, generate a read-only adoption plan first:
 After human review:
 
 ```powershell
-.\.agents\bin\agentos.cmd project-adopt --target D:\path\to\project --apply --human-confirmed
+.\.agents\bin\agentos-admin.cmd project-adopt --target D:\path\to\project --apply --human-confirmed
 ```
 
 Follow the guide for your journey:
@@ -93,8 +93,8 @@ Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement
 
 ## Current release
 
-**v0.28.2 — Project Bootstrap & Repository Normalization** · schema **61**
+**v0.28.3 — Privileged Control Plane Separation** · schema **61**
 
-v0.28.2 adds no new security feature. It normalizes repository bootstrap and distribution: separate distribution/installed metadata, `project-init` and `project-adopt`, no representative project identity or purpose, no AgentOS docs copied to application root, deterministic effective policy generation, and role-aware validation for `agentos_distribution` and `governed_project`.
+v0.28.3 separates the Agent Execution Plane (`agentos`) from the Privileged Control Plane (`agentos-admin`). The agent plane can no longer dispatch privileged commands; MCP and Web retain no privileged mutation authority. Schema remains 61; tool exclusivity and anti-bypass attestation are reserved for v0.28.4.
 
 See [RELEASE_NOTES.md](RELEASE_NOTES.md) for details.

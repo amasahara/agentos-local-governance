@@ -11,7 +11,7 @@ Plan kiểm tra Git, README, VERSION, tests và source roots mà không sửa pr
 Chỉ apply sau khi human review:
 
 ```text
-agentos project-adopt --target <project-root> --apply --human-confirmed
+agentos-admin project-adopt --target <project-root> --apply --human-confirmed
 ```
 
 Apply chỉ sở hữu `.agents/`; source, tests, README và VERSION của application được giữ nguyên.

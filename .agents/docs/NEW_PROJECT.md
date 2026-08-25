@@ -3,7 +3,7 @@
 Khởi tạo AgentOS trong một application project mới:
 
 ```text
-agentos project-init --target <project-root>
+agentos-admin project-init --target <project-root>
 ```
 
 Kết quả:

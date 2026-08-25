@@ -11,16 +11,30 @@
 - Installed AgentOS: `.agents/release/VERSION` và `.agents/release/install-manifest.json`
 - Application: root `README.md` và root `VERSION`
 
-## Current commands
+## Current execution planes
 
-- `project-init`
-- `project-adopt`
-- `repository-validate --role agentos_distribution`
-- `repository-validate --role governed_project`
-- `policy-compile`
-- `runtime-health`
-- `release-integrity-check`
-- `manifest-verify`
+Agent execution plane — `agentos`:
+
+- `project-adopt` performs read-only adoption scanning;
+- `repository-validate` validates repository contracts;
+- `policy-compile` materializes deterministic effective policy;
+- `runtime-health` reports execution-plane health;
+- normal governed agent commands remain on this plane.
+
+Privileged control plane — `agentos-admin`:
+
+- `project-init`;
+- `project-adopt --apply`;
+- human/operator approval and activation commands;
+- project identity and primary-project authority;
+- privileged domain mutations.
+
+Dual-plane commands are argument-gated:
+
+- `project-adopt`;
+- `architecture-init`.
+
+MCP and Web Control Plane do not expose privileged mutation authority.
 
 ## Policy
 

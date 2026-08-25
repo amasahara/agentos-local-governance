@@ -37,6 +37,8 @@ CORE_FILES = (
     ".agents/agentos/core.py",
     ".agents/agentos/cli.py",
     ".agents/agentos/cli_runtime.py",
+    ".agents/agentos/cli_identity.py",
+    ".agents/agentos/privileged_control_plane.py",
     ".agents/agentos/db.py",
     ".agents/agentos/policy.py",
     ".agents/agentos/workflow.py",
@@ -54,6 +56,8 @@ CORE_FILES = (
     ".agents/bin/agentos",
     ".agents/bin/agentos-mcp",
     ".agents/bin/agentos.cmd",
+    ".agents/bin/agentos-admin",
+    ".agents/bin/agentos-admin.cmd",
     ".agents/bin/agentos-mcp.cmd",
 )
 RELEASE_FILES = (
@@ -73,6 +77,7 @@ RELEASE_FILES = (
     ".agents/tests/test_release_hardening_v0242.py",
     ".agents/tests/test_secret_lineage_v0226.py",
     ".agents/tests/test_unified_runtime_v0225.py",
+    ".agents/tests/test_privileged_control_plane_v0283.py",
     ".github/workflows/agentos-release-validation.yml",
     "RELEASE_NOTES.md",
     "tools/build_manifest.py",
@@ -386,6 +391,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 required_policy_sections.add("multi_agent_supervisor_policy")
             if release_version >= (0, 27, 3):
                 required_policy_sections.add("isolated_workspace_integration_policy")
+            if release_version >= (0, 28, 3):
+                required_policy_sections.add("privileged_control_plane_policy")
             missing = sorted(required_policy_sections - set(policy))
             if missing:
                 findings.append(_finding("missing_policy_sections", f"missing policy sections: {missing}", ".agents/config/governance.json"))
@@ -426,6 +433,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     runtime_wrappers = {
         ".agents/bin/agentos": "agentos.cli_runtime",
         ".agents/bin/agentos.cmd": "agentos.cli_runtime",
+        ".agents/bin/agentos-admin": "agentos.privileged_control_plane",
+        ".agents/bin/agentos-admin.cmd": "agentos.privileged_control_plane",
         ".agents/bin/agentos-mcp": "agentos.mcp_runtime",
         ".agents/bin/agentos-mcp.cmd": "agentos.mcp_runtime",
     }
@@ -440,12 +449,57 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             findings.append(_finding("legacy_runtime_forwarding_active", "top-level wrapper still uses version/gateway forwarding", rel))
 
     try:
-        from .cli_runtime import command_registry
+        from .cli_runtime import (
+            DUAL_PLANE_COMMANDS,
+            agent_command_registry,
+            command_registry,
+            privileged_command_registry,
+        )
+
         commands = command_registry()
         if len(commands) != len(set(commands)):
-            findings.append(_finding("duplicate_cli_commands", "unified CLI registry contains duplicate commands"))
+            findings.append(
+                _finding(
+                    "duplicate_cli_commands",
+                    "canonical CLI registry contains duplicate commands",
+                )
+            )
+
+        agent_commands = set(agent_command_registry())
+        privileged_commands = set(privileged_command_registry())
+
+        unexpected_overlap = sorted(
+            (agent_commands & privileged_commands)
+            - set(DUAL_PLANE_COMMANDS)
+        )
+
+        if unexpected_overlap:
+            findings.append(
+                _finding(
+                    "privileged_control_plane_overlap",
+                    "agent and privileged registries overlap outside "
+                    f"the dual-plane allowlist: {unexpected_overlap}",
+                    ".agents/agentos/cli_runtime.py",
+                )
+            )
+
+        if not privileged_commands:
+            findings.append(
+                _finding(
+                    "privileged_control_plane_empty",
+                    "privileged control-plane registry must not be empty",
+                    ".agents/agentos/cli_runtime.py",
+                )
+            )
+
     except Exception as exc:
-        findings.append(_finding("cli_runtime_unloadable", f"cannot load unified CLI registry: {exc}", ".agents/agentos/cli_runtime.py"))
+        findings.append(
+            _finding(
+                "cli_runtime_unloadable",
+                f"cannot load separated CLI registries: {exc}",
+                ".agents/agentos/cli_runtime.py",
+            )
+        )
 
     try:
         from .mcp_runtime import ALL_TOOLS

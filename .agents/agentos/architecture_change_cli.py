@@ -3,6 +3,8 @@ Purpose: CLI surface for v0.25.5 Architecture Change Proposal & ADR lifecycle.
 """
 from __future__ import annotations
 
+from .cli_identity import cli_program
+
 import argparse
 import json
 import os
@@ -36,7 +38,7 @@ def _json(value: str | None, default: Any) -> Any:
 
 def build_parser() -> argparse.ArgumentParser:
     """Build v0.25.5 proposal/ADR commands."""
-    parser = argparse.ArgumentParser(prog="agentos")
+    parser = argparse.ArgumentParser(prog=cli_program())
     parser.add_argument("--root")
     sub = parser.add_subparsers(dest="command", required=True)
 

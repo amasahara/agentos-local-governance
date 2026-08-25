@@ -13,6 +13,8 @@ Responsibilities:
 """
 from __future__ import annotations
 
+from .cli_identity import cli_program
+
 import argparse
 import json
 from pathlib import Path
@@ -41,7 +43,7 @@ def _emit(value: object) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     """Build v0.21.2 operator CLI parser."""
-    parser = argparse.ArgumentParser(prog="agentos")
+    parser = argparse.ArgumentParser(prog=cli_program())
     parser.add_argument("--root", default=".")
     sub = parser.add_subparsers(dest="command", required=True)
 

@@ -15,6 +15,8 @@ Responsibilities:
 """
 from __future__ import annotations
 
+from .cli_identity import cli_program
+
 import argparse
 import json
 from pathlib import Path
@@ -157,7 +159,7 @@ def docs_check_v0201(root: Path) -> dict[str, Any]:
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the additive v0.20.1 CLI parser."""
-    parser = argparse.ArgumentParser(prog="agentos")
+    parser = argparse.ArgumentParser(prog=cli_program())
     parser.add_argument("--root")
     sub = parser.add_subparsers(dest="command", required=True)
 

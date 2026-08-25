@@ -4,6 +4,8 @@ Purpose:
     Expose v0.25.2 Architecture Contract lifecycle commands through unified CLI.
 """
 from __future__ import annotations
+
+from .cli_identity import cli_program
 import argparse, json, os
 from pathlib import Path
 from typing import Any
@@ -21,7 +23,7 @@ def build_parser()->argparse.ArgumentParser:
     Returns:
         Configured argparse parser.
     """
-    p=argparse.ArgumentParser(prog="agentos"); p.add_argument("--root"); s=p.add_subparsers(dest="command",required=True)
+    p=argparse.ArgumentParser(prog=cli_program()); p.add_argument("--root"); s=p.add_subparsers(dest="command",required=True)
     q=s.add_parser("architecture-init"); q.add_argument("--created-by",default="human"); q.add_argument("--overwrite",action="store_true")
     s.add_parser("architecture-validate")
     q=s.add_parser("architecture-show"); q.add_argument("--baseline-id",type=int)

@@ -74,7 +74,12 @@ def parser() -> argparse.ArgumentParser:
     Returns:
         Configured argument parser.
     """
-    p=argparse.ArgumentParser(prog="agentos"); p.add_argument("--root",default="."); p.add_argument("--session-id")
+    program = (
+        "agentos-admin"
+        if os.environ.get("AGENTOS_EXECUTION_PLANE") == "control"
+        else "agentos"
+    )
+    p=argparse.ArgumentParser(prog=program); p.add_argument("--root",default="."); p.add_argument("--session-id")
     s=p.add_subparsers(dest="cmd",required=True)
     a=s.add_parser("start-task"); a.add_argument("--task-id",required=True); a.add_argument("--request",required=True)
     a=s.add_parser("use-task"); a.add_argument("--task-id",required=True)

@@ -1,6 +1,6 @@
 {
   "release_policy": {
-    "version": "0.28.2",
+    "version": "0.28.3",
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
     "identity_sources": [
       "VERSION",
@@ -31,5 +31,28 @@
     "historical_launchers_in_installed_release": false,
     "historical_docs_in_installed_release": false,
     "historical_tools_in_installed_release": false
+  },
+  "privileged_control_plane_policy": {
+    "enabled": true,
+    "control_plane_version": 1,
+    "database_schema": 61,
+    "agent_entrypoint": "agentos.cli_runtime",
+    "admin_entrypoint": "agentos.privileged_control_plane",
+    "agent_launcher": "agentos",
+    "admin_launcher": "agentos-admin",
+    "privileged_control_plane_required": true,
+    "control_plane_allowlist_explicit": true,
+    "dual_plane_argument_enforcement": true,
+    "dual_plane_commands": [
+      "architecture-init",
+      "project-adopt"
+    ],
+    "agent_plane_privileged_execution_allowed": false,
+    "mcp_privileged_mutation_exposed": false,
+    "web_mutation_authority": false,
+    "existing_governed_mutation_enforcement_preserved": true,
+    "human_authority_preserved": true,
+    "tool_exclusivity_attested": false,
+    "hard_anti_bypass_reserved_for_v0284": true
   }
 }

@@ -4,6 +4,7 @@ Dùng launcher hiện hành:
 
 ```powershell
 .\.agents\bin\agentos.cmd --help
+.\.agents\bin\agentos-admin.cmd --help
 .\.agents\bin\agentos-mcp.cmd
 ```
 
@@ -14,4 +15,4 @@ PowerShell:
 - không thêm dấu backslash trước option;
 - backtick chỉ hợp lệ khi là ký tự cuối dòng.
 
-POSIX và Windows wrappers phải đi vào cùng `agentos.cli_runtime` và `agentos.mcp_runtime`.
+POSIX và Windows wrappers phải giữ parity theo từng plane: `agentos` → `agentos.cli_runtime`, `agentos-admin` → `agentos.privileged_control_plane`, và `agentos-mcp` → `agentos.mcp_runtime`.

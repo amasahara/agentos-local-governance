@@ -69,7 +69,7 @@ Một task được quản trị đi qua các bước chính:
 Project mới:
 
 ```powershell
-.\.agents\bin\agentos.cmd project-init --target D:\path\to\project
+.\.agents\bin\agentos-admin.cmd project-init --target D:\path\to\project
 ```
 
 Project hiện hữu, tạo adoption plan chỉ đọc trước:
@@ -81,7 +81,7 @@ Project hiện hữu, tạo adoption plan chỉ đọc trước:
 Sau khi con người review plan:
 
 ```powershell
-.\.agents\bin\agentos.cmd project-adopt --target D:\path\to\project --apply --human-confirmed
+.\.agents\bin\agentos-admin.cmd project-adopt --target D:\path\to\project --apply --human-confirmed
 ```
 
 Xem hướng dẫn theo hành trình:
@@ -118,8 +118,8 @@ Các thay đổi governance phải giữ `AGENTS.md`, structured policy, runtime
 
 ## Bản phát hành hiện hành
 
-**v0.28.2 — Project Bootstrap & Repository Normalization** · schema **61**
+**v0.28.3 — Privileged Control Plane Separation** · schema **61**
 
-v0.28.2 không thêm security feature mới. Release này chuẩn hóa repository và bootstrap: tách distribution/installed metadata, dùng `project-init` và `project-adopt`, bỏ representative project identity/purpose, không ghi tài liệu AgentOS vào application root, tạo effective policy deterministic và kiểm tra repository theo role `agentos_distribution` hoặc `governed_project`.
+v0.28.3 tách Agent Execution Plane (`agentos`) khỏi Privileged Control Plane (`agentos-admin`). Agent plane không còn dispatch privileged commands; MCP và Web vẫn không có privileged mutation authority. Schema giữ nguyên 61; tool exclusivity và anti-bypass attestation được dành cho v0.28.4.
 
 Chi tiết thay đổi nằm trong [RELEASE_NOTES.md](RELEASE_NOTES.md).

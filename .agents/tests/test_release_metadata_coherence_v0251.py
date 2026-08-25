@@ -213,7 +213,10 @@ def test_v0282_distribution_role_uses_authoritative_metadata() -> None:
         "agentos_distribution",
     )
     assert result["ok"] is True
-    assert result["release"] == "0.28.2"
+    expected_release = (
+        distribution / "VERSION"
+    ).read_text(encoding="utf-8").strip()
+    assert result["release"] == expected_release
     assert result["schema"] == 61
 
 

@@ -1,5 +1,5 @@
 {
-  "version": "0.28.2",
+  "version": "0.28.3",
   "schema_version": 61,
   "repository_policy": {
     "roles": [
@@ -13,6 +13,13 @@
   "runtime_policy": {
     "cli_entrypoint": "agentos.cli_runtime",
     "mcp_entrypoint": "agentos.mcp_runtime",
-    "historical_version_forwarding": false
+    "historical_version_forwarding": false,
+    "privileged_cli_entrypoint": "agentos.privileged_control_plane",
+    "agent_launcher": "agentos",
+    "privileged_control_plane_launcher": "agentos-admin",
+    "separated_control_plane_required": true,
+    "agent_plane_privileged_execution_allowed": false,
+    "control_plane_allowlist_explicit": true,
+    "dual_plane_argument_enforcement": true
   }
 }

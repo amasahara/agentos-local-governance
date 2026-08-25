@@ -98,6 +98,50 @@ PRIVILEGED_COMMANDS = {
 }
 
 
+CORE_CONTROL_PLANE_COMMANDS = {
+    "approve-task",
+    "skill-graduate",
+    "skill-revoke",
+    "ack-baseline",
+    "approve-local-override",
+    "rotate-audit-key",
+    "job-cancel",
+    "plan-approve",
+    "memory-forget",
+    "observability-prune",
+    "audit-segment-archive",
+    "evolution-transition",
+    "role-assign",
+
+    # Project/bootstrap identity authority.
+    "project-init",
+    "project-identity-init",
+    "project-purpose-set",
+    "project-fork",
+
+    # Human primary-project authority.
+    "project-compatibility-confirm",
+    "project-primary-select",
+
+    # Human consolidation authority.
+    "project-consolidation-review",
+    "project-consolidation-approve",
+    "project-consolidation-rollback",
+}
+
+CONTROL_PLANE_COMMANDS = frozenset(
+    PRIVILEGED_COMMANDS | CORE_CONTROL_PLANE_COMMANDS
+)
+
+
+# These commands contain both a non-authority mode and an explicit
+# privileged mode. The dispatcher applies argument-level separation.
+DUAL_PLANE_COMMANDS = frozenset({
+    "project-adopt",
+    "architecture-init",
+})
+
+
 def _commands(parser: argparse.ArgumentParser) -> dict[str, argparse.ArgumentParser]:
     """Return subcommand parsers keyed by command name.
 
@@ -158,6 +202,27 @@ def command_registry() -> dict[str, str]:
             raise RuntimeError(f"duplicate special CLI command registration: {command}")
         registry[command] = "special"
     return registry
+
+
+def agent_command_registry() -> dict[str, str]:
+    """Return commands dispatchable from the normal agent plane."""
+    return {
+        command: handler
+        for command, handler in command_registry().items()
+        if command not in CONTROL_PLANE_COMMANDS
+    }
+
+
+def privileged_command_registry() -> dict[str, str]:
+    """Return commands dispatchable only from the control plane."""
+    registry = command_registry()
+    return {
+        command: registry[command]
+        for command in sorted(
+            CONTROL_PLANE_COMMANDS | DUAL_PLANE_COMMANDS
+        )
+        if command in registry
+    }
 
 
 def _resolve_root(value: str | None) -> Path:
@@ -222,39 +287,76 @@ def _emit(value: Any) -> None:
 
 
 def _runtime_health(root: Path) -> dict[str, Any]:
-    """Return CLI runtime registry and cross-platform wrapper health.
-
-    Args:
-        root: Governed project root.
-
-    Returns:
-        Machine-readable runtime health report.
-    """
+    """Return runtime, registry, wrapper, and control-plane health."""
     registry = command_registry()
+    agent_registry = agent_command_registry()
+    privileged_registry = privileged_command_registry()
+
     wrappers = {
         "posix_cli": root / ".agents/bin/agentos",
         "windows_cli": root / ".agents/bin/agentos.cmd",
+        "posix_admin": root / ".agents/bin/agentos-admin",
+        "windows_admin": root / ".agents/bin/agentos-admin.cmd",
         "posix_mcp": root / ".agents/bin/agentos-mcp",
         "windows_mcp": root / ".agents/bin/agentos-mcp.cmd",
     }
-    wrapper_status = {name: path.is_file() and path.stat().st_size > 0 for name, path in wrappers.items()}
+
+    wrapper_status = {
+        name: path.is_file() and path.stat().st_size > 0
+        for name, path in wrappers.items()
+    }
+
     legacy_active: list[str] = []
     for name, path in wrappers.items():
         if not path.exists():
             continue
-        text = path.read_text(encoding="utf-8", errors="replace")
-        if "agentos.v0" in text or "agentos-mcp.v0" in text or "mcp_reconciliation_recovery_gateway" in text:
+        body = path.read_text(
+            encoding="utf-8",
+            errors="replace",
+        )
+        if (
+            "agentos.v0" in body
+            or "agentos-mcp.v0" in body
+            or "mcp_reconciliation_recovery_gateway" in body
+        ):
             legacy_active.append(name)
+
+    shared = sorted(
+        set(agent_registry) & set(privileged_registry)
+    )
+    unexpected_overlap = sorted(
+        set(shared) - set(DUAL_PLANE_COMMANDS)
+    )
+
+    parity = (
+        wrapper_status["posix_cli"]
+        and wrapper_status["windows_cli"]
+        and wrapper_status["posix_admin"]
+        and wrapper_status["windows_admin"]
+        and wrapper_status["posix_mcp"]
+        and wrapper_status["windows_mcp"]
+    )
+
     return {
-        "ok": all(wrapper_status.values()) and not legacy_active,
+        "ok": (
+            all(wrapper_status.values())
+            and not legacy_active
+            and not unexpected_overlap
+        ),
         "version": VERSION,
         "schema": CURRENT_SCHEMA_VERSION,
-        "runtime": "unified_python_registry",
+        "runtime": "separated_control_plane_v1",
         "command_count": len(registry),
+        "agent_command_count": len(agent_registry),
+        "privileged_command_count": len(privileged_registry),
+        "agent_privileged_overlap": unexpected_overlap,
+        "dual_plane_commands": sorted(DUAL_PLANE_COMMANDS),
+        "agent_plane_privileged_dispatch": False,
+        "privileged_control_plane": True,
         "duplicate_commands": [],
         "wrappers": wrapper_status,
         "legacy_version_forwarding_active": legacy_active,
-        "windows_posix_parity": wrapper_status["posix_cli"] and wrapper_status["windows_cli"] and wrapper_status["posix_mcp"] and wrapper_status["windows_mcp"],
+        "windows_posix_parity": parity,
     }
 
 
@@ -297,78 +399,196 @@ def _dispatch_special(command: str, root: Path, args: list[str]) -> int:
     elif command == "runtime-health":
         result = _runtime_health(root)
     elif command == "commands-list":
-        registry = command_registry()
-        result = {"ok": True, "version": VERSION, "commands": sorted(registry), "count": len(registry)}
+        registry = agent_command_registry()
+        result = {
+            "ok": True,
+            "version": VERSION,
+            "plane": "agent",
+            "commands": sorted(registry),
+            "count": len(registry),
+        }
     else:
         raise RuntimeError(f"unknown special command: {command}")
     _emit(result)
     return 0 if not isinstance(result, dict) or result.get("ok", True) else 2
 
 
-def _help() -> None:
-    registry = command_registry()
-    print(f"AgentOS Local Governance v{VERSION} — unified CLI runtime")
-    print("Usage: agentos [--root PATH] [--task-id ID] [--session-id ID] COMMAND [ARGS]")
+def _help(plane: str = "agent") -> None:
+    """Show only the commands dispatchable from the selected plane."""
+    if plane == "control":
+        registry = privileged_command_registry()
+        executable = "agentos-admin"
+        label = "privileged control plane"
+    else:
+        registry = agent_command_registry()
+        executable = "agentos"
+        label = "agent execution plane"
+
+    print(f"AgentOS Local Governance v{VERSION} — {label}")
+    print(
+        f"Usage: {executable} [--root PATH] "
+        "[--task-id ID] [--session-id ID] COMMAND [ARGS]"
+    )
     print("Commands:")
+
     for command in sorted(registry):
         print(f"  {command}")
 
 
-def main(argv: list[str] | None = None) -> int:
-    """Execute one command through the unified cross-platform runtime.
+def main(
+    argv: list[str] | None = None,
+    *,
+    plane: str = "agent",
+) -> int:
+    """Execute a command through an explicitly selected execution plane."""
+    if plane not in {"agent", "control"}:
+        raise ValueError(f"unknown execution plane: {plane}")
 
-    Args:
-        argv: Optional argument vector for tests/embedding.
+    executable = (
+        "agentos-admin"
+        if plane == "control"
+        else "agentos"
+    )
 
-    Returns:
-        Process exit code.
-    """
     try:
-        root, task_id, session_id, command, command_args = _parse_prefix(list(sys.argv[1:] if argv is None else argv))
+        root, task_id, session_id, command, command_args = _parse_prefix(
+            list(sys.argv[1:] if argv is None else argv)
+        )
+
         if command in {None, "__help__"}:
-            _help()
+            _help(plane)
             return 0
+
         if command == "__version__":
             print(VERSION)
             return 0
 
         registry = command_registry()
         handler = registry.get(command)
+
         if handler is None:
-            print(f"agentos: unknown command: {command}", file=sys.stderr)
+            print(
+                f"{executable}: unknown command: {command}",
+                file=sys.stderr,
+            )
+            return 2
+
+        if plane == "agent" and command in CONTROL_PLANE_COMMANDS:
+            print(
+                "agentos: command requires privileged control plane "
+                f"(agentos-admin): {command}",
+                file=sys.stderr,
+            )
+            return 2
+
+        if (
+            plane == "control"
+            and command not in CONTROL_PLANE_COMMANDS
+            and command not in DUAL_PLANE_COMMANDS
+        ):
+            print(
+                "agentos-admin: command is not available in privileged "
+                f"control plane: {command}",
+                file=sys.stderr,
+            )
+            return 2
+
+        if (
+            plane == "agent"
+            and command == "project-adopt"
+            and "--apply" in command_args
+        ):
+            print(
+                "agentos: project-adopt --apply requires privileged "
+                "control plane (agentos-admin)",
+                file=sys.stderr,
+            )
+            return 2
+
+        if (
+            plane == "agent"
+            and command == "architecture-init"
+            and "--overwrite" in command_args
+        ):
+            print(
+                "agentos: architecture-init --overwrite requires "
+                "privileged control plane (agentos-admin)",
+                file=sys.stderr,
+            )
             return 2
 
         if task_id:
             os.environ["AGENTOS_TASK_ID"] = task_id
+
         if session_id:
             os.environ["AGENTOS_SESSION_ID"] = session_id
-        os.environ["AGENTOS_PROJECT_ROOT"] = str(root)
 
-        if command in PRIVILEGED_COMMANDS and (not task_id or not session_id):
-            print("privileged command requires --task-id and --session-id", file=sys.stderr)
+        os.environ["AGENTOS_PROJECT_ROOT"] = str(root)
+        os.environ["AGENTOS_EXECUTION_PLANE"] = plane
+
+        # Preserve the existing v0.22.4 requirement for historical
+        # governed privileged mutations.
+        if (
+            command in PRIVILEGED_COMMANDS
+            and (not task_id or not session_id)
+        ):
+            print(
+                "privileged command requires --task-id and --session-id",
+                file=sys.stderr,
+            )
             return 2
 
         if handler == "special":
-            return _dispatch_special(command, root, command_args)
+            return _dispatch_special(
+                command,
+                root,
+                command_args,
+            )
 
         if handler == "core":
             if command == "run-tests":
                 core_cli._run_tests = _run_tests_with_active_python
+
             forwarded = ["--root", str(root)]
+
             if session_id:
                 forwarded += ["--session-id", session_id]
+
             forwarded.append(command)
+
             if task_id and _core_accepts_task_id(command):
                 forwarded += ["--task-id", task_id]
+
             forwarded += command_args
+
             return int(core_cli.main(forwarded))
 
-        module = importlib.import_module(f"agentos.{handler}")
-        return int(module.main(["--root", str(root), command, *command_args]))
+        module = importlib.import_module(
+            f"agentos.{handler}"
+        )
+
+        return int(
+            module.main(
+                [
+                    "--root",
+                    str(root),
+                    command,
+                    *command_args,
+                ]
+            )
+        )
+
     except SystemExit as exc:
         return int(exc.code or 0)
+
     except Exception as exc:
-        _emit({"ok": False, "error": type(exc).__name__, "message": str(exc)})
+        _emit(
+            {
+                "ok": False,
+                "error": type(exc).__name__,
+                "message": str(exc),
+            }
+        )
         return 2
 
 

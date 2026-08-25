@@ -34,6 +34,25 @@ def _agentos_args(root: Path, *args: str) -> list[str]:
     return [str(root / ".agents/bin/agentos"), *args]
 
 
+def _agentos_admin_args(
+    root: Path,
+    *args: str,
+) -> list[str]:
+    """Return the native privileged control-plane launcher."""
+    if os.name == "nt":
+        return [
+            os.environ.get("ComSpec", "cmd.exe"),
+            "/d",
+            "/c",
+            str(root / ".agents/bin/agentos-admin.cmd"),
+            *args,
+        ]
+    return [
+        str(root / ".agents/bin/agentos-admin"),
+        *args,
+    ]
+
+
 def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / "project"
     shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns(".git", "runtime", "agentos.db", "__pycache__", ".pytest_cache", "MANIFEST.json", "CHECKSUMS.sha256"))
@@ -175,10 +194,10 @@ def test_governance_policy_registers_privileged_capabilities(tmp_path: Path, mon
     assert cfg["mcp_privileged_mutation_exposed"] is False
 
 
-def test_cli_prefix_context_routes_privileged_command(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_admin_cli_prefix_context_routes_privileged_command(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root = project(tmp_path, monkeypatch)
     prepare(root)
-    cp = subprocess.run(_agentos_args(
+    cp = subprocess.run(_agentos_admin_args(
         root, "--task-id", "T-GOV", "--session-id", "S-GOV",
         "db-connection-register", "--alias", "cli-source", "--role", "SOURCE", "--engine", "mssql",
         "--host", "source.internal", "--database", "HIS", "--domain", "healthcare",
@@ -189,8 +208,77 @@ def test_cli_prefix_context_routes_privileged_command(tmp_path: Path, monkeypatc
     assert payload["ok"] is True
 
 
-def test_cli_rejects_privileged_command_without_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_admin_cli_rejects_privileged_command_without_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     root = project(tmp_path, monkeypatch)
-    cp = subprocess.run(_agentos_args(root, "db-connection-register", "--help"), cwd=root, text=True, capture_output=True, env=os.environ.copy())
+
+    cp = subprocess.run(
+        _agentos_admin_args(
+            root,
+            "db-connection-register",
+            "--help",
+        ),
+        cwd=root,
+        text=True,
+        capture_output=True,
+        env=os.environ.copy(),
+    )
+
     assert cp.returncode == 2
-    assert "requires --task-id and --session-id" in cp.stderr
+    assert (
+        "requires --task-id and --session-id"
+        in cp.stderr
+    )
+
+
+def test_agent_plane_rejects_privileged_command_even_with_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = project(tmp_path, monkeypatch)
+    prepare(root)
+
+    cp = subprocess.run(
+        _agentos_args(
+            root,
+            "--task-id",
+            "T-GOV",
+            "--session-id",
+            "S-GOV",
+            "db-connection-register",
+            "--help",
+        ),
+        cwd=root,
+        text=True,
+        capture_output=True,
+        env=os.environ.copy(),
+    )
+
+    assert cp.returncode == 2
+    assert "requires privileged control plane" in cp.stderr
+
+
+def test_admin_plane_rejects_normal_agent_command(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = project(tmp_path, monkeypatch)
+
+    cp = subprocess.run(
+        _agentos_admin_args(
+            root,
+            "status",
+        ),
+        cwd=root,
+        text=True,
+        capture_output=True,
+        env=os.environ.copy(),
+    )
+
+    assert cp.returncode == 2
+    assert (
+        "not available in privileged control plane"
+        in cp.stderr
+    )

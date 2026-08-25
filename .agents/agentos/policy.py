@@ -20,7 +20,7 @@ from .db import connect
 
 CLAIM_TYPES = {"business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"}
 RISK_LEVELS = {"low", "medium", "high"}
-SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy", "governed_skill_contract_policy", "architecture_aware_skill_selection_policy"}
+SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy", "governed_skill_contract_policy", "architecture_aware_skill_selection_policy", "privileged_control_plane_policy"}
 SAFE_OVERRIDE_KEYS = {"source_root", "test_path", "encoding", "runtime_paths"}
 
 
@@ -115,6 +115,8 @@ def validate_policy(policy: dict[str, Any]) -> None:
     if version >= (0, 28, 1):
         required.add("command_center_policy")
         required.add("web_control_plane_policy")
+    if version >= (0, 28, 3):
+        required.add("privileged_control_plane_policy")
     missing = sorted(required - policy.keys())
     if missing:
         raise RuntimeError(f"missing policy keys: {missing}")
@@ -225,6 +227,91 @@ def validate_policy(policy: dict[str, Any]) -> None:
             raise RuntimeError("v0.28.1 web control plane reservation must be released")
         if command_center.get("web_control_plane_available") is not True:
             raise RuntimeError("v0.28.1 web control plane must be explicitly available")
+    if version >= (0, 28, 3):
+        control = policy["privileged_control_plane_policy"]
+
+        control_required_true = (
+            "enabled",
+            "privileged_control_plane_required",
+            "control_plane_allowlist_explicit",
+            "dual_plane_argument_enforcement",
+            "existing_governed_mutation_enforcement_preserved",
+            "human_authority_preserved",
+            "hard_anti_bypass_reserved_for_v0284",
+        )
+
+        disabled_control = [
+            key
+            for key in control_required_true
+            if control.get(key) is not True
+        ]
+
+        if disabled_control:
+            raise RuntimeError(
+                "privileged control-plane invariant disabled: "
+                f"{disabled_control}"
+            )
+
+        control_required_false = (
+            "agent_plane_privileged_execution_allowed",
+            "mcp_privileged_mutation_exposed",
+            "web_mutation_authority",
+            "tool_exclusivity_attested",
+        )
+
+        poisoned_control = [
+            key
+            for key in control_required_false
+            if control.get(key) is not False
+        ]
+
+        if poisoned_control:
+            raise RuntimeError(
+                "privileged control-plane authority invariant "
+                f"violated: {poisoned_control}"
+            )
+
+        if int(control.get("database_schema", 0)) != 61:
+            raise RuntimeError(
+                "privileged control-plane schema is invalid"
+            )
+
+        if int(control.get("control_plane_version", 0)) != 1:
+            raise RuntimeError(
+                "privileged control-plane version is invalid"
+            )
+
+        if control.get("agent_entrypoint") != "agentos.cli_runtime":
+            raise RuntimeError(
+                "agent execution-plane entrypoint is invalid"
+            )
+
+        if (
+            control.get("admin_entrypoint")
+            != "agentos.privileged_control_plane"
+        ):
+            raise RuntimeError(
+                "privileged control-plane entrypoint is invalid"
+            )
+
+        if control.get("agent_launcher") != "agentos":
+            raise RuntimeError(
+                "agent execution-plane launcher is invalid"
+            )
+
+        if control.get("admin_launcher") != "agentos-admin":
+            raise RuntimeError(
+                "privileged control-plane launcher is invalid"
+            )
+
+        if set(control.get("dual_plane_commands", [])) != {
+            "architecture-init",
+            "project-adopt",
+        }:
+            raise RuntimeError(
+                "dual-plane command allowlist is invalid"
+            )
+
     clarification = policy["human_clarification_policy"]
     clarification_required_true = (
         "enabled", "structured_clarity_assessment_required", "no_silent_material_assumptions",

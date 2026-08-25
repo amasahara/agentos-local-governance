@@ -1,4 +1,4 @@
-# AgentOS v0.28.2 Quickstart
+# AgentOS v0.28.3 Quickstart
 
 Chọn đúng hành trình:
 

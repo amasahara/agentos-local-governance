@@ -1189,6 +1189,29 @@
     "local_erasure_authority_only": true,
     "unnecessary_relinkable_retention_forbidden": true
   },
+  "privileged_control_plane_policy": {
+    "admin_entrypoint": "agentos.privileged_control_plane",
+    "admin_launcher": "agentos-admin",
+    "agent_entrypoint": "agentos.cli_runtime",
+    "agent_launcher": "agentos",
+    "agent_plane_privileged_execution_allowed": false,
+    "control_plane_allowlist_explicit": true,
+    "control_plane_version": 1,
+    "database_schema": 61,
+    "dual_plane_argument_enforcement": true,
+    "dual_plane_commands": [
+      "architecture-init",
+      "project-adopt"
+    ],
+    "enabled": true,
+    "existing_governed_mutation_enforcement_preserved": true,
+    "hard_anti_bypass_reserved_for_v0284": true,
+    "human_authority_preserved": true,
+    "mcp_privileged_mutation_exposed": false,
+    "privileged_control_plane_required": true,
+    "tool_exclusivity_attested": false,
+    "web_mutation_authority": false
+  },
   "project_bootstrap_policy": {
     "adoption_default_mode": "read_only_plan",
     "application_root_writes": [],
@@ -1356,7 +1379,7 @@
       "governed_project"
     ],
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
-    "version": "0.28.2"
+    "version": "0.28.3"
   },
   "repository_policy": {
     "application_root_metadata_owned_by_agentos": false,
@@ -1411,9 +1434,16 @@
     "whole_plan_approval_still_required": true
   },
   "runtime_policy": {
+    "agent_launcher": "agentos",
+    "agent_plane_privileged_execution_allowed": false,
     "cli_entrypoint": "agentos.cli_runtime",
+    "control_plane_allowlist_explicit": true,
+    "dual_plane_argument_enforcement": true,
     "historical_version_forwarding": false,
-    "mcp_entrypoint": "agentos.mcp_runtime"
+    "mcp_entrypoint": "agentos.mcp_runtime",
+    "privileged_cli_entrypoint": "agentos.privileged_control_plane",
+    "privileged_control_plane_launcher": "agentos-admin",
+    "separated_control_plane_required": true
   },
   "schema_bootstrap_policy": {
     "baseline_rotation": "explicit_release_only",
@@ -1607,7 +1637,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.28.2",
+  "version": "0.28.3",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,

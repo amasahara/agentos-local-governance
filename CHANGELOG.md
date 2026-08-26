@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.28.4 — Tool Exclusivity & Enforcement Attestation
+
+- Added deterministic enforcement attestation for AgentOS-mediated execution surfaces.
+- Routed `job-submit` and `agentos.run_command_async` through the canonical proxy lifecycle.
+- Revalidated execution authority immediately before the actual asynchronous `subprocess.Popen()` side effect.
+- Routed `agentos run-tests` through governed `process.exec`.
+- Attested that the active MCP runtime has no legacy subprocess-forwarding path.
+- Classified canonical, internal-governance, and inactive-legacy process primitives.
+- Integrated fail-closed attestation into runtime health, doctor, policy validation, and release integrity.
+- Preserved Privileged Control Plane separation introduced in v0.28.3.
+- Database schema remains **61**.
+- The attestation scope is explicitly limited to `agentos_mediated_agent_execution`.
+- No claim is made for same-user host bypass resistance, OS-level process isolation, or arbitrary host-process containment.
+
 ## v0.28.3 — Privileged Control Plane Separation
 
 - Added separate `agentos` and `agentos-admin` execution planes.

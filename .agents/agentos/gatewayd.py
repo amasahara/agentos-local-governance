@@ -13,9 +13,9 @@ from __future__ import annotations
 import argparse,json,os,secrets,socket
 from pathlib import Path
 from .db import connect
-from .proxy import proxy_execute
+from .proxy import proxy_execute,proxy_submit_job
 from .security import authenticate_request,issue_session_token,revoke_session,reconcile_state
-from .jobs import cancel_job, job_status, submit_job
+from .jobs import cancel_job, job_status
 
 def socket_path(root:Path)->Path: return Path(os.environ.get('AGENTOS_GATEWAY_SOCKET',str(root/'.agents/runtime/agentos-gateway.sock')))
 def dispatch(root:Path,req:dict):
@@ -32,7 +32,7 @@ def dispatch(root:Path,req:dict):
         auth=authenticate_request(root,req['session_token'],req['task_id'],cap,req.get('args',{}),req['request_id'],int(req['sequence']))
         if req['tool_name']=='agentos.run_command_async':
             args=req.get('args',{})
-            return submit_job(root,req['task_id'],auth['session_id'],args['command'],args.get('cwd','.'),int(args.get('timeout_seconds',900)),args.get('env'),True)
+            return proxy_submit_job(root,req['task_id'],auth['session_id'],args['command'],args.get('cwd','.'),int(args.get('timeout_seconds',900)),args.get('env'),True)
         return proxy_execute(root,req['task_id'],auth['session_id'],req['tool_name'],req.get('args',{}),req.get('reason_code'),req.get('justification'),req.get('target'))
     raise RuntimeError('unsupported gateway action')
 def serve(root:Path):

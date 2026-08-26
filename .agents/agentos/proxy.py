@@ -94,6 +94,12 @@ def _command_profile(command: list[str], policy: dict[str, Any]) -> str:
     if not command or not all(isinstance(x, str) and x for x in command):
         raise RuntimeError("command must be a non-empty JSON array of strings")
     executable = Path(command[0]).name.lower()
+
+    # Windows executable suffixes are transport details, not
+    # different process-policy identities.
+    if executable.endswith(".exe"):
+        executable = executable[:-4]
+
     cfg = policy["proxy_policy"]["process_exec"]
     if executable in set(cfg.get("denied_executables", [])) | NETWORK_EXECUTABLES | SHELL_EXECUTABLES:
         raise RuntimeError(f"process blocked: executable is denied: {executable}")
@@ -341,6 +347,206 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
     if capability == "coordination.task.reclaim": return True, force_reclaim_task(root,task_id,session_id,str(args["reason"]))
     raise RuntimeError(f"unsupported capability: {capability}")
 
+
+
+def proxy_submit_job(
+    root: Path,
+    task_id: str,
+    session_id: str,
+    command: list[str],
+    cwd: str = ".",
+    timeout_seconds: int = 900,
+    env: dict[str, Any] | None = None,
+    auto_start: bool = True,
+    reason_code: str | None = None,
+    justification: str | None = None,
+    target: str | None = None,
+) -> dict[str, Any]:
+    """Submit asynchronous process execution through the canonical proxy.
+
+    The tool call represents governed job submission/launch.
+    Terminal async-job lifecycle evidence remains owned by jobs.py.
+    """
+    tool_name = "agentos.run_command_async"
+    capability = normalize_capability(tool_name)
+
+    guarded_args = {
+        "command": list(command),
+        "cwd": cwd,
+        "timeout": int(timeout_seconds),
+        "env": env or {},
+        "auto_start": bool(auto_start),
+    }
+
+    metadata = _preflight(
+        root,
+        task_id,
+        session_id,
+        capability,
+        guarded_args,
+    )
+    metadata = {
+        **metadata,
+        "execution_mode": "async_job",
+    }
+
+    canonical_tool = TOOL_NAMES[capability]
+
+    requested = {
+        "tool": tool_name,
+        "capability": capability,
+        "args": redact_value(guarded_args),
+        "metadata": metadata,
+    }
+
+    append_audit_event(
+        root,
+        "proxy.request",
+        requested,
+        task_id,
+        session_id,
+    )
+    append_signed_event(
+        root,
+        "proxy.request",
+        requested,
+        task_id,
+        session_id,
+    )
+
+    guard = guard_tool(
+        root,
+        task_id,
+        session_id,
+        canonical_tool,
+        guarded_args,
+        reason_code,
+        justification,
+        target,
+    )
+
+    if not guard["allowed"]:
+        denied = {
+            "allowed": False,
+            "reason": guard["reason"],
+            "capability": capability,
+            "execution_mode": "async_job",
+        }
+
+        append_signed_event(
+            root,
+            "proxy.denied",
+            denied,
+            task_id,
+            session_id,
+        )
+        return denied
+
+    try:
+        # Local import prevents the proxy/jobs module dependency
+        # from becoming an import-time cycle.
+        from .jobs import submit_job
+
+        output = submit_job(
+            root,
+            task_id,
+            session_id,
+            list(command),
+            cwd,
+            int(timeout_seconds),
+            env or {},
+            bool(auto_start),
+            execution_token=guard["execution_token"],
+        )
+        success = True
+    except Exception as exc:
+        output = {
+            "error": type(exc).__name__,
+            "message": str(exc),
+        }
+        success = False
+
+    summary = json.dumps(
+        redact_value(output),
+        sort_keys=True,
+        ensure_ascii=False,
+    )
+
+    canonical = complete_tool(
+        root,
+        guard["execution_token"],
+        guarded_args,
+        success,
+        summary,
+        session_id,
+    )
+
+    event = {
+        "allowed": True,
+        "success": success,
+        "capability": capability,
+        "tool_call_id": canonical["tool_call_id"],
+        "output": redact_value(output),
+        "metadata": metadata,
+    }
+
+    append_audit_event(
+        root,
+        "proxy.completed",
+        event,
+        task_id,
+        session_id,
+    )
+
+    signed = append_signed_event(
+        root,
+        "proxy.completed",
+        event,
+        task_id,
+        session_id,
+    )
+
+    with connect(root) as c:
+        c.execute(
+            "INSERT INTO proxy_executions("
+            "task_id,session_id,tool_name,capability,"
+            "decision,success,tool_call_id,external_event_hash"
+            ") VALUES(?,?,?,?,?,?,?,?)",
+            (
+                task_id,
+                session_id,
+                tool_name,
+                capability,
+                "allowed",
+                int(success),
+                canonical["tool_call_id"],
+                signed["event_hash"],
+            ),
+        )
+
+        c.execute(
+            "INSERT INTO process_exec_events("
+            "task_id,session_id,command_json,cwd,"
+            "command_profile,decision,success,exit_code"
+            ") VALUES(?,?,?,?,?,?,?,?)",
+            (
+                task_id,
+                session_id,
+                json.dumps(redact_value(command)),
+                metadata["cwd"],
+                metadata["command_profile"],
+                "allowed",
+                int(success),
+                output.get("exit_code")
+                if isinstance(output, dict)
+                else None,
+            ),
+        )
+
+    return {
+        **event,
+        "external_audit": signed,
+    }
 
 def proxy_execute(root: Path, task_id: str, session_id: str, tool_name: str, args: dict[str, Any], reason_code: str | None = None, justification: str | None = None, target: str | None = None) -> dict[str, Any]:
     """Evaluate and execute one tool request through the enforced proxy."""

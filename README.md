@@ -118,8 +118,8 @@ Các thay đổi governance phải giữ `AGENTS.md`, structured policy, runtime
 
 ## Bản phát hành hiện hành
 
-**v0.28.3 — Privileged Control Plane Separation** · schema **61**
+**v0.28.4 — Tool Exclusivity & Enforcement Attestation** · schema **61**
 
-v0.28.3 tách Agent Execution Plane (`agentos`) khỏi Privileged Control Plane (`agentos-admin`). Agent plane không còn dispatch privileged commands; MCP và Web vẫn không có privileged mutation authority. Schema giữ nguyên 61; tool exclusivity và anti-bypass attestation được dành cho v0.28.4.
+v0.28.4 hoàn tất Tool Exclusivity & Enforcement Attestation cho các execution surface do AgentOS quản lý. Agent-side process execution, async job launch và `run-tests` đều đi qua canonical enforcement boundary; MCP active runtime không còn subprocess forwarding qua legacy gateways. Runtime có thể tự kiểm chứng các invariant này bằng `agentos enforcement-attest`, đồng thời release/runtime health fail-closed nếu attestation không đạt.
 
-Chi tiết thay đổi nằm trong [RELEASE_NOTES.md](RELEASE_NOTES.md).
+Phạm vi attestation được giới hạn rõ ở `agentos_mediated_agent_execution`. Bản phát hành này **không** tuyên bố chống bypass từ arbitrary same-user host process, không tuyên bố OS-level process isolation và không tuyên bố arbitrary host-process containment. Schema giữ nguyên **61**.

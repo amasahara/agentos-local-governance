@@ -1,41 +1,93 @@
-# AgentOS Local Governance v0.28.3 — Privileged Control Plane Separation
+# AgentOS Local Governance v0.28.4 — Tool Exclusivity & Enforcement Attestation
 
-v0.28.3 separates normal agent execution from privileged human/operator authority.
+AgentOS v0.28.4 establishes machine-verifiable tool exclusivity for AgentOS-mediated agent execution surfaces.
 
-## Release identity
+Database schema remains **61**.
 
-- AgentOS version: **0.28.3**
-- Database schema: **61**
-- MCP privileged mutation authority: **none**
-- Web mutation authority: **none**
+## Highlights
 
-## Main changes
+### Canonical execution boundary
 
-- Added dedicated `agentos-admin` launchers for Windows and POSIX.
-- Removed privileged command dispatch from the normal `agentos` execution plane.
-- Added explicit agent-plane and privileged-plane registries.
-- Added fail-closed command-surface separation.
-- Added argument-level dual-plane enforcement for `project-adopt` and `architecture-init`.
-- `project-adopt` remains read-only through `agentos`; `--apply` requires `agentos-admin`.
-- `architecture-init --overwrite` requires `agentos-admin`.
-- Human/operator authority commands are isolated from the agent execution plane.
-- Installed project payloads include `agentos-admin` and `agentos-admin.cmd`.
-- `commands-list` exposes only the normal agent execution surface.
+Supported agent-side process execution now uses the canonical AgentOS enforcement lifecycle:
 
-## Preserved governance
+```text
+request
+→ proxy preflight
+→ guard
+→ governed adapter execution
+→ completion
+→ tool_call_id
+→ signed audit evidence
+```
 
-Existing governed mutation enforcement remains authoritative:
+Synchronous process execution remains owned by the canonical process proxy. Asynchronous job execution is reintegrated into the same governed lifecycle.
 
-task/session context → approval → owner session → workflow approval → baseline/drift checks → one-time execution token → signed audit.
+### Guarded asynchronous process execution
 
-MCP remains without privileged mutation authority.
+`job-submit` and MCP `agentos.run_command_async` now route through the canonical async proxy boundary. The actual `subprocess.Popen()` side effect revalidates its execution token immediately before process creation and verifies task/session ownership, guarded command, working directory, timeout, filtered environment hash, immutable job specification hash, and `auto_start` authority.
 
-The optional Web Control Plane remains read-only and cannot execute privileged CLI operations.
+Deferred queued jobs cannot use an already completed execution authority to start a process.
 
-## Deliberately deferred
+### Governed `run-tests`
 
-v0.28.3 establishes structural authority separation only.
+`agentos run-tests` no longer owns a separate raw pytest subprocess path. It executes project tests through governed `process.exec` using `agentos.run_command`. The default project test surface is `tests/` rather than AgentOS internal tests.
 
-It does not claim hard anti-bypass, direct-module-call prevention, tool exclusivity, or enforcement attestation.
+### Legacy MCP gateways remain inactive
 
-Those capabilities are reserved for **v0.28.4 — Tool Exclusivity & Enforcement Attestation**.
+Historical `mcp_*_gateway.py` compatibility modules may remain in the repository, but they are not part of the active MCP runtime. The active runtime attests `subprocess_forwarding=false`, `legacy_gateway_active=false`, `legacy_gateway_handler_count=0`, and `trusted_enforcement_gateway=true`.
+
+### Enforcement attestation
+
+A new read-only command is available:
+
+```text
+agentos enforcement-attest
+```
+
+It deterministically verifies proxy-only execution, canonical guarded lifecycle, registry separation, backend-access restrictions, legacy path blocking, MCP trusted-gateway binding, sync/async signed lifecycle, guarded async `Popen`, process-primitive classification, and canonical process adapter presence.
+
+Runtime now contains:
+
+```text
+341 canonical commands
+245 agent-plane commands
+98 privileged-control-plane commands
+2 intentional dual-plane commands
+0 unexpected agent/privileged overlap
+```
+
+### Fail-closed integration
+
+Enforcement attestation is integrated into `runtime-health`, `doctor`, release integrity validation, and release policy validation.
+
+v0.28.4+ requires:
+
+```text
+tool_exclusivity_attested = true
+hard_anti_bypass_reserved_for_v0284 = false
+tool_exclusivity_scope = agentos_mediated_agent_execution
+enforcement_attestation_version = 1
+```
+
+### Explicit security scope
+
+The v0.28.4 attestation scope is `agentos_mediated_agent_execution`.
+
+The release intentionally does **not** claim same-user host bypass resistance, OS-level process isolation, or arbitrary host-process containment.
+
+## Compatibility
+
+No database migration is required.
+
+```text
+v0.28.3 schema: 61
+v0.28.4 schema: 61
+```
+
+The Privileged Control Plane introduced in v0.28.3 remains intact.
+
+## Next
+
+The next planned roadmap node is:
+
+**v0.29.0 — Independent Completion Verification**

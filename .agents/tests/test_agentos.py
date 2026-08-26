@@ -572,13 +572,65 @@ def test_knowledge_runtime_schema(tmp_path: Path) -> None:
 
 
 def test_async_job_manifest_and_discovery(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    root=project(tmp_path); monkeypatch.setenv("AGENTOS_AUDIT_HOME",str(tmp_path/"audit")); ready(root)
-    complete_automated_step(root,"T1","prepare_change","prepare-change",{"ready":True})
+    root = project(tmp_path)
+    monkeypatch.setenv(
+        "AGENTOS_AUDIT_HOME",
+        str(tmp_path / "audit"),
+    )
+    ready(root)
+
+    complete_automated_step(
+        root,
+        "T1",
+        "prepare_change",
+        "prepare-change",
+        {"ready": True},
+    )
+
     from agentos.jobs import discover_tools, submit_job
-    result=submit_job(root,"T1","S1",["python3","-m","pytest","--version"],auto_start=False)
-    assert result["state"]=="queued"
-    assert result["spec"]["network_policy"]=="none"
-    assert "agentos.run_command_async" in discover_tools(root,"T1")["available_now"]
+
+    guarded_args = {
+        "command": [
+            "python3",
+            "-m",
+            "pytest",
+            "--version",
+        ],
+        "cwd": ".",
+        "timeout": 900,
+        "env": {},
+        "auto_start": False,
+    }
+
+    guard = guard_tool(
+        root,
+        "T1",
+        "S1",
+        "shell_local",
+        guarded_args,
+    )
+
+    assert guard["allowed"] is True
+    assert guard["execution_token"]
+
+    result = submit_job(
+        root,
+        "T1",
+        "S1",
+        guarded_args["command"],
+        cwd=guarded_args["cwd"],
+        timeout_seconds=guarded_args["timeout"],
+        env=guarded_args["env"],
+        auto_start=guarded_args["auto_start"],
+        execution_token=guard["execution_token"],
+    )
+
+    assert result["state"] == "queued"
+    assert result["spec"]["network_policy"] == "none"
+    assert (
+        "agentos.run_command_async"
+        in discover_tools(root, "T1")["available_now"]
+    )
 
 
 def test_task_plan_revision_and_precommit_gate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

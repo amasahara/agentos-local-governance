@@ -680,7 +680,7 @@
     "current_release_identity_files": [
       ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
     ],
-    "current_release_name": "Multi-Agent Worker Supervisor",
+    "current_release_name": "Tool Exclusivity & Enforcement Attestation",
     "current_schema": 60,
     "current_schema_files": [
       ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
@@ -1195,6 +1195,7 @@
     "agent_entrypoint": "agentos.cli_runtime",
     "agent_launcher": "agentos",
     "agent_plane_privileged_execution_allowed": false,
+    "arbitrary_host_process_containment_attested": false,
     "control_plane_allowlist_explicit": true,
     "control_plane_version": 1,
     "database_schema": 61,
@@ -1204,12 +1205,16 @@
       "project-adopt"
     ],
     "enabled": true,
+    "enforcement_attestation_version": 1,
     "existing_governed_mutation_enforcement_preserved": true,
-    "hard_anti_bypass_reserved_for_v0284": true,
+    "hard_anti_bypass_reserved_for_v0284": false,
     "human_authority_preserved": true,
     "mcp_privileged_mutation_exposed": false,
+    "os_level_process_isolation_attested": false,
     "privileged_control_plane_required": true,
-    "tool_exclusivity_attested": false,
+    "same_user_host_bypass_resistance_claimed": false,
+    "tool_exclusivity_attested": true,
+    "tool_exclusivity_scope": "agentos_mediated_agent_execution",
     "web_mutation_authority": false
   },
   "project_bootstrap_policy": {
@@ -1379,7 +1384,7 @@
       "governed_project"
     ],
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
-    "version": "0.28.3"
+    "version": "0.28.4"
   },
   "repository_policy": {
     "application_root_metadata_owned_by_agentos": false,
@@ -1637,7 +1642,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.28.3",
+  "version": "0.28.4",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,

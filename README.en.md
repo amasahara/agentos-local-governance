@@ -93,8 +93,8 @@ Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement
 
 ## Current release
 
-**v0.28.3 — Privileged Control Plane Separation** · schema **61**
+**v0.28.4 — Tool Exclusivity & Enforcement Attestation** · schema **61**
 
-v0.28.3 separates the Agent Execution Plane (`agentos`) from the Privileged Control Plane (`agentos-admin`). The agent plane can no longer dispatch privileged commands; MCP and Web retain no privileged mutation authority. Schema remains 61; tool exclusivity and anti-bypass attestation are reserved for v0.28.4.
+v0.28.4 completes Tool Exclusivity & Enforcement Attestation for AgentOS-mediated execution surfaces. Agent-side process execution, asynchronous job launch, and `run-tests` now use the canonical enforcement boundary; the active MCP runtime has no legacy subprocess-forwarding path. These invariants are machine-verifiable through `agentos enforcement-attest`, and runtime/release health fails closed when structural attestation is not green.
 
-See [RELEASE_NOTES.md](RELEASE_NOTES.md) for details.
+The attestation scope is explicitly limited to `agentos_mediated_agent_execution`. This release does **not** claim resistance to arbitrary same-user host-process bypass, OS-level process isolation, or arbitrary host-process containment. Schema remains **61**.

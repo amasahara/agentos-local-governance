@@ -45,6 +45,7 @@ CORE_FILES = (
     ".agents/agentos/proxy.py",
     ".agents/agentos/security.py",
     ".agents/agentos/tooling.py",
+    ".agents/agentos/enforcement_attestation.py",
     ".agents/agentos/external_audit.py",
     ".agents/agentos/memory.py",
     ".agents/agentos/mcp_server.py",
@@ -78,6 +79,8 @@ RELEASE_FILES = (
     ".agents/tests/test_secret_lineage_v0226.py",
     ".agents/tests/test_unified_runtime_v0225.py",
     ".agents/tests/test_privileged_control_plane_v0283.py",
+    ".agents/tests/test_tool_exclusivity_v0284.py",
+    ".agents/tests/test_enforcement_attestation_v0284.py",
     ".github/workflows/agentos-release-validation.yml",
     "RELEASE_NOTES.md",
     "tools/build_manifest.py",
@@ -310,6 +313,7 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
     """
     root = root.resolve()
     findings: list[dict[str, Any]] = []
+    attestation_report: dict[str, Any] | None = None
     for rel in (*CORE_FILES, *EXTENSION_FILES, *RELEASE_FILES):
         path = root / rel
         if not path.is_file() or path.stat().st_size == 0:
@@ -403,6 +407,100 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 findings.append(_finding("distribution_model_invalid", "v0.27.0+ must use latest full release without updater scripts", ".agents/config/release_policy.json"))
         except Exception as exc:
             findings.append(_finding("invalid_governance", f"cannot load effective governance: {exc}", ".agents/config/governance.json"))
+
+    # v0.28.4 tool-exclusivity structural attestation gate.
+    #
+    # During development on VERSION 0.28.3, the structural report must
+    # already be green while policy_declared_attested remains false.
+    # Once VERSION becomes 0.28.4, the release declaration itself also
+    # becomes mandatory.
+    try:
+        from .enforcement_attestation import (
+            ATTESTATION_SCOPE,
+            attest_enforcement,
+        )
+
+        attestation_report = attest_enforcement(root)
+
+        if (
+            attestation_report.get("ok") is not True
+            or attestation_report.get("attestation_ready") is not True
+            or attestation_report.get("tool_exclusivity") is not True
+        ):
+            findings.append(
+                _finding(
+                    "enforcement_attestation_failed",
+                    "tool-exclusivity structural attestation is not green: "
+                    f"{attestation_report.get('findings', [])}",
+                    ".agents/agentos/enforcement_attestation.py",
+                )
+            )
+
+        if attestation_report.get("scope") != ATTESTATION_SCOPE:
+            findings.append(
+                _finding(
+                    "enforcement_attestation_scope_invalid",
+                    "enforcement attestation scope is missing or invalid",
+                    ".agents/agentos/enforcement_attestation.py",
+                )
+            )
+
+        try:
+            attested_release_version = tuple(
+                int(part)
+                for part in str(version or "0.0.0").split(".")
+            )
+        except ValueError:
+            attested_release_version = (0, 0, 0)
+
+        if attested_release_version >= (0, 28, 4):
+            if (
+                attestation_report.get("policy_declared_attested")
+                is not True
+            ):
+                findings.append(
+                    _finding(
+                        "tool_exclusivity_policy_not_activated",
+                        "v0.28.4+ requires policy-declared tool exclusivity",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
+            non_claims = (
+                attestation_report.get("non_claims")
+                or {}
+            )
+
+            required_non_claims = (
+                "same_user_host_bypass_resistance",
+                "os_level_process_isolation_attested",
+                "arbitrary_host_process_containment",
+            )
+
+            invalid_non_claims = [
+                key
+                for key in required_non_claims
+                if non_claims.get(key) is not False
+            ]
+
+            if invalid_non_claims:
+                findings.append(
+                    _finding(
+                        "enforcement_attestation_overclaim",
+                        "v0.28.4 security scope overclaims host/OS "
+                        f"isolation: {invalid_non_claims}",
+                        ".agents/agentos/enforcement_attestation.py",
+                    )
+                )
+
+    except Exception as exc:
+        findings.append(
+            _finding(
+                "enforcement_attestation_unloadable",
+                f"cannot execute enforcement attestation: {exc}",
+                ".agents/agentos/enforcement_attestation.py",
+            )
+        )
 
     try:
         from .release_coherence import check_release_metadata_coherence
@@ -667,6 +765,26 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
         "core_file_count": len(CORE_FILES),
         "extension_file_count": len(EXTENSION_FILES),
         "release_file_count": len(RELEASE_FILES),
+        "enforcement_attestation": (
+            None
+            if attestation_report is None
+            else {
+                "ok": attestation_report.get("ok"),
+                "attestation_ready": attestation_report.get(
+                    "attestation_ready"
+                ),
+                "tool_exclusivity": attestation_report.get(
+                    "tool_exclusivity"
+                ),
+                "scope": attestation_report.get("scope"),
+                "policy_declared_attested": attestation_report.get(
+                    "policy_declared_attested"
+                ),
+                "finding_count": len(
+                    attestation_report.get("findings", [])
+                ),
+            }
+        ),
         "findings": findings,
     }
 

@@ -1,6 +1,6 @@
 {
   "release_policy": {
-    "version": "0.28.3",
+    "version": "0.28.4",
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
     "identity_sources": [
       "VERSION",
@@ -52,7 +52,12 @@
     "web_mutation_authority": false,
     "existing_governed_mutation_enforcement_preserved": true,
     "human_authority_preserved": true,
-    "tool_exclusivity_attested": false,
-    "hard_anti_bypass_reserved_for_v0284": true
+    "tool_exclusivity_attested": true,
+    "hard_anti_bypass_reserved_for_v0284": false,
+    "tool_exclusivity_scope": "agentos_mediated_agent_execution",
+    "enforcement_attestation_version": 1,
+    "same_user_host_bypass_resistance_claimed": false,
+    "os_level_process_isolation_attested": false,
+    "arbitrary_host_process_containment_attested": false
   }
 }

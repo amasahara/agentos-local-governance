@@ -14,7 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +26,7 @@ from .skill_contract_v2 import set_skill_contract, skill_contract_get, skill_con
 from .retrieval import search_knowledge
 from .embeddings import build_embedding_index, rag_query
 from .knowledge_graph import build_graph, graph_neighbors, graph_path
-from .jobs import cancel_job, discover_tools, job_status, recover_jobs, submit_job
+from .jobs import cancel_job, discover_tools, job_status, recover_jobs
 from .planning import active_plan, approve_plan, precommit_check, submit_plan
 from .evaluation import aggregate_metrics, compare_outcomes, export_metrics, record_outcome
 from .evolution import create_proposal, proposal_status, simulate_proposal, transition_proposal
@@ -38,7 +38,7 @@ from .drift import ack_baseline, drift_check, drift_diff
 from .indexing import duplicate_report, index_build, index_query, index_status
 from .incremental_index_benchmark import DEFAULT_BENCHMARK_FILE, check_incremental_index_benchmark, run_incremental_index_benchmark
 from .policy import approve_local_override, local_override_status, load_policy
-from .proxy import proxy_execute
+from .proxy import proxy_execute, proxy_submit_job
 from .external_audit import rotate_signing_key, verify_external_log
 from .tooling import complete_tool, egress_report, guard_tool
 from .storage import archive_audit_segment, backup_create, backup_verify, prune_observability
@@ -133,7 +133,7 @@ def parser() -> argparse.ArgumentParser:
     a=s.add_parser("memory-validate")
     a=s.add_parser("finding-record"); a.add_argument("--kind",required=True); a.add_argument("--message",required=True); a.add_argument("--path"); a.add_argument("--symbol"); _task_arg(a)
     a=s.add_parser("docs-scan"); a.add_argument("--scope",default="src"); _task_arg(a)
-    a=s.add_parser("run-tests"); _task_arg(a); a.add_argument("--path",default=".agents/tests")
+    a=s.add_parser("run-tests"); _task_arg(a); a.add_argument("--path",default="tests")
     a=s.add_parser("sync-check"); _task_arg(a)
     a=s.add_parser("report"); _task_arg(a)
     a=s.add_parser("ack-baseline"); a.add_argument("--identity"); a.add_argument("--force-noninteractive",action="store_true")
@@ -177,11 +177,70 @@ def parser() -> argparse.ArgumentParser:
     return p
 
 
-def _run_tests(root: Path, path: str) -> dict[str, Any]:
-    env={**os.environ,"PYTHONPATH":str(root/".agents")}
-    proc=subprocess.run(["python3","-m","pytest",path,"-q"],cwd=root,text=True,capture_output=True,env=env)
-    return {"ok":proc.returncode==0,"exit_code":proc.returncode,"stdout":proc.stdout,"stderr":proc.stderr}
+def _run_tests(
+    root: Path,
+    path: str,
+    task_id: str,
+    session_id: str,
+) -> dict[str, Any]:
+    """Run project tests through canonical process enforcement."""
+    proxied = proxy_execute(
+        root,
+        task_id,
+        session_id,
+        "agentos.run_command",
+        {
+            "command": [
+                sys.executable,
+                "-m",
+                "pytest",
+                path,
+                "-q",
+            ],
+            "cwd": ".",
+            "timeout": 600,
+            "env": {},
+        },
+    )
 
+    output = (
+        proxied.get("output", {})
+        if isinstance(proxied, dict)
+        else {}
+    )
+
+    if not isinstance(output, dict):
+        output = {}
+
+    success = bool(
+        proxied.get("success", False)
+    )
+
+    result = {
+        "ok": success,
+        "allowed": bool(
+            proxied.get("allowed", success)
+        ),
+        "exit_code": output.get(
+            "exit_code",
+            0 if success else 2,
+        ),
+        "stdout": output.get("stdout", ""),
+        "stderr": output.get("stderr", ""),
+        "tool_call_id": proxied.get(
+            "tool_call_id"
+        ),
+    }
+
+    if "reason" in proxied:
+        result["reason"] = proxied["reason"]
+
+    if "external_audit" in proxied:
+        result["external_audit"] = (
+            proxied["external_audit"]
+        )
+
+    return result
 
 def _reminder(root: Path, session: str, task_id: str | None = None) -> dict[str, Any]:
     active=task_id or current_task_id(root,session); drift=drift_check(root,task_id=active); override=local_override_status(root)
@@ -197,7 +256,11 @@ def _reminder(root: Path, session: str, task_id: str | None = None) -> dict[str,
 
 def _doctor(root: Path, scope: str) -> dict[str, Any]:
     """Run consolidated installation and enforcement health checks."""
+    from .enforcement_attestation import attest_enforcement
+
     policy = load_policy(root)
+    attestation = attest_enforcement(root)
+
     checks = {
         "instruction": instruction_check(root),
         "documentation": docs_check(root),
@@ -212,8 +275,33 @@ def _doctor(root: Path, scope: str) -> dict[str, Any]:
             "direct_backend_access_forbidden": policy.get("proxy_policy", {}).get("direct_backend_access_forbidden"),
         },
     }
-    ok = all(item.get("ok", False) for item in checks.values())
-    return {"ok": ok, "checks": checks}
+    checks["enforcement_attestation"] = {
+        "ok": (
+            attestation.get("ok") is True
+            and attestation.get("attestation_ready") is True
+        ),
+        "attestation_ready": attestation.get(
+            "attestation_ready"
+        ),
+        "tool_exclusivity": attestation.get(
+            "tool_exclusivity"
+        ),
+        "scope": attestation.get("scope"),
+        "policy_declared_attested": attestation.get(
+            "policy_declared_attested"
+        ),
+        "findings": attestation.get("findings", []),
+    }
+
+    ok = all(
+        item.get("ok", False)
+        for item in checks.values()
+    )
+
+    return {
+        "ok": ok,
+        "checks": checks,
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -225,7 +313,7 @@ def main(argv: list[str] | None = None) -> int:
     args=parser().parse_args(argv); root=Path(args.root).resolve(); session=normalize_session_id(args.session_id)
     try:
         tid=getattr(args,"task_id",None)
-        task_commands={"role-assign","collaboration-readiness","message-send","message-list","job-submit","tools-discover","plan-submit","plan-show","precommit-check","context-build","context-status","context-explain","context-compare","memory-record","finding-record","approve-task","acquire-resource","heartbeat-resource","release-resource","list-resources","claim-task","handoff-task","mark-step","workflow-status","index-build","guard-tool","prepare-change","record-claim","list-claims","egress-report","cache-store","cache-lookup","report","proxy-execute","mcp-serve"}
+        task_commands={"run-tests","role-assign","collaboration-readiness","message-send","message-list","job-submit","tools-discover","plan-submit","plan-show","precommit-check","context-build","context-status","context-explain","context-compare","memory-record","finding-record","approve-task","acquire-resource","heartbeat-resource","release-resource","list-resources","claim-task","handoff-task","mark-step","workflow-status","index-build","guard-tool","prepare-change","record-claim","list-claims","egress-report","cache-store","cache-lookup","report","proxy-execute","mcp-serve"}
         if args.cmd in task_commands:
             tid=resolve_task_id(root,tid,session)
         if args.cmd=="start-task":
@@ -307,7 +395,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.cmd=="graph-path": result=graph_path(root,args.from_node,args.to_node,args.max_depth)
         elif args.cmd=="memory-validate": result=validate_memory(root)
         elif args.cmd=="finding-record": result=record_finding(root,args.kind,args.message,args.path,args.symbol,tid)
-        elif args.cmd=="job-submit": result=submit_job(root,tid,session,_json_arg(args.command,"command"),args.cwd,args.timeout,_json_arg(args.env,"env"),not args.no_start)
+        elif args.cmd=="job-submit": result=proxy_submit_job(root,tid,session,_json_arg(args.command,"command"),args.cwd,args.timeout,_json_arg(args.env,"env"),not args.no_start)
         elif args.cmd=="job-status": result=job_status(root,args.job_id)
         elif args.cmd=="job-cancel": result=cancel_job(root,args.job_id,session,args.reason)
         elif args.cmd=="job-recover": result=recover_jobs(root)
@@ -341,7 +429,7 @@ def main(argv: list[str] | None = None) -> int:
             result=documentation_scan(root,args.scope)
             if tid and result.get("ok"): complete_automated_step(root,tid,"documentation_check","docs-scan",result)
         elif args.cmd=="run-tests":
-            result=_run_tests(root,args.path)
+            result=_run_tests(root,args.path,tid,session)
             if tid and result["ok"]: complete_automated_step(root,tid,"tests","run-tests",result,exit_code=result["exit_code"])
         elif args.cmd=="sync-check":
             dc,ic=docs_check(root),instruction_check(root); result={"ok":dc["ok"] and ic["ok"],"docs":dc,"instruction":ic}

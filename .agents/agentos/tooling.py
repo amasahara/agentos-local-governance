@@ -177,6 +177,72 @@ def guard_tool(root: Path, task_id: str, session_id: str, tool_name: str, args: 
     return {"allowed": decision == "allow", "decision": decision, "reason": reason, "execution_token": token, "expires_at": expires.isoformat() if token else None, **classification}
 
 
+
+def validate_execution_token(
+    root: Path,
+    execution_token: str,
+    task_id: str,
+    session_id: str,
+    tool_name: str,
+    input_data: dict[str, Any],
+) -> dict[str, Any]:
+    """Validate one guarded execution token without consuming it.
+
+    This is used by execution adapters immediately before the
+    actual side effect. complete_tool() remains responsible for
+    consuming the single-use token and materializing canonical
+    completion evidence.
+    """
+    actual_hash = _args_hash(input_data)
+    now = datetime.now(timezone.utc)
+
+    with connect(root) as c:
+        row = c.execute(
+            "SELECT * FROM guarded_executions "
+            "WHERE execution_token=?",
+            (execution_token,),
+        ).fetchone()
+
+    if not row:
+        raise RuntimeError("execution token not found")
+
+    if row["task_id"] != task_id:
+        raise RuntimeError(
+            "execution token belongs to another task"
+        )
+
+    if row["session_id"] != session_id:
+        raise RuntimeError(
+            "execution token belongs to another session"
+        )
+
+    if row["tool_name"] != tool_name:
+        raise RuntimeError(
+            "execution token belongs to another tool"
+        )
+
+    if row["decision"] != "allow":
+        raise RuntimeError(
+            "execution token was not allowed"
+        )
+
+    if row["completed_at"] is not None:
+        raise RuntimeError(
+            "execution token has already been used"
+        )
+
+    if datetime.fromisoformat(row["expires_at"]) < now:
+        raise RuntimeError(
+            "execution token has expired"
+        )
+
+    if row["args_hash"] != actual_hash:
+        raise RuntimeError(
+            "execution arguments do not match guarded arguments"
+        )
+
+    return dict(row)
+
 def complete_tool(root: Path, execution_token: str, input_data: dict[str, Any], success: bool, output_summary: str, session_id: str) -> dict[str, Any]:
     """Complete a guarded execution and create canonical evidence.
 

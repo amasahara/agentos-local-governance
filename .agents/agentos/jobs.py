@@ -27,6 +27,7 @@ from .db import connect
 from .external_audit import append_signed_event
 from .proxy import _command_profile, _filtered_env, _inside, _isolated_workspace, _scan_agentos_imports
 from .policy import load_policy
+from .tooling import validate_execution_token
 from .workflow import workflow_status
 
 _FINAL = {"succeeded", "failed", "cancelled", "timed_out"}
@@ -42,7 +43,18 @@ def _job_dir(root: Path, job_id: str) -> Path:
     return path
 
 
-def submit_job(root: Path, task_id: str, session_id: str, command: list[str], cwd: str = ".", timeout_seconds: int = 900, env: dict[str, Any] | None = None, auto_start: bool = True) -> dict[str, Any]:
+def submit_job(
+    root: Path,
+    task_id: str,
+    session_id: str,
+    command: list[str],
+    cwd: str = ".",
+    timeout_seconds: int = 900,
+    env: dict[str, Any] | None = None,
+    auto_start: bool = True,
+    *,
+    execution_token: str,
+) -> dict[str, Any]:
     """Create an immutable governed job and optionally start it.
 
     Args:
@@ -58,6 +70,23 @@ def submit_job(root: Path, task_id: str, session_id: str, command: list[str], cw
     Returns:
         Serialized job status.
     """
+    guarded_args = {
+        "command": list(command),
+        "cwd": cwd,
+        "timeout": int(timeout_seconds),
+        "env": env or {},
+        "auto_start": bool(auto_start),
+    }
+
+    validate_execution_token(
+        root,
+        execution_token,
+        task_id,
+        session_id,
+        "shell_local",
+        guarded_args,
+    )
+
     policy = load_policy(root)
     profile = _command_profile(command, policy)
     source_cwd = _inside(root, cwd)
@@ -87,37 +116,178 @@ def submit_job(root: Path, task_id: str, session_id: str, command: list[str], cw
     event = append_signed_event(root, "job.queued", {"job_id": job_id, "spec_hash": spec_hash}, task_id, session_id)
     with connect(root) as c:
         c.execute("UPDATE async_jobs SET external_event_hash=? WHERE job_id=?", (event["event_hash"], job_id))
-    return start_job(root, job_id, clean_env) if auto_start else job_status(root, job_id)
+    return (
+        start_job(
+            root,
+            job_id,
+            execution_token=execution_token,
+            guarded_args=guarded_args,
+        )
+        if auto_start
+        else job_status(root, job_id)
+    )
 
 
-def start_job(root: Path, job_id: str, clean_env: dict[str, str] | None = None) -> dict[str, Any]:
-    """Launch a queued asynchronous job.
+def start_job(
+    root: Path,
+    job_id: str,
+    *,
+    execution_token: str,
+    guarded_args: dict[str, Any],
+) -> dict[str, Any]:
+    """Launch a queued asynchronous job under guarded authority.
 
-    Args:
-        root: Governed project root.
-        job_id: Job identifier.
-        clean_env: Pre-filtered environment for launch.
+    The actual subprocess side effect is allowed only while the
+    original execution token is still valid and bound to the
+    immutable queued job specification.
 
-    Returns:
-        Updated job status.
+    Deferred queued jobs require a future newly-guarded start
+    operation; a token created for ``auto_start=False`` cannot
+    launch a process.
     """
     with connect(root, immediate=True) as c:
-        row = c.execute("SELECT * FROM async_jobs WHERE job_id=?", (job_id,)).fetchone()
+        row = c.execute(
+            "SELECT * FROM async_jobs WHERE job_id=?",
+            (job_id,),
+        ).fetchone()
+
         if not row:
             raise RuntimeError("job not found")
+
         if row["state"] != "queued":
             return dict(row)
+
         spec = json.loads(row["spec_json"])
-        stdout = open(row["stdout_path"], "ab", buffering=0)
-        stderr = open(row["stderr_path"], "ab", buffering=0)
+
+        # Re-validate immediately before the actual process
+        # side effect. complete_tool() consumes this token only
+        # after submit_job/start_job returns to the proxy.
+        validate_execution_token(
+            root,
+            execution_token,
+            row["task_id"],
+            row["session_id"],
+            "shell_local",
+            guarded_args,
+        )
+
+        if guarded_args.get("auto_start") is not True:
+            raise RuntimeError(
+                "queued job requires a new guarded start operation"
+            )
+
+        expected_command = list(
+            guarded_args.get("command") or []
+        )
+
+        if spec.get("command") != expected_command:
+            raise RuntimeError(
+                "queued job command does not match guarded arguments"
+            )
+
+        if spec.get("cwd") != guarded_args.get("cwd"):
+            raise RuntimeError(
+                "queued job cwd does not match guarded arguments"
+            )
+
+        if int(spec.get("timeout_seconds", 0)) != int(
+            guarded_args.get("timeout", 0)
+        ):
+            raise RuntimeError(
+                "queued job timeout does not match guarded arguments"
+            )
+
+        # Rebuild the launch environment from guarded input.
+        # start_job no longer accepts caller-supplied clean_env.
+        launch_env = _filtered_env(
+            guarded_args.get("env") or {}
+        )
+
+        environment_hash = hashlib.sha256(
+            json.dumps(
+                launch_env,
+                sort_keys=True,
+            ).encode()
+        ).hexdigest()
+
+        if spec.get("environment_hash") != environment_hash:
+            raise RuntimeError(
+                "queued job environment does not match guarded arguments"
+            )
+
+        # Detect modification of the immutable queued job spec.
+        actual_spec_hash = hashlib.sha256(
+            json.dumps(
+                spec,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        ).hexdigest()
+
+        if actual_spec_hash != row["spec_hash"]:
+            raise RuntimeError(
+                "queued job specification hash mismatch"
+            )
+
+        stdout = open(
+            row["stdout_path"],
+            "ab",
+            buffering=0,
+        )
+        stderr = open(
+            row["stderr_path"],
+            "ab",
+            buffering=0,
+        )
+
         kwargs: dict[str, Any] = {}
+
         if os.name == "posix":
             kwargs["start_new_session"] = True
-        proc = subprocess.Popen(spec["command"], cwd=spec["workspace"], env=clean_env or _filtered_env(), stdout=stdout, stderr=stderr, **kwargs)
-        c.execute("UPDATE async_jobs SET state='running',pid=?,started_at=? WHERE job_id=?", (proc.pid, _now(), job_id))
-        c.execute("INSERT INTO job_events(job_id,event_type,details_json) VALUES(?,?,?)", (job_id, "running", json.dumps({"pid": proc.pid})))
-    return job_status(root, job_id)
 
+        try:
+            proc = subprocess.Popen(
+                spec["command"],
+                cwd=spec["workspace"],
+                env=launch_env,
+                stdout=stdout,
+                stderr=stderr,
+                shell=False,
+                **kwargs,
+            )
+        except Exception:
+            stdout.close()
+            stderr.close()
+            raise
+
+        c.execute(
+            "UPDATE async_jobs "
+            "SET state='running',pid=?,started_at=? "
+            "WHERE job_id=?",
+            (
+                proc.pid,
+                _now(),
+                job_id,
+            ),
+        )
+
+        c.execute(
+            "INSERT INTO job_events("
+            "job_id,event_type,details_json"
+            ") VALUES(?,?,?)",
+            (
+                job_id,
+                "running",
+                json.dumps(
+                    {
+                        "pid": proc.pid,
+                        "spec_hash": row["spec_hash"],
+                    }
+                ),
+            ),
+        )
+
+    return job_status(root, job_id)
 
 def _pid_alive(pid: int) -> bool:
     try:

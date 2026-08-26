@@ -1,7 +1,7 @@
 {
   "format": 1,
   "repository_role": "agentos_distribution",
-  "agentos_version": "0.28.3",
+  "agentos_version": "0.28.4",
   "schema_version": 61,
   "payload_root": ".agents",
   "installed_metadata_root": ".agents/release",

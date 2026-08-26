@@ -1,3 +1,12 @@
+## v0.28.4 — Tool Exclusivity & Enforcement Attestation
+  * Added deterministic enforcement attestation for AgentOS-mediated execution surfaces.
+  * Routed synchronous test execution and asynchronous job execution through canonical governed process boundaries.
+  * Revalidated async execution authority immediately before the actual subprocess side effect.
+  * Active MCP runtime remains bound to the trusted enforcement gateway with no legacy subprocess forwarding.
+  * Added process-primitive classification for canonical, internal-governance, and inactive-legacy execution sites.
+  * Integrated fail-closed attestation into runtime health, doctor, policy validation, and release integrity.
+  * Tool-exclusivity scope is limited to agentos_mediated_agent_execution; OS-level isolation and same-user host bypass resistance are not claimed.
+  * Release is 0.28.4; database schema remains 61.
 ## v0.28.3 — Privileged Control Plane Separation
 
 - Separated normal agent execution from human/operator privileged authority.

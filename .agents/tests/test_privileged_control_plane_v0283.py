@@ -212,32 +212,108 @@ def test_installed_payload_contains_admin_launchers() -> None:
 
 
 def test_v0283_policy_declares_control_plane_boundary() -> None:
+    """Protect the v0.28.3 boundary across later releases."""
     from agentos.policy import load_release_policy
 
     policy = load_release_policy(ROOT)
-    control = policy["privileged_control_plane_policy"]
+    control = policy[
+        "privileged_control_plane_policy"
+    ]
 
-    assert policy["version"] == "0.28.3"
-    assert control["enabled"] is True
-    assert control["privileged_control_plane_required"] is True
-    assert control["control_plane_allowlist_explicit"] is True
-    assert control["dual_plane_argument_enforcement"] is True
-
-    assert (
-        control["agent_plane_privileged_execution_allowed"]
-        is False
+    version = tuple(
+        int(part)
+        for part in policy["version"].split(".")
     )
-    assert control["mcp_privileged_mutation_exposed"] is False
-    assert control["web_mutation_authority"] is False
 
-    assert control["tool_exclusivity_attested"] is False
+    assert version >= (0, 28, 3)
+
+    assert control["enabled"] is True
     assert (
-        control["hard_anti_bypass_reserved_for_v0284"]
+        control[
+            "privileged_control_plane_required"
+        ]
         is True
     )
+    assert (
+        control[
+            "control_plane_allowlist_explicit"
+        ]
+        is True
+    )
+    assert (
+        control[
+            "dual_plane_argument_enforcement"
+        ]
+        is True
+    )
+    assert (
+        control[
+            "agent_plane_privileged_execution_allowed"
+        ]
+        is False
+    )
+    assert (
+        control[
+            "mcp_privileged_mutation_exposed"
+        ]
+        is False
+    )
+    assert (
+        control[
+            "web_mutation_authority"
+        ]
+        is False
+    )
 
+    assert set(
+        control["dual_plane_commands"]
+    ) == {
+        "architecture-init",
+        "project-adopt",
+    }
+
+    if version == (0, 28, 3):
+        assert (
+            control[
+                "tool_exclusivity_attested"
+            ]
+            is False
+        )
+        assert (
+            control[
+                "hard_anti_bypass_reserved_for_v0284"
+            ]
+            is True
+        )
+
+    if version >= (0, 28, 4):
+        assert (
+            control[
+                "tool_exclusivity_attested"
+            ]
+            is True
+        )
+        assert (
+            control[
+                "hard_anti_bypass_reserved_for_v0284"
+            ]
+            is False
+        )
+        assert (
+            control[
+                "tool_exclusivity_scope"
+            ]
+            == "agentos_mediated_agent_execution"
+        )
+        assert (
+            control[
+                "enforcement_attestation_version"
+            ]
+            == 1
+        )
 
 def test_v0283_policy_poisoning_fails_closed() -> None:
+    """Protect both historical v0.28.3 and current v0.28.4 contracts."""
     from copy import deepcopy
 
     from agentos.policy import (
@@ -247,34 +323,125 @@ def test_v0283_policy_poisoning_fails_closed() -> None:
 
     policy = load_release_policy(ROOT)
 
+    # --------------------------------------------------------
+    # Boundary invariant shared by v0.28.3+
+    # --------------------------------------------------------
+
     poisoned = deepcopy(policy)
-    poisoned["privileged_control_plane_policy"][
+
+    poisoned[
+        "privileged_control_plane_policy"
+    ][
         "agent_plane_privileged_execution_allowed"
     ] = True
 
     try:
         validate_policy(poisoned)
     except RuntimeError as exc:
-        assert "control-plane" in str(exc)
+        assert (
+            "control-plane" in str(exc)
+            or "authority invariant" in str(exc)
+        )
     else:
         raise AssertionError(
             "poisoned agent-plane authority was accepted"
         )
 
-    poisoned = deepcopy(policy)
-    poisoned["privileged_control_plane_policy"][
+    # --------------------------------------------------------
+    # Historical v0.28.3 reservation contract
+    # --------------------------------------------------------
+
+    historical = deepcopy(policy)
+    historical["version"] = "0.28.3"
+
+    historical_control = historical[
+        "privileged_control_plane_policy"
+    ]
+
+    historical_control[
+        "tool_exclusivity_attested"
+    ] = False
+
+    historical_control[
+        "hard_anti_bypass_reserved_for_v0284"
+    ] = True
+
+    # A reconstructed valid v0.28.3 contract must still validate.
+    validate_policy(historical)
+
+    poisoned_v0283 = deepcopy(historical)
+
+    poisoned_v0283[
+        "privileged_control_plane_policy"
+    ][
         "tool_exclusivity_attested"
     ] = True
 
     try:
-        validate_policy(poisoned)
+        validate_policy(poisoned_v0283)
     except RuntimeError as exc:
-        assert "control-plane" in str(exc)
+        message = str(exc)
+
+        assert (
+            "v0.28.3" in message
+            or "tool exclusivity" in message
+        )
     else:
         raise AssertionError(
-            "v0.28.4 exclusivity was falsely attested"
+            "v0.28.3 falsely accepted tool-exclusivity attestation"
         )
 
+    # --------------------------------------------------------
+    # Current v0.28.4 activation contract
+    # --------------------------------------------------------
+
+    current_version = tuple(
+        int(part)
+        for part in policy["version"].split(".")
+    )
+
+    if current_version >= (0, 28, 4):
+        poisoned_v0284 = deepcopy(policy)
+
+        poisoned_v0284[
+            "privileged_control_plane_policy"
+        ][
+            "tool_exclusivity_attested"
+        ] = False
+
+        try:
+            validate_policy(poisoned_v0284)
+        except RuntimeError as exc:
+            assert (
+                "tool exclusivity"
+                in str(exc)
+            )
+        else:
+            raise AssertionError(
+                "v0.28.4 accepted disabled tool exclusivity"
+            )
+
+        poisoned_reservation = deepcopy(policy)
+
+        poisoned_reservation[
+            "privileged_control_plane_policy"
+        ][
+            "hard_anti_bypass_reserved_for_v0284"
+        ] = True
+
+        try:
+            validate_policy(
+                poisoned_reservation
+            )
+        except RuntimeError as exc:
+            assert (
+                "reservation" in str(exc)
+                or "v0.28.4" in str(exc)
+            )
+        else:
+            raise AssertionError(
+                "v0.28.4 accepted stale anti-bypass reservation"
+            )
 
 def test_admin_help_uses_control_plane_program_identity() -> None:
     for command in (

@@ -237,7 +237,6 @@ def validate_policy(policy: dict[str, Any]) -> None:
             "dual_plane_argument_enforcement",
             "existing_governed_mutation_enforcement_preserved",
             "human_authority_preserved",
-            "hard_anti_bypass_reserved_for_v0284",
         )
 
         disabled_control = [
@@ -256,7 +255,6 @@ def validate_policy(policy: dict[str, Any]) -> None:
             "agent_plane_privileged_execution_allowed",
             "mcp_privileged_mutation_exposed",
             "web_mutation_authority",
-            "tool_exclusivity_attested",
         )
 
         poisoned_control = [
@@ -270,6 +268,84 @@ def validate_policy(policy: dict[str, Any]) -> None:
                 "privileged control-plane authority invariant "
                 f"violated: {poisoned_control}"
             )
+
+        if version == (0, 28, 3):
+            if (
+                control.get(
+                    "hard_anti_bypass_reserved_for_v0284"
+                )
+                is not True
+            ):
+                raise RuntimeError(
+                    "v0.28.3 must reserve hard anti-bypass "
+                    "attestation for v0.28.4"
+                )
+
+            if (
+                control.get("tool_exclusivity_attested")
+                is not False
+            ):
+                raise RuntimeError(
+                    "v0.28.3 must not declare tool exclusivity"
+                )
+
+        if version >= (0, 28, 4):
+            if (
+                control.get(
+                    "hard_anti_bypass_reserved_for_v0284"
+                )
+                is not False
+            ):
+                raise RuntimeError(
+                    "v0.28.4+ must release the v0.28.4 "
+                    "anti-bypass reservation"
+                )
+
+            if (
+                control.get("tool_exclusivity_attested")
+                is not True
+            ):
+                raise RuntimeError(
+                    "v0.28.4+ requires tool exclusivity "
+                    "attestation"
+                )
+
+            if (
+                control.get("tool_exclusivity_scope")
+                != "agentos_mediated_agent_execution"
+            ):
+                raise RuntimeError(
+                    "v0.28.4+ tool exclusivity scope is invalid"
+                )
+
+            if int(
+                control.get(
+                    "enforcement_attestation_version",
+                    0,
+                )
+            ) != 1:
+                raise RuntimeError(
+                    "v0.28.4+ enforcement attestation "
+                    "version must be 1"
+                )
+
+            non_claim_keys = (
+                "same_user_host_bypass_resistance_claimed",
+                "os_level_process_isolation_attested",
+                "arbitrary_host_process_containment_attested",
+            )
+
+            invalid_non_claims = [
+                key
+                for key in non_claim_keys
+                if control.get(key) is not False
+            ]
+
+            if invalid_non_claims:
+                raise RuntimeError(
+                    "v0.28.4+ enforcement scope overclaim: "
+                    f"{invalid_non_claims}"
+                )
 
         if int(control.get("database_schema", 0)) != 61:
             raise RuntimeError(

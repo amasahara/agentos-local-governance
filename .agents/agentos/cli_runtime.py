@@ -71,6 +71,7 @@ SPECIAL_COMMANDS = {
     "governed-operation-show",
     "runtime-health",
     "commands-list",
+    "enforcement-attest",
 }
 
 PRIVILEGED_COMMANDS = {
@@ -328,6 +329,10 @@ def _runtime_health(root: Path) -> dict[str, Any]:
         set(shared) - set(DUAL_PLANE_COMMANDS)
     )
 
+    from .enforcement_attestation import attest_enforcement
+
+    enforcement_attestation = attest_enforcement(root)
+
     parity = (
         wrapper_status["posix_cli"]
         and wrapper_status["windows_cli"]
@@ -342,6 +347,10 @@ def _runtime_health(root: Path) -> dict[str, Any]:
             all(wrapper_status.values())
             and not legacy_active
             and not unexpected_overlap
+            and enforcement_attestation.get("ok") is True
+            and enforcement_attestation.get(
+                "attestation_ready"
+            ) is True
         ),
         "version": VERSION,
         "schema": CURRENT_SCHEMA_VERSION,
@@ -354,6 +363,23 @@ def _runtime_health(root: Path) -> dict[str, Any]:
         "agent_plane_privileged_dispatch": False,
         "privileged_control_plane": True,
         "duplicate_commands": [],
+        "enforcement_attestation": {
+            "ok": enforcement_attestation.get("ok"),
+            "attestation_ready": enforcement_attestation.get(
+                "attestation_ready"
+            ),
+            "tool_exclusivity": enforcement_attestation.get(
+                "tool_exclusivity"
+            ),
+            "scope": enforcement_attestation.get("scope"),
+            "policy_declared_attested": enforcement_attestation.get(
+                "policy_declared_attested"
+            ),
+            "findings": enforcement_attestation.get(
+                "findings",
+                [],
+            ),
+        },
         "wrappers": wrapper_status,
         "legacy_version_forwarding_active": legacy_active,
         "windows_posix_parity": parity,
@@ -365,23 +391,6 @@ def _core_accepts_task_id(command: str) -> bool:
     parser = _commands(core_cli.parser()).get(command)
     return bool(parser and "--task-id" in parser._option_string_actions)
 
-
-def _run_tests_with_active_python(root: Path, path: str) -> dict[str, Any]:
-    """Run pytest with the interpreter that launched the unified CLI runtime."""
-    env = {**os.environ, "PYTHONPATH": str(root / ".agents")}
-    proc = core_cli.subprocess.run(
-        [sys.executable, "-m", "pytest", path, "-q"],
-        cwd=root,
-        text=True,
-        capture_output=True,
-        env=env,
-    )
-    return {
-        "ok": proc.returncode == 0,
-        "exit_code": proc.returncode,
-        "stdout": proc.stdout,
-        "stderr": proc.stderr,
-    }
 
 def _dispatch_special(command: str, root: Path, args: list[str]) -> int:
     """Dispatch current-release utility commands in-process."""
@@ -398,6 +407,9 @@ def _dispatch_special(command: str, root: Path, args: list[str]) -> int:
         result = governed_operation_status(root, parsed.operation_id)
     elif command == "runtime-health":
         result = _runtime_health(root)
+    elif command == "enforcement-attest":
+        from .enforcement_attestation import attest_enforcement
+        result = attest_enforcement(root)
     elif command == "commands-list":
         registry = agent_command_registry()
         result = {
@@ -546,9 +558,6 @@ def main(
             )
 
         if handler == "core":
-            if command == "run-tests":
-                core_cli._run_tests = _run_tests_with_active_python
-
             forwarded = ["--root", str(root)]
 
             if session_id:

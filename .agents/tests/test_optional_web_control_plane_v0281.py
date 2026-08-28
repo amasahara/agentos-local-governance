@@ -20,7 +20,7 @@ _POLICY = {
         "enabled": True,
         "optional": True,
         "web_version": 1,
-        "database_schema": 61,
+        "database_schema": 62,
         "default_host": "127.0.0.1",
         "default_port": 8765,
         "loopback_only": True,

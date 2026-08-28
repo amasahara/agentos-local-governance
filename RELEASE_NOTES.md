@@ -1,93 +1,78 @@
-# AgentOS Local Governance v0.28.4 — Tool Exclusivity & Enforcement Attestation
+# AgentOS Local Governance v0.29.0 — Independent Completion Verification
 
-AgentOS v0.28.4 establishes machine-verifiable tool exclusivity for AgentOS-mediated agent execution surfaces.
+AgentOS v0.29.0 makes accepted completion producer-independent and evidence-bound for AgentOS-mediated workflows.
 
-Database schema remains **61**.
+Database schema is **62**.
 
 ## Highlights
 
-### Canonical execution boundary
+### Independent completion receipt
 
-Supported agent-side process execution now uses the canonical AgentOS enforcement lifecycle:
+Accepted completion can no longer be established solely by the producer that produced the work. AgentOS records a completion request bound to the subject, producer task/session/assignment, subject hash, and required checks. Verification runs under governed reviewer authority.
+
+A passing receipt requires verifier task/session/assignment independence, exact subject-hash match, every required check to pass, and non-empty evidence. If the subject changes after verification, the receipt becomes stale and completion fails closed until independently verified again.
+
+### Workflow, worker, and integration enforcement
+
+Single-task workflow completion separates candidate readiness from final completion and binds the terminal report to the accepted receipt. Multi-agent workers cannot self-terminalize as `completed`; a current independent receipt is required. Controlled integration proposals pin the worker receipt and readiness revalidates it.
+
+### CLI and MCP
+
+Agent-plane CLI adds:
 
 ```text
-request
-→ proxy preflight
-→ guard
-→ governed adapter execution
-→ completion
-→ tool_call_id
-→ signed audit evidence
+completion-request
+completion-verify
+completion-status
 ```
 
-Synchronous process execution remains owned by the canonical process proxy. Asynchronous job execution is reintegrated into the same governed lifecycle.
-
-### Guarded asynchronous process execution
-
-`job-submit` and MCP `agentos.run_command_async` now route through the canonical async proxy boundary. The actual `subprocess.Popen()` side effect revalidates its execution token immediately before process creation and verifies task/session ownership, guarded command, working directory, timeout, filtered environment hash, immutable job specification hash, and `auto_start` authority.
-
-Deferred queued jobs cannot use an already completed execution authority to start a process.
-
-### Governed `run-tests`
-
-`agentos run-tests` no longer owns a separate raw pytest subprocess path. It executes project tests through governed `process.exec` using `agentos.run_command`. The default project test surface is `tests/` rather than AgentOS internal tests.
-
-### Legacy MCP gateways remain inactive
-
-Historical `mcp_*_gateway.py` compatibility modules may remain in the repository, but they are not part of the active MCP runtime. The active runtime attests `subprocess_forwarding=false`, `legacy_gateway_active=false`, `legacy_gateway_handler_count=0`, and `trusted_enforcement_gateway=true`.
-
-### Enforcement attestation
-
-A new read-only command is available:
+MCP adds exactly one completion surface:
 
 ```text
-agentos enforcement-attest
+agentos.completion_status_get
 ```
 
-It deterministically verifies proxy-only execution, canonical guarded lifecycle, registry separation, backend-access restrictions, legacy path blocking, MCP trusted-gateway binding, sync/async signed lifecycle, guarded async `Popen`, process-primitive classification, and canonical process adapter presence.
+It is read-only and privacy-redacted. Completion request/verify mutation authority is not exposed over MCP.
 
-Runtime now contains:
+### Attestation and release integrity
+
+`agentos enforcement-attest` now verifies independent reviewer authority, producer/verifier separation, subject-hash binding, passing-check/evidence requirements, stale-subject rejection, workflow/worker/integration receipt enforcement, CLI plane isolation, and MCP read-only exposure.
+
+v0.29.0 release policy declares:
 
 ```text
-341 canonical commands
-245 agent-plane commands
+independent_completion_attested = true
+scope = agentos_mediated_agent_execution
+database_schema = 62
+```
+
+### Runtime surface
+
+```text
+344 canonical commands
+248 agent-plane commands
 98 privileged-control-plane commands
 2 intentional dual-plane commands
 0 unexpected agent/privileged overlap
+124 MCP tools
 ```
 
-### Fail-closed integration
+The intentional dual-plane commands remain `architecture-init` and `project-adopt`.
 
-Enforcement attestation is integrated into `runtime-health`, `doctor`, release integrity validation, and release policy validation.
+### Explicit claim boundary
 
-v0.28.4+ requires:
+> AgentOS completion is producer-independent and evidence-bound.
 
-```text
-tool_exclusivity_attested = true
-hard_anti_bypass_reserved_for_v0284 = false
-tool_exclusivity_scope = agentos_mediated_agent_execution
-enforcement_attestation_version = 1
-```
+The scope is `agentos_mediated_agent_execution`.
 
-### Explicit security scope
-
-The v0.28.4 attestation scope is `agentos_mediated_agent_execution`.
-
-The release intentionally does **not** claim same-user host bypass resistance, OS-level process isolation, or arbitrary host-process containment.
+This release does **not** guarantee semantic correctness, attest model/provider independence, replace human review, replace human approval, claim same-user host bypass resistance, claim OS-level process isolation, or claim arbitrary host-process containment.
 
 ## Compatibility
 
-No database migration is required.
+v0.29.0 upgrades AgentOS state from schema **61** to **62**. Fresh databases materialize the existing schema bootstrap baseline and apply the ordered migration chain through migration 62. Existing schema-61 state upgrades incrementally.
 
-```text
-v0.28.3 schema: 61
-v0.28.4 schema: 61
-```
+The v0.28.4 Tool Exclusivity & Enforcement Attestation contract and v0.28.3 Privileged Control Plane separation remain intact.
 
-The Privileged Control Plane introduced in v0.28.3 remains intact.
+## Distribution
 
-## Next
-
-The next planned roadmap node is:
-
-**v0.29.0 — Independent Completion Verification**
+The distribution model remains **Latest Full Release**. No version-specific updater script is required in the release payload. Project-owned source, skills/workflows, and local runtime state remain outside the managed replacement boundary.

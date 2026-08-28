@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from agentos import multi_agent_supervisor as mas
+from agentos import completion_verification as cv
 from agentos import mcp_v0272
 from agentos import multi_agent_supervisor_cli as supervisor_cli
 
@@ -61,6 +62,7 @@ def runtime(tmp_path: Path, monkeypatch):
         """
     )
     mas.migration_60(con)
+    cv.migration_62(con)
     con.commit(); con.close()
 
     @contextlib.contextmanager
@@ -120,9 +122,13 @@ def runtime(tmp_path: Path, monkeypatch):
 
     monkeypatch.setattr(mas, "connect", rw)
     monkeypatch.setattr(mas, "connect_read_only", ro)
+    monkeypatch.setattr(cv, "connect", rw)
+    monkeypatch.setattr(cv, "connect_read_only", ro)
     monkeypatch.setattr(mas, "load_policy", policy)
     monkeypatch.setattr(mas, "architecture_plan_status", arch_status)
-    monkeypatch.setattr(mas, "append_signed_event", lambda *a, **k: {"event_hash": hashlib.sha256(repr((a, k)).encode()).hexdigest()})
+    signed = lambda *a, **k: {"event_hash": hashlib.sha256(repr((a, k)).encode()).hexdigest()}
+    monkeypatch.setattr(mas, "append_signed_event", signed)
+    monkeypatch.setattr(cv, "append_signed_event", signed)
 
     def seed_task(task_id: str, files: list[str], session_id: str | None = None, role: str = "executor", sections: list[str] | None = None, owner: str | None = None):
         payload = {
@@ -152,6 +158,7 @@ def _base(runtime):
     seed("parent", ["src/a.py", "src/b.py"], sections=["ARCH-03", "ARCH-12"])
     seed("worker-a", ["src/a.py"], "session-a", owner="session-a")
     seed("worker-b", ["src/b.py"], "session-b", owner="session-b")
+    seed("reviewer", [], "review-session", role="reviewer", owner="review-session")
     sup = mas.create_supervisor(runtime["root"], "parent", "human:architect")
     return sup["supervisor_id"]
 
@@ -221,10 +228,26 @@ def test_dag_runnable_sequence_and_no_process_launch(runtime):
     assert started == {"supervisor_id": sid, "worker_key": "a", "status": "running", "process_launched": False}
     with pytest.raises(PermissionError, match="worker_not_runnable"):
         mas.worker_start(runtime["root"], sid, "b", "worker-b", "session-b")
-    mas.worker_update(runtime["root"], sid, "a", "worker-a", "session-a", "completed")
+    with pytest.raises(PermissionError, match="independent_completion_verification_required"):
+        mas.worker_update(runtime["root"], sid, "a", "worker-a", "session-a", "completed")
+    request_a = mas.worker_completion_request(runtime["root"], sid, "a", "worker-a", "session-a")
+    verified_a = mas.worker_completion_verify(
+        runtime["root"], request_a["request_id"], "reviewer", "review-session",
+        verdict="pass", checks={"evidence": True, "tests": True},
+        evidence={"review": "worker-a independently verified"},
+    )
+    assert verified_a["worker_status"] == "completed"
+    assert verified_a["supervisor_completed"] is False
     assert mas.supervisor_readiness(runtime["root"], sid)["runnable_workers"] == ["b"]
     mas.worker_start(runtime["root"], sid, "b", "worker-b", "session-b")
-    mas.worker_update(runtime["root"], sid, "b", "worker-b", "session-b", "completed")
+    request_b = mas.worker_completion_request(runtime["root"], sid, "b", "worker-b", "session-b")
+    verified_b = mas.worker_completion_verify(
+        runtime["root"], request_b["request_id"], "reviewer", "review-session",
+        verdict="pass", checks={"evidence": True, "tests": True},
+        evidence={"review": "worker-b independently verified"},
+    )
+    assert verified_b["worker_status"] == "completed"
+    assert verified_b["supervisor_completed"] is True
     final = mas.supervisor_readiness(runtime["root"], sid)
     assert final["effective_status"] == "completed"
     assert final["automatic_process_launch"] is False

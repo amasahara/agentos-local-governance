@@ -656,6 +656,42 @@ def _conflicts(root: Path, workspace_id: int) -> list[dict[str, Any]]:
     return conflicts
 
 
+def _worker_completion_verification(
+    root: Path,
+    supervisor_id: int,
+    worker_key: str,
+) -> dict[str, Any]:
+    """Return current independent completion state for one worker subject."""
+    from .completion_verification import completion_status
+    from .multi_agent_supervisor import worker_completion_subject
+
+    subject = worker_completion_subject(root, supervisor_id, worker_key)
+    return completion_status(
+        root,
+        subject_type="multi_agent_worker",
+        subject_id=f"{int(supervisor_id)}:{worker_key}",
+        current_subject_payload=subject,
+    )
+
+
+def _require_worker_completion_verification(
+    root: Path,
+    supervisor_id: int,
+    worker_key: str,
+) -> dict[str, Any]:
+    """Fail closed unless a current independent pass receipt exists."""
+    status = _worker_completion_verification(root, supervisor_id, worker_key)
+    if status["request"] is None:
+        raise PermissionError(
+            "independent_completion_verification_required_for_integration_proposal"
+        )
+    if not status["current"]:
+        raise PermissionError("independent_completion_verification_stale")
+    if not status["accepted"]:
+        raise PermissionError("independent_completion_verification_not_pass")
+    return status
+
+
 def create_integration_proposal(root: Path, supervisor_id: int, worker_key: str, created_by: str) -> dict[str, Any]:
     """Create a controlled integration proposal from a completed worker's sealed workspace.
 
@@ -672,19 +708,73 @@ def create_integration_proposal(root: Path, supervisor_id: int, worker_key: str,
         ws = dict(_workspace_row(c, supervisor_id, worker_key))
         if str(ws["status"]) != "sealed": raise PermissionError("sealed_workspace_required_for_integration_proposal")
         if str(ws["worker_status"]) != "completed": raise PermissionError("completed_worker_required_for_integration_proposal")
+    verification = _require_worker_completion_verification(
+        root,
+        supervisor_id,
+        worker_key,
+    )
     files, manifest_hash = _scan_workspace(root, ws)
     if manifest_hash != str(ws["diff_manifest_hash"]): raise PermissionError("sealed_workspace_changed")
     gates = _candidate_gates(root, Path(str(ws["workspace_path"])), [x["path"] for x in files])
     test = _test_receipt(root, str(ws["task_id"]), str(ws["session_id"]), str(ws["collected_at"] or ""))
     conflicts = _conflicts(root, int(ws["id"]))
     statuses = {"conflict_status": "block" if conflicts else "pass", "architecture_status": gates["architecture_status"], "security_status": gates["security_status"], "test_status": test["status"]}
-    proposal_payload = {"workspace_id": int(ws["id"]), "supervisor_id": int(supervisor_id), "worker_id": int(ws["worker_id"]), "parent_task_id": str(ws["parent_task_id"]), "base_commit": str(ws["base_commit"]), "diff_manifest_hash": manifest_hash, **statuses}
+    completion_request_id = str(verification["request"]["request_id"])
+    completion_result_hash = str(verification["attempt"]["result_hash"])
+    proposal_payload = {
+        "workspace_id": int(ws["id"]),
+        "supervisor_id": int(supervisor_id),
+        "worker_id": int(ws["worker_id"]),
+        "parent_task_id": str(ws["parent_task_id"]),
+        "base_commit": str(ws["base_commit"]),
+        "diff_manifest_hash": manifest_hash,
+        "completion_verification_request_id": completion_request_id,
+        "completion_verification_result_hash": completion_result_hash,
+        **statuses,
+    }
     proposal_hash = _sha(proposal_payload)
     with connect(root) as c:
-        cur = c.execute("INSERT INTO multi_agent_integration_proposals(workspace_id,supervisor_id,worker_id,parent_task_id,base_commit,diff_manifest_hash,status,conflict_status,architecture_status,security_status,test_status,proposal_hash,created_by,created_at) VALUES(?,?,?,?,?,?,'draft',?,?,?,?,?,?,?)", (int(ws["id"]), int(supervisor_id), int(ws["worker_id"]), str(ws["parent_task_id"]), str(ws["base_commit"]), manifest_hash, statuses["conflict_status"], statuses["architecture_status"], statuses["security_status"], statuses["test_status"], proposal_hash, human, _now()))
+        cur = c.execute(
+            """
+            INSERT INTO multi_agent_integration_proposals(
+                workspace_id,supervisor_id,worker_id,parent_task_id,base_commit,
+                diff_manifest_hash,status,conflict_status,architecture_status,
+                security_status,test_status,proposal_hash,created_by,created_at,
+                completion_verification_request_id,completion_verification_result_hash
+            ) VALUES(?,?,?,?,?,?,'draft',?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                int(ws["id"]), int(supervisor_id), int(ws["worker_id"]),
+                str(ws["parent_task_id"]), str(ws["base_commit"]), manifest_hash,
+                statuses["conflict_status"], statuses["architecture_status"],
+                statuses["security_status"], statuses["test_status"], proposal_hash,
+                human, _now(), completion_request_id, completion_result_hash,
+            ),
+        )
         pid = int(cur.lastrowid)
-    _record_event(root, "integration_proposal_created", {"proposal_hash": proposal_hash, **statuses, "conflict_count": len(conflicts)}, proposal_id=pid, workspace_id=int(ws["id"]), task_id=str(ws["parent_task_id"]))
-    return {"proposal_id": pid, "status": "draft", "proposal_hash": proposal_hash, **statuses, "conflicts": conflicts}
+    _record_event(
+        root,
+        "integration_proposal_created",
+        {
+            "proposal_hash": proposal_hash,
+            "completion_verification_request_id": completion_request_id,
+            "completion_verification_result_hash": completion_result_hash,
+            **statuses,
+            "conflict_count": len(conflicts),
+        },
+        proposal_id=pid,
+        workspace_id=int(ws["id"]),
+        task_id=str(ws["parent_task_id"]),
+    )
+    return {
+        "proposal_id": pid,
+        "status": "draft",
+        "proposal_hash": proposal_hash,
+        "completion_verification_request_id": completion_request_id,
+        "completion_verification_result_hash": completion_result_hash,
+        **statuses,
+        "conflicts": conflicts,
+    }
 
 
 def integration_readiness(root: Path, proposal_id: int) -> dict[str, Any]:
@@ -697,18 +787,65 @@ def integration_readiness(root: Path, proposal_id: int) -> dict[str, Any]:
         Read-only readiness, reasons, conflicts, and current diff hash.
     """
     with connect_read_only(root) as c:
-        row = c.execute("SELECT p.*,ws.workspace_path,ws.status AS workspace_status,ws.task_id AS worker_task_id,ws.session_id AS worker_session_id,w.plan_id,w.plan_hash,w.architecture_baseline_hash,w.status AS worker_status FROM multi_agent_integration_proposals p JOIN multi_agent_workspaces ws ON ws.id=p.workspace_id JOIN multi_agent_workers w ON w.id=p.worker_id WHERE p.id=?", (int(proposal_id),)).fetchone()
+        row = c.execute(
+            """
+            SELECT p.*,ws.workspace_path,ws.status AS workspace_status,
+                   ws.worker_key,ws.task_id AS worker_task_id,
+                   ws.session_id AS worker_session_id,w.plan_id,w.plan_hash,
+                   w.architecture_baseline_hash,w.status AS worker_status
+            FROM multi_agent_integration_proposals p
+            JOIN multi_agent_workspaces ws ON ws.id=p.workspace_id
+            JOIN multi_agent_workers w ON w.id=p.worker_id
+            WHERE p.id=?
+            """,
+            (int(proposal_id),),
+        ).fetchone()
         if not row: raise ValueError("integration_proposal_not_found")
         row = dict(row)
+    verification = _worker_completion_verification(
+        root,
+        int(row["supervisor_id"]),
+        str(row["worker_key"]),
+    )
     files, current_hash = _scan_workspace(root, row)
     conflicts = _conflicts(root, int(row["workspace_id"]))
     reasons = []
+    if str(row["worker_status"]) != "completed":
+        reasons.append("worker_not_completed")
+    if verification["request"] is None:
+        reasons.append("independent_completion_verification_missing")
+    elif not verification["current"]:
+        reasons.append("independent_completion_verification_stale")
+    elif not verification["accepted"]:
+        reasons.append("independent_completion_verification_not_pass")
+    else:
+        current_request_id = str(verification["request"]["request_id"])
+        current_result_hash = str(verification["attempt"]["result_hash"])
+        if (
+            str(row.get("completion_verification_request_id") or "") != current_request_id
+            or str(row.get("completion_verification_result_hash") or "") != current_result_hash
+        ):
+            reasons.append("independent_completion_verification_receipt_changed")
     if str(row["workspace_status"]) != "sealed": reasons.append("workspace_not_sealed")
     if current_hash != str(row["diff_manifest_hash"]): reasons.append("workspace_diff_changed")
     if conflicts: reasons.append("primary_conflict")
     for key in ("architecture_status", "security_status", "test_status"):
         if str(row[key]) != "pass": reasons.append(key + "_not_pass")
-    return {"proposal_id": int(proposal_id), "status": str(row["status"]), "ready": not reasons, "reasons": reasons, "conflicts": conflicts, "file_count": len(files), "diff_manifest_hash": current_hash}
+    return {
+        "proposal_id": int(proposal_id),
+        "status": str(row["status"]),
+        "ready": not reasons,
+        "reasons": reasons,
+        "conflicts": conflicts,
+        "file_count": len(files),
+        "diff_manifest_hash": current_hash,
+        "completion_verification": {
+            "accepted": bool(verification["accepted"]),
+            "current": bool(verification["current"]),
+            "request_id": verification["request"]["request_id"] if verification["request"] else None,
+            "result_hash": verification["attempt"]["result_hash"] if verification["attempt"] else None,
+        },
+    }
 
 
 def review_integration(root: Path, proposal_id: int, reviewed_by: str) -> dict[str, Any]:

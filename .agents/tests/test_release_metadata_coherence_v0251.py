@@ -217,7 +217,7 @@ def test_v0282_distribution_role_uses_authoritative_metadata() -> None:
         distribution / "VERSION"
     ).read_text(encoding="utf-8").strip()
     assert result["release"] == expected_release
-    assert result["schema"] == 61
+    assert result["schema"] == 62
 
 
 def test_v0282_project_init_preserves_application_root(

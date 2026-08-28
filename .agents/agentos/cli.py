@@ -42,7 +42,7 @@ from .proxy import proxy_execute, proxy_submit_job
 from .external_audit import rotate_signing_key, verify_external_log
 from .tooling import complete_tool, egress_report, guard_tool
 from .storage import archive_audit_segment, backup_create, backup_verify, prune_observability
-from .workflow import complete_automated_step, current_task_id, mark_step, next_step, normalize_session_id, resolve_task_id, seed_workflow, set_current_task, workflow_status
+from .workflow import bind_workflow_report_verification, complete_automated_step, current_task_id, mark_step, next_step, normalize_session_id, resolve_task_id, seed_workflow, set_current_task, workflow_status
 
 
 def emit(value: Any) -> None:
@@ -438,10 +438,15 @@ def main(argv: list[str] | None = None) -> int:
             status=workflow_status(root,tid); pending=[x for x in status["required_pending"] if x!="report"]; drift=drift_check(root,task_id=tid); override=local_override_status(root); audit=verify_external_log(root)
             from .architecture_compliance import architecture_compliance_check
             architecture=architecture_compliance_check(root,task_id=tid,mode="final_report",refresh_scan=True,created_by="system:final-report")
-            blockers={"pending_steps":pending,"invalid_provenance":status["invalid_provenance"],"baseline_state":drift["baseline_state"],"drift_changes":drift["changes"],"sensitive_override_status":override["status"],"external_audit":audit,"architecture_compliance":architecture if not architecture.get("ok",True) else None}
-            blocked=bool(pending or status["invalid_provenance"] or drift["baseline_state"]!="initialized" or drift["drift_detected"] or (override["sensitive"] and override["status"]!="approved") or not audit["ok"] or not architecture.get("ok",False))
+            completion_required=bool(status.get("independent_completion_enforced"))
+            completion_ok=bool(status.get("completion_verification",{}).get("accepted")) if completion_required else True
+            blockers={"pending_steps":pending,"invalid_provenance":status["invalid_provenance"],"independent_completion_verification":None if completion_ok else status.get("completion_verification"),"baseline_state":drift["baseline_state"],"drift_changes":drift["changes"],"sensitive_override_status":override["status"],"external_audit":audit,"architecture_compliance":architecture if not architecture.get("ok",True) else None}
+            blocked=bool(pending or status["invalid_provenance"] or not completion_ok or drift["baseline_state"]!="initialized" or drift["drift_detected"] or (override["sensitive"] and override["status"]!="approved") or not audit["ok"] or not architecture.get("ok",False))
             if blocked: result={"ok":False,"blocked":True,**blockers}
-            else: mark_step(root,tid,"report","done","Final report produced after all automated gates, architecture compliance, and governance review passed."); result={"ok":True,"workflow":workflow_status(root,tid),"drift":drift,"override":override,"external_audit":audit,"architecture_compliance":architecture}
+            else:
+                mark_step(root,tid,"report","done","Final report produced after all automated gates, architecture compliance, independent completion verification, and governance review passed.")
+                if completion_required: bind_workflow_report_verification(root,tid)
+                result={"ok":True,"workflow":workflow_status(root,tid),"drift":drift,"override":override,"external_audit":audit,"architecture_compliance":architecture}
         elif args.cmd=="ack-baseline": result=ack_baseline(root,args.identity,force_noninteractive=args.force_noninteractive,session_id=session)
         elif args.cmd=="drift-check": result=drift_check(root,task_id=current_task_id(root,session))
         elif args.cmd=="drift-diff": result=drift_diff(root,args.file)

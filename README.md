@@ -117,9 +117,14 @@ Trước khi gửi thay đổi:
 Các thay đổi governance phải giữ `AGENTS.md`, structured policy, runtime, tests, documentation, changelog và release identity nhất quán.
 
 ## Bản phát hành hiện hành
+**v0.29.0 — Independent Completion Verification** · schema **62**
 
-**v0.28.4 — Tool Exclusivity & Enforcement Attestation** · schema **61**
+v0.29.0 bổ sung independent completion boundary cho workflow do AgentOS quản lý. Completion được AgentOS chấp nhận không thể chỉ do chính producer xác lập; nó phải có fresh verification receipt gắn với immutable completion subject và reviewer authority độc lập với producer task/session/assignment.
 
-v0.28.4 hoàn tất Tool Exclusivity & Enforcement Attestation cho các execution surface do AgentOS quản lý. Agent-side process execution, async job launch và `run-tests` đều đi qua canonical enforcement boundary; MCP active runtime không còn subprocess forwarding qua legacy gateways. Runtime có thể tự kiểm chứng các invariant này bằng `agentos enforcement-attest`, đồng thời release/runtime health fail-closed nếu attestation không đạt.
+Receipt được bind với subject hash, required checks và evidence. Subject thay đổi sau verification làm receipt stale và completion fail closed. Cơ chế này áp dụng cho single-task workflow, multi-agent worker completion và controlled integration readiness.
 
-Phạm vi attestation được giới hạn rõ ở `agentos_mediated_agent_execution`. Bản phát hành này **không** tuyên bố chống bypass từ arbitrary same-user host process, không tuyên bố OS-level process isolation và không tuyên bố arbitrary host-process containment. Schema giữ nguyên **61**.
+CLI bổ sung `completion-request`, `completion-verify`, `completion-status` trên agent plane. MCP chỉ expose read-only `agentos.completion_status_get`; completion mutation authority không được expose qua MCP.
+
+Runtime hiện có **344** canonical commands, **248** agent-plane commands, **98** privileged-control-plane commands và **124** MCP tools.
+
+Claim release được giới hạn: **AgentOS completion is producer-independent and evidence-bound** trong scope `agentos_mediated_agent_execution`. Release không bảo đảm semantic correctness, không attest model/provider independence, không thay thế human review/approval, và giữ nguyên các non-claim về same-user host bypass, OS-level process isolation và arbitrary host-process containment.

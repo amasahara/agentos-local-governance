@@ -117,6 +117,8 @@ def validate_policy(policy: dict[str, Any]) -> None:
         required.add("web_control_plane_policy")
     if version >= (0, 28, 3):
         required.add("privileged_control_plane_policy")
+    if version >= (0, 29, 0):
+        required.add("completion_verification_policy")
     missing = sorted(required - policy.keys())
     if missing:
         raise RuntimeError(f"missing policy keys: {missing}")
@@ -212,8 +214,20 @@ def validate_policy(policy: dict[str, Any]) -> None:
         web_poisoned = [key for key in web_required_false if web.get(key) is not False]
         if web_poisoned:
             raise RuntimeError(f"web control plane authority invariant violated: {web_poisoned}")
-        if int(web.get("database_schema", 0)) != 61 or int(web.get("web_version", 0)) != 1:
-            raise RuntimeError("web control plane version/schema is invalid")
+        expected_web_schema = (
+            62
+            if version >= (0, 29, 0)
+            else 61
+        )
+
+        if (
+            int(web.get("database_schema", 0))
+            != expected_web_schema
+            or int(web.get("web_version", 0)) != 1
+        ):
+            raise RuntimeError(
+                "web control plane version/schema is invalid"
+            )
         if str(web.get("default_host")) != "127.0.0.1":
             raise RuntimeError("web control plane default host must be loopback")
         port = int(web.get("default_port", 0) or 0)
@@ -347,7 +361,16 @@ def validate_policy(policy: dict[str, Any]) -> None:
                     f"{invalid_non_claims}"
                 )
 
-        if int(control.get("database_schema", 0)) != 61:
+        expected_control_schema = (
+            62
+            if version >= (0, 29, 0)
+            else 61
+        )
+
+        if (
+            int(control.get("database_schema", 0))
+            != expected_control_schema
+        ):
             raise RuntimeError(
                 "privileged control-plane schema is invalid"
             )
@@ -386,6 +409,86 @@ def validate_policy(policy: dict[str, Any]) -> None:
         }:
             raise RuntimeError(
                 "dual-plane command allowlist is invalid"
+            )
+
+    if version >= (0, 29, 0):
+        completion = policy[
+            "completion_verification_policy"
+        ]
+
+        completion_required_true = (
+            "enabled",
+            "independent_completion_attested",
+            "producer_task_independence_required",
+            "producer_session_independence_required",
+            "reviewer_role_required",
+            "subject_hash_binding_required",
+            "fresh_receipt_required",
+            "evidence_required_for_pass",
+            "workflow_report_receipt_binding_required",
+            "worker_completion_receipt_required",
+            "integration_receipt_revalidation_required",
+            "mcp_status_read_only",
+        )
+
+        disabled_completion = [
+            key
+            for key in completion_required_true
+            if completion.get(key) is not True
+        ]
+
+        if disabled_completion:
+            raise RuntimeError(
+                "independent completion invariant disabled: "
+                f"{disabled_completion}"
+            )
+
+        completion_required_false = (
+            "mcp_mutation_allowed",
+            "semantic_correctness_guaranteed",
+            "model_provider_independence_attested",
+            "human_review_replaced",
+            "human_approval_replaced",
+        )
+
+        poisoned_completion = [
+            key
+            for key in completion_required_false
+            if completion.get(key) is not False
+        ]
+
+        if poisoned_completion:
+            raise RuntimeError(
+                "independent completion scope/authority overclaim: "
+                f"{poisoned_completion}"
+            )
+
+        if int(
+            completion.get(
+                "verification_version",
+                0,
+            )
+        ) != 1:
+            raise RuntimeError(
+                "independent completion verification version is invalid"
+            )
+
+        if int(
+            completion.get(
+                "database_schema",
+                0,
+            )
+        ) != 62:
+            raise RuntimeError(
+                "independent completion schema is invalid"
+            )
+
+        if (
+            completion.get("scope")
+            != "agentos_mediated_agent_execution"
+        ):
+            raise RuntimeError(
+                "independent completion attestation scope is invalid"
             )
 
     clarification = policy["human_clarification_policy"]

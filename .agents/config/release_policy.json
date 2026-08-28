@@ -1,13 +1,13 @@
 {
-  "version": "0.28.4",
+  "version": "0.29.0",
   "documentation_policy": {
     "current_release_identity_files": [
       "README.md",
       "README.en.md",
       "RELEASE_NOTES.md"
     ],
-    "current_release_name": "Tool Exclusivity & Enforcement Attestation",
-    "current_schema": 61,
+    "current_release_name": "Independent Completion Verification",
+    "current_schema": 62,
     "current_schema_files": [
       "README.md",
       "README.en.md",
@@ -203,7 +203,7 @@
     "enabled": true,
     "optional": true,
     "web_version": 1,
-    "database_schema": 61,
+    "database_schema": 62,
     "default_host": "127.0.0.1",
     "default_port": 8765,
     "loopback_only": true,
@@ -226,7 +226,7 @@
   "privileged_control_plane_policy": {
     "enabled": true,
     "control_plane_version": 1,
-    "database_schema": 61,
+    "database_schema": 62,
     "agent_entrypoint": "agentos.cli_runtime",
     "admin_entrypoint": "agentos.privileged_control_plane",
     "agent_launcher": "agentos",
@@ -250,5 +250,27 @@
     "same_user_host_bypass_resistance_claimed": false,
     "os_level_process_isolation_attested": false,
     "arbitrary_host_process_containment_attested": false
+  },
+  "completion_verification_policy": {
+    "enabled": true,
+    "verification_version": 1,
+    "database_schema": 62,
+    "scope": "agentos_mediated_agent_execution",
+    "independent_completion_attested": true,
+    "producer_task_independence_required": true,
+    "producer_session_independence_required": true,
+    "reviewer_role_required": true,
+    "subject_hash_binding_required": true,
+    "fresh_receipt_required": true,
+    "evidence_required_for_pass": true,
+    "workflow_report_receipt_binding_required": true,
+    "worker_completion_receipt_required": true,
+    "integration_receipt_revalidation_required": true,
+    "mcp_status_read_only": true,
+    "mcp_mutation_allowed": false,
+    "semantic_correctness_guaranteed": false,
+    "model_provider_independence_attested": false,
+    "human_review_replaced": false,
+    "human_approval_replaced": false
   }
 }

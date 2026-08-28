@@ -92,9 +92,14 @@ State the problem and acceptance criteria, place changes by responsibility and l
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
 
 ## Current release
+**v0.29.0 — Independent Completion Verification** · schema **62**
 
-**v0.28.4 — Tool Exclusivity & Enforcement Attestation** · schema **61**
+v0.29.0 adds an independent completion boundary for AgentOS-governed workflows. Completion accepted by AgentOS cannot be established solely by the producer; it requires a fresh verification receipt bound to the immutable completion subject and reviewer authority independent from the producer task/session/assignment.
 
-v0.28.4 completes Tool Exclusivity & Enforcement Attestation for AgentOS-mediated execution surfaces. Agent-side process execution, asynchronous job launch, and `run-tests` now use the canonical enforcement boundary; the active MCP runtime has no legacy subprocess-forwarding path. These invariants are machine-verifiable through `agentos enforcement-attest`, and runtime/release health fails closed when structural attestation is not green.
+The receipt is bound to the subject hash, required checks, and evidence. Subject mutation makes the receipt stale and completion fails closed. The rule applies to single-task workflow completion, multi-agent worker completion, and controlled integration readiness.
 
-The attestation scope is explicitly limited to `agentos_mediated_agent_execution`. This release does **not** claim resistance to arbitrary same-user host-process bypass, OS-level process isolation, or arbitrary host-process containment. Schema remains **61**.
+The agent-plane CLI adds `completion-request`, `completion-verify`, and `completion-status`. MCP exposes only the read-only `agentos.completion_status_get`; completion mutation authority is not exposed over MCP.
+
+The runtime has **344** canonical commands, **248** agent-plane commands, **98** privileged-control-plane commands, and **124** MCP tools.
+
+The release claim is deliberately narrow: **AgentOS completion is producer-independent and evidence-bound** within `agentos_mediated_agent_execution`. This release does not guarantee semantic correctness, attest model/provider independence, replace human review/approval, or change the existing host/OS isolation non-claims.

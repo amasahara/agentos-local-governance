@@ -293,6 +293,10 @@ def attest_enforcement(
         "privileged_control_plane_policy",
         {},
     )
+    completion_policy = policy.get(
+        "completion_verification_policy",
+        {},
+    )
 
     checks: dict[str, bool] = {}
     findings: list[dict[str, str]] = []
@@ -724,6 +728,299 @@ def attest_enforcement(
     )
 
     # --------------------------------------------------------
+    # Independent completion verification
+    # --------------------------------------------------------
+    # Structural/runtime evidence is evaluated before schema-62 activation.
+    # Policy activation remains deferred until VERSION 0.29.0.
+
+    tool_exclusivity_ok = not findings
+    completion_check_names: list[str] = []
+
+    def require_completion(
+        name: str,
+        condition: bool,
+        message: str,
+    ) -> None:
+        completion_check_names.append(name)
+        require(name, condition, message)
+
+    completion_verify_source = _function_source(
+        root,
+        ".agents/agentos/completion_verification.py",
+        "verify_completion",
+    )
+    completion_status_source = _function_source(
+        root,
+        ".agents/agentos/completion_verification.py",
+        "completion_status",
+    )
+    completion_require_source = _function_source(
+        root,
+        ".agents/agentos/completion_verification.py",
+        "require_current_verification",
+    )
+    completion_assignment_source = _function_source(
+        root,
+        ".agents/agentos/completion_verification.py",
+        "_active_assignment",
+    )
+    workflow_status_source = _function_source(
+        root,
+        ".agents/agentos/workflow.py",
+        "workflow_status",
+    )
+    workflow_request_source = _function_source(
+        root,
+        ".agents/agentos/workflow.py",
+        "workflow_completion_request",
+    )
+    workflow_verify_source = _function_source(
+        root,
+        ".agents/agentos/workflow.py",
+        "workflow_completion_verify",
+    )
+    workflow_bind_source = _function_source(
+        root,
+        ".agents/agentos/workflow.py",
+        "bind_workflow_report_verification",
+    )
+    worker_update_source = _function_source(
+        root,
+        ".agents/agentos/multi_agent_supervisor.py",
+        "worker_update",
+    )
+    worker_request_source = _function_source(
+        root,
+        ".agents/agentos/multi_agent_supervisor.py",
+        "worker_completion_request",
+    )
+    worker_verify_source = _function_source(
+        root,
+        ".agents/agentos/multi_agent_supervisor.py",
+        "worker_completion_verify",
+    )
+    integration_create_source = _function_source(
+        root,
+        ".agents/agentos/multi_agent_workspace.py",
+        "create_integration_proposal",
+    )
+    integration_readiness_source = _function_source(
+        root,
+        ".agents/agentos/multi_agent_workspace.py",
+        "integration_readiness",
+    )
+    public_status_source = _function_source(
+        root,
+        ".agents/agentos/completion_surface.py",
+        "completion_public_status",
+    )
+    safe_request_source = _function_source(
+        root,
+        ".agents/agentos/completion_surface.py",
+        "_safe_request",
+    )
+    safe_attempt_source = _function_source(
+        root,
+        ".agents/agentos/completion_surface.py",
+        "_safe_attempt",
+    )
+    workflow_projection_source = _function_source(
+        root,
+        ".agents/agentos/completion_surface.py",
+        "_workflow_status_raw",
+    )
+    mcp_v0290_source = _source(
+        root,
+        ".agents/agentos/mcp_v0290.py",
+    )
+
+    require_completion(
+        "completion_verifier_task_independent",
+        "completion_verifier_task_must_be_independent" in completion_verify_source,
+        "completion verifier task independence is not fail-closed",
+    )
+    require_completion(
+        "completion_verifier_session_independent",
+        "completion_verifier_session_must_be_independent" in completion_verify_source,
+        "completion verifier session independence is not fail-closed",
+    )
+    require_completion(
+        "completion_reviewer_role_required",
+        (
+            "_active_assignment(" in completion_verify_source
+            and '"reviewer"' in completion_verify_source
+            and "active_reviewer_assignment_required"
+            in completion_verify_source
+            and "task_role_assignments"
+            in completion_assignment_source
+        ),
+        "completion verification is not bound to reviewer authority",
+    )
+    require_completion(
+        "completion_subject_hash_exact",
+        (
+            "observed_subject_hash" in completion_verify_source
+            and "subject_hash" in completion_verify_source
+            and "completion_verification_stale" in completion_status_source
+        ),
+        "completion verification is not bound to the exact current subject hash",
+    )
+    require_completion(
+        "completion_pass_checks_required",
+        (
+            "required_checks" in completion_verify_source
+            and "checks" in completion_verify_source
+            and "pass" in completion_verify_source
+        ),
+        "completion pass does not structurally require declared checks",
+    )
+    require_completion(
+        "completion_pass_evidence_required",
+        (
+            "evidence" in completion_verify_source
+            and "pass" in completion_verify_source
+        ),
+        "completion pass does not structurally require evidence",
+    )
+    require_completion(
+        "completion_current_receipt_required",
+        (
+            "completion_verification_stale"
+            in completion_status_source
+            and "completion_status("
+            in completion_require_source
+            and 'status["accepted"]'
+            in completion_require_source
+            and "raise PermissionError("
+            in completion_require_source
+        ),
+        "current completion receipt is not fail-closed on mutation",
+    )
+    require_completion(
+        "workflow_completion_candidate_pre_report",
+        (
+            "report" in workflow_request_source
+            and "workflow_completion_candidate_not_ready" in workflow_request_source
+        ),
+        "workflow completion candidate is not pre-report gated",
+    )
+    require_completion(
+        "workflow_completion_independent_verify",
+        (
+            "verify_completion(" in workflow_verify_source
+            and "workflow" in workflow_verify_source
+        ),
+        "workflow verification does not use canonical independent verifier",
+    )
+    require_completion(
+        "workflow_report_receipt_bound",
+        (
+            "completion_verification_request_id" in workflow_bind_source
+            and "completion_verification_result_hash" in workflow_bind_source
+            and "report_binding_current" in workflow_status_source
+            and "completion_verification" in workflow_status_source
+        ),
+        "workflow report is not bound to current completion receipt",
+    )
+    require_completion(
+        "worker_direct_completion_denied",
+        "independent_completion_verification_required" in worker_update_source,
+        "worker producer can still directly self-terminalize",
+    )
+    require_completion(
+        "worker_completion_current_receipt_required",
+        (
+            "require_current_verification(" in worker_verify_source
+            and "completed" in worker_verify_source
+            and "worker_completion_request" in worker_request_source
+        ),
+        "worker completion is not terminalized through a current receipt",
+    )
+    require_completion(
+        "integration_completion_receipt_required",
+        (
+            "_require_worker_completion_verification(" in integration_create_source
+            and "completion_verification_request_id" in integration_create_source
+            and "completion_verification_result_hash" in integration_create_source
+        ),
+        "integration proposal does not pin an independent completion receipt",
+    )
+    require_completion(
+        "integration_completion_receipt_revalidated",
+        (
+            "independent_completion_verification_stale" in integration_readiness_source
+            and "independent_completion_verification_receipt_changed" in integration_readiness_source
+        ),
+        "integration readiness does not revalidate receipt freshness",
+    )
+
+    completion_commands = {
+        "completion-request",
+        "completion-verify",
+        "completion-status",
+    }
+    require_completion(
+        "completion_cli_agent_plane_only",
+        (
+            completion_commands.issubset(set(agent_registry))
+            and not (completion_commands & set(privileged_registry))
+            and not (completion_commands & set(CONTROL_PLANE_COMMANDS))
+        ),
+        "completion CLI commands are not isolated to the normal agent plane",
+    )
+
+    from .mcp_runtime import ALL_TOOL_NAMES
+
+    require_completion(
+        "completion_mcp_status_only",
+        (
+            "agentos.completion_status_get" in ALL_TOOL_NAMES
+            and "agentos.completion_request" not in ALL_TOOL_NAMES
+            and "agentos.completion_verify" not in ALL_TOOL_NAMES
+            and "completion_public_status" in mcp_v0290_source
+            and "completion_request(" not in mcp_v0290_source
+            and "completion_verify(" not in mcp_v0290_source
+        ),
+        "MCP exposes completion mutation authority",
+    )
+    require_completion(
+        "completion_mcp_read_only_projection",
+        (
+            "read_only=True" in workflow_projection_source
+            and "completion_public_status" in public_status_source
+        ),
+        "MCP completion status is not projected through a read-only workflow path",
+    )
+
+    public_projection_source = safe_request_source + "\n" + safe_attempt_source
+    forbidden_public_fields = (
+        "producer_session_id",
+        "producer_assignment_id",
+        "verifier_session_id",
+        "verifier_assignment_id",
+        "evidence_json",
+    )
+    require_completion(
+        "completion_public_status_redacted",
+        not any(
+            field in public_projection_source
+            for field in forbidden_public_fields
+        ),
+        "public completion status exposes identity or raw evidence",
+    )
+
+    completion_structural_ok = all(
+        checks.get(name) is True
+        for name in completion_check_names
+    )
+    completion_policy_declared = bool(
+        completion_policy.get(
+            "independent_completion_attested",
+            False,
+        )
+    )
+
+    # --------------------------------------------------------
     # Final derived assertion
     # --------------------------------------------------------
 
@@ -737,7 +1034,7 @@ def attest_enforcement(
         "version": __version__,
         "schema": CURRENT_SCHEMA_VERSION,
         "scope": ATTESTATION_SCOPE,
-        "tool_exclusivity": ok,
+        "tool_exclusivity": tool_exclusivity_ok,
         "attestation_ready": ok,
         "policy_declared_attested": bool(
             privileged_policy.get(
@@ -750,6 +1047,46 @@ def attest_enforcement(
         "agent_privileged_overlap": (
             unexpected_overlap
         ),
+        "completion_verification": {
+            "structurally_attested": completion_structural_ok,
+            "producer_independent": bool(
+                checks.get("completion_verifier_task_independent")
+                and checks.get("completion_verifier_session_independent")
+                and checks.get("completion_reviewer_role_required")
+            ),
+            "evidence_bound": bool(
+                checks.get("completion_subject_hash_exact")
+                and checks.get("completion_pass_checks_required")
+                and checks.get("completion_pass_evidence_required")
+            ),
+            "freshness_bound": bool(
+                checks.get("completion_current_receipt_required")
+                and checks.get("integration_completion_receipt_revalidated")
+            ),
+            "workflow_enforced": bool(
+                checks.get("workflow_completion_candidate_pre_report")
+                and checks.get("workflow_completion_independent_verify")
+                and checks.get("workflow_report_receipt_bound")
+            ),
+            "worker_enforced": bool(
+                checks.get("worker_direct_completion_denied")
+                and checks.get("worker_completion_current_receipt_required")
+            ),
+            "integration_enforced": bool(
+                checks.get("integration_completion_receipt_required")
+                and checks.get("integration_completion_receipt_revalidated")
+            ),
+            "cli_agent_plane_only": checks.get(
+                "completion_cli_agent_plane_only"
+            ) is True,
+            "mcp_read_only": bool(
+                checks.get("completion_mcp_status_only")
+                and checks.get("completion_mcp_read_only_projection")
+                and checks.get("completion_public_status_redacted")
+            ),
+            "policy_declared_attested": completion_policy_declared,
+            "policy_scope": completion_policy.get("scope"),
+        },
         "mcp": {
             "ok": bool(
                 mcp_health.get("ok")
@@ -791,5 +1128,9 @@ def attest_enforcement(
             "same_user_host_bypass_resistance": False,
             "os_level_process_isolation_attested": False,
             "arbitrary_host_process_containment": False,
+            "semantic_correctness_guaranteed": False,
+            "model_provider_independence_attested": False,
+            "human_review_replaced": False,
+            "human_approval_replaced": False,
         },
     }

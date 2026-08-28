@@ -327,6 +327,28 @@
     "snapshot_version": 1,
     "web_control_plane_reserved_for_v0281": true
   },
+  "completion_verification_policy": {
+    "database_schema": 62,
+    "enabled": true,
+    "evidence_required_for_pass": true,
+    "fresh_receipt_required": true,
+    "human_approval_replaced": false,
+    "human_review_replaced": false,
+    "independent_completion_attested": true,
+    "integration_receipt_revalidation_required": true,
+    "mcp_mutation_allowed": false,
+    "mcp_status_read_only": true,
+    "model_provider_independence_attested": false,
+    "producer_session_independence_required": true,
+    "producer_task_independence_required": true,
+    "reviewer_role_required": true,
+    "scope": "agentos_mediated_agent_execution",
+    "semantic_correctness_guaranteed": false,
+    "subject_hash_binding_required": true,
+    "verification_version": 1,
+    "worker_completion_receipt_required": true,
+    "workflow_report_receipt_binding_required": true
+  },
   "concurrency_policy": {
     "atomic_replace": true,
     "audit_sink_for_multi_process": "daemon",
@@ -1198,7 +1220,7 @@
     "arbitrary_host_process_containment_attested": false,
     "control_plane_allowlist_explicit": true,
     "control_plane_version": 1,
-    "database_schema": 61,
+    "database_schema": 62,
     "dual_plane_argument_enforcement": true,
     "dual_plane_commands": [
       "architecture-init",
@@ -1384,7 +1406,7 @@
       "governed_project"
     ],
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
-    "version": "0.28.4"
+    "version": "0.29.0"
   },
   "repository_policy": {
     "application_root_metadata_owned_by_agentos": false,
@@ -1528,7 +1550,7 @@
     "target_schema_snapshot_required": true,
     "type_compatibility_required": true
   },
-  "schema_version": 61,
+  "schema_version": 62,
   "secret_resolver_policy": {
     "aliases": {},
     "allowed_capabilities": [
@@ -1642,7 +1664,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.28.4",
+  "version": "0.29.0",
   "workflow_policy": {
     "automated_steps_require_command_provenance": true,
     "failure_exit_code": 2,

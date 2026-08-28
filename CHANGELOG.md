@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.29.0 — Independent Completion Verification
+
+- Added schema **62** completion verification request/attempt state.
+- Accepted completion requires a fresh reviewer receipt bound to the exact subject hash.
+- Verifier task/session/assignment must be independent from the producer and reviewer authority remains governed.
+- Passing verification requires all declared checks plus evidence; subject mutation invalidates the receipt.
+- Applied the receipt boundary to workflow finalization, worker completion, and integration readiness.
+- Added `completion-request`, `completion-verify`, `completion-status`, plus read-only MCP `agentos.completion_status_get`.
+- Extended enforcement attestation and release integrity with independent-completion gates.
+- Runtime surface: 344 canonical / 248 agent / 98 privileged commands; MCP 124 tools.
+- Claim scope remains `agentos_mediated_agent_execution`; semantic correctness, provider independence, and replacement of human review/approval are not claimed.
+
 ## v0.28.4 — Tool Exclusivity & Enforcement Attestation
 
 - Added deterministic enforcement attestation for AgentOS-mediated execution surfaces.

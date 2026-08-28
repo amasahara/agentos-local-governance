@@ -1,3 +1,12 @@
+## v0.29.0 — Independent Completion Verification
+
+- Added schema 62 independent completion receipts bound to exact subject hash, required checks, evidence, and reviewer authority.
+- Producer task/session/assignment cannot self-establish accepted completion.
+- Workflow report finalization, worker completion, and integration readiness revalidate the current receipt and fail closed on stale subjects.
+- Added agent-plane completion CLI commands and one read-only MCP completion status tool; MCP completion mutation remains forbidden.
+- Release is 0.29.0; database schema is 62.
+- Completion is attested as producer-independent and evidence-bound only within `agentos_mediated_agent_execution`.
+
 ## v0.28.4 — Tool Exclusivity & Enforcement Attestation
   * Added deterministic enforcement attestation for AgentOS-mediated execution surfaces.
   * Routed synchronous test execution and asynchronous job execution through canonical governed process boundaries.

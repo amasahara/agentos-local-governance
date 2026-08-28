@@ -353,6 +353,16 @@ def test_v0283_policy_poisoning_fails_closed() -> None:
 
     historical = deepcopy(policy)
     historical["version"] = "0.28.3"
+    historical["web_control_plane_policy"]["database_schema"] = 61
+    historical[
+        "privileged_control_plane_policy"
+    ][
+        "database_schema"
+    ] = 61
+    historical.pop(
+        "completion_verification_policy",
+        None,
+    )
 
     historical_control = historical[
         "privileged_control_plane_policy"

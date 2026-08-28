@@ -226,6 +226,9 @@ def _v0284_policy_candidate() -> dict:
         }
     )
 
+    policy["web_control_plane_policy"]["database_schema"] = 61
+    policy["privileged_control_plane_policy"]["database_schema"] = 61
+    policy.pop("completion_verification_policy", None)
     return policy
 
 

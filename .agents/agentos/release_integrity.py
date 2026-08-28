@@ -60,6 +60,10 @@ CORE_FILES = (
     ".agents/bin/agentos-admin",
     ".agents/bin/agentos-admin.cmd",
     ".agents/bin/agentos-mcp.cmd",
+    ".agents/agentos/completion_verification.py",
+    ".agents/agentos/completion_surface.py",
+    ".agents/agentos/completion_cli.py",
+    ".agents/agentos/mcp_v0290.py",
 )
 RELEASE_FILES = (
     ".agents/tests/test_release_line_endings_v0242.py",
@@ -118,6 +122,11 @@ RELEASE_FILES = (
     ".agents/config/update_ownership.v0255.json",
     ".agents/config/update_ownership.v0260.json",
     ".agents/config/update_ownership.v0261.json",
+    ".agents/tests/test_completion_verification_v0290.py",
+    ".agents/tests/test_workflow_completion_v0290.py",
+    ".agents/tests/test_completion_surface_v0290.py",
+    ".agents/tests/test_completion_attestation_v0290.py",
+    ".agents/tests/test_completion_activation_v0290.py",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -493,6 +502,74 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                     )
                 )
 
+        completion_attestation = (
+            attestation_report.get("completion_verification")
+            or {}
+        )
+        required_completion_assertions = (
+            "structurally_attested",
+            "producer_independent",
+            "evidence_bound",
+            "freshness_bound",
+            "workflow_enforced",
+            "worker_enforced",
+            "integration_enforced",
+            "cli_agent_plane_only",
+            "mcp_read_only",
+        )
+        invalid_completion_assertions = [
+            key
+            for key in required_completion_assertions
+            if completion_attestation.get(key) is not True
+        ]
+        if invalid_completion_assertions:
+            findings.append(
+                _finding(
+                    "completion_attestation_failed",
+                    "independent-completion structural attestation is not green: "
+                    f"{invalid_completion_assertions}",
+                    ".agents/agentos/enforcement_attestation.py",
+                )
+            )
+
+        if attested_release_version >= (0, 29, 0):
+            if (
+                completion_attestation.get("policy_declared_attested")
+                is not True
+            ):
+                findings.append(
+                    _finding(
+                        "completion_attestation_policy_not_activated",
+                        "v0.29.0+ requires policy-declared independent completion attestation",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
+            completion_non_claims = (
+                attestation_report.get("non_claims")
+                or {}
+            )
+            required_completion_non_claims = (
+                "semantic_correctness_guaranteed",
+                "model_provider_independence_attested",
+                "human_review_replaced",
+                "human_approval_replaced",
+            )
+            invalid_completion_non_claims = [
+                key
+                for key in required_completion_non_claims
+                if completion_non_claims.get(key) is not False
+            ]
+            if invalid_completion_non_claims:
+                findings.append(
+                    _finding(
+                        "completion_attestation_overclaim",
+                        "v0.29.0 completion scope overclaims semantic, provider, or human-authority guarantees: "
+                        f"{invalid_completion_non_claims}",
+                        ".agents/agentos/enforcement_attestation.py",
+                    )
+                )
+
     except Exception as exc:
         findings.append(
             _finding(
@@ -709,11 +786,11 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             or len(V0272_TOOL_NAMES) != 3
             or len(V0273_TOOL_NAMES) != 4
             or len(V0280_TOOL_NAMES) != 3
-            or len(ALL_TOOLS) != 123
+            or len(ALL_TOOLS) != 124
         ):
             findings.append(_finding(
                 "mcp_tool_surface_changed",
-                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + 4 v0.25.5 + 3 v0.26.0 + 3 v0.26.1 + 3 v0.26.2 + 3 v0.26.3 + 3 v0.27.0 + 3 v0.27.1 + 3 v0.27.2 + 4 v0.27.3 + 3 v0.28.0 + health = 123 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} + {len(V0255_TOOL_NAMES)} + {len(V0260_TOOL_NAMES)} + {len(V0261_TOOL_NAMES)} + {len(V0262_TOOL_NAMES)} + {len(V0263_TOOL_NAMES)} + {len(V0270_TOOL_NAMES)} + {len(V0271_TOOL_NAMES)} + {len(V0272_TOOL_NAMES)} + {len(V0273_TOOL_NAMES)} + {len(V0280_TOOL_NAMES)} / {len(ALL_TOOLS)}",
+                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + 4 v0.25.5 + 3 v0.26.0 + 3 v0.26.1 + 3 v0.26.2 + 3 v0.26.3 + 3 v0.27.0 + 3 v0.27.1 + 3 v0.27.2 + 4 v0.27.3 + 3 v0.28.0 + 1 v0.29.0 + health = 124 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} + {len(V0255_TOOL_NAMES)} + {len(V0260_TOOL_NAMES)} + {len(V0261_TOOL_NAMES)} + {len(V0262_TOOL_NAMES)} + {len(V0263_TOOL_NAMES)} + {len(V0270_TOOL_NAMES)} + {len(V0271_TOOL_NAMES)} + {len(V0272_TOOL_NAMES)} + {len(V0273_TOOL_NAMES)} + {len(V0280_TOOL_NAMES)} / {len(ALL_TOOLS)}",
                 ".agents/agentos/mcp_runtime.py",
             ))
     except Exception as exc:
@@ -779,6 +856,9 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 "scope": attestation_report.get("scope"),
                 "policy_declared_attested": attestation_report.get(
                     "policy_declared_attested"
+                ),
+                "completion_verification": attestation_report.get(
+                    "completion_verification"
                 ),
                 "finding_count": len(
                     attestation_report.get("findings", [])

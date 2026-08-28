@@ -69,7 +69,7 @@ Một task được quản trị đi qua các bước chính:
 Project mới:
 
 ```powershell
-.\.agents\bin\agentos.cmd project-init --target D:\path\to\project
+.\.agents\bin\agentos-admin.cmd project-init --target D:\path\to\project
 ```
 
 Project hiện hữu, tạo adoption plan chỉ đọc trước:
@@ -81,7 +81,7 @@ Project hiện hữu, tạo adoption plan chỉ đọc trước:
 Sau khi con người review plan:
 
 ```powershell
-.\.agents\bin\agentos.cmd project-adopt --target D:\path\to\project --apply --human-confirmed
+.\.agents\bin\agentos-admin.cmd project-adopt --target D:\path\to\project --apply --human-confirmed
 ```
 
 Xem hướng dẫn theo hành trình:
@@ -102,3 +102,16 @@ Xem hướng dẫn theo hành trình:
 - `tools/`: công cụ build/validation của distribution, không cài vào application project.
 
 Lịch sử phiên bản thuộc [CHANGELOG.md](CHANGELOG.md), Git history, tags và relea
+
+## Bản phát hành hiện hành
+**v0.29.0 — Independent Completion Verification** · schema **62**
+
+v0.29.0 bổ sung independent completion boundary cho workflow do AgentOS quản lý. Completion được AgentOS chấp nhận không thể chỉ do chính producer xác lập; nó phải có fresh verification receipt gắn với immutable completion subject và reviewer authority độc lập với producer task/session/assignment.
+
+Receipt được bind với subject hash, required checks và evidence. Subject thay đổi sau verification làm receipt stale và completion fail closed. Cơ chế này áp dụng cho single-task workflow, multi-agent worker completion và controlled integration readiness.
+
+CLI bổ sung `completion-request`, `completion-verify`, `completion-status` trên agent plane. MCP chỉ expose read-only `agentos.completion_status_get`; completion mutation authority không được expose qua MCP.
+
+Runtime hiện có **344** canonical commands, **248** agent-plane commands, **98** privileged-control-plane commands và **124** MCP tools.
+
+Claim release được giới hạn: **AgentOS completion is producer-independent and evidence-bound** trong scope `agentos_mediated_agent_execution`. Release không bảo đảm semantic correctness, không attest model/provider independence, không thay thế human review/approval, và giữ nguyên các non-claim về same-user host bypass, OS-level process isolation và arbitrary host-process containment.

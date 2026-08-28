@@ -769,15 +769,178 @@ def worker_start(root: Path, supervisor_id: int, worker_key: str, caller_task_id
     return {"supervisor_id": int(supervisor_id), "worker_key": worker_key, "status": "running", "process_launched": False}
 
 
-def worker_update(root: Path, supervisor_id: int, worker_key: str, caller_task_id: str, caller_session_id: str, status: str) -> dict[str, Any]:
-    """Update a running worker to completed, failed, or blocked; caller must own the bound task/session."""
-    target = str(status)
-    if target not in {"completed", "failed", "blocked"}:
-        raise ValueError("unsupported_worker_update_status")
+def worker_completion_subject(root: Path, supervisor_id: int, worker_key: str) -> dict[str, Any]:
+    """Return deterministic hashable state for one worker completion candidate."""
+    with connect_read_only(root) as c:
+        worker = dict(_worker_row(c, supervisor_id, worker_key))
+        supervisor = dict(_supervisor_row(c, supervisor_id))
+        workspace = None
+        has_workspace = c.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='multi_agent_workspaces'"
+        ).fetchone()
+        if has_workspace:
+            row = c.execute(
+                "SELECT id,status,base_commit,diff_manifest_hash,collected_at,sealed_at FROM multi_agent_workspaces WHERE worker_id=?",
+                (int(worker["id"]),),
+            ).fetchone()
+            if row:
+                workspace = {
+                    "workspace_id": int(row["id"]),
+                    "status": str(row["status"]),
+                    "base_commit": str(row["base_commit"]),
+                    "diff_manifest_hash": row["diff_manifest_hash"],
+                    "collected_at": row["collected_at"],
+                    "sealed_at": row["sealed_at"],
+                }
+    return {
+        "supervisor_id": int(supervisor_id),
+        "supervisor_hash": str(supervisor["supervisor_hash"]),
+        "parent_task_id": str(supervisor["parent_task_id"]),
+        "parent_plan_id": int(supervisor["parent_plan_id"]),
+        "parent_plan_hash": str(supervisor["parent_plan_hash"]),
+        "worker_id": int(worker["id"]),
+        "worker_key": str(worker["worker_key"]),
+        "task_id": str(worker["task_id"]),
+        "session_id": str(worker["session_id"]),
+        "role": str(worker["role"]),
+        "plan_id": int(worker["plan_id"]),
+        "plan_hash": str(worker["plan_hash"]),
+        "architecture_baseline_hash": str(worker["architecture_baseline_hash"]),
+        "assignment_hash": str(worker["assignment_hash"]),
+        "capability_set_hash": str(worker["capability_set_hash"]),
+        "workspace": workspace,
+    }
+
+
+def worker_completion_request(root: Path, supervisor_id: int, worker_key: str, caller_task_id: str, caller_session_id: str) -> dict[str, Any]:
+    """Create a completion candidate; producer cannot terminalize itself."""
+    with connect_read_only(root) as c:
+        worker = dict(_worker_row(c, supervisor_id, worker_key))
+    if str(worker["task_id"]) != str(caller_task_id) or str(worker["session_id"]) != str(caller_session_id):
+        raise PermissionError("worker_assignment_owner_mismatch")
+    if str(worker["status"]) != "running":
+        raise PermissionError("worker_not_running")
     workspace_cfg = load_policy(root).get("isolated_workspace_integration_policy", {})
-    if target == "completed" and isinstance(workspace_cfg, dict) and workspace_cfg.get("enabled", False) and workspace_cfg.get("require_sealed_workspace_before_executor_complete", True):
+    if (
+        str(worker["role"]) == "executor"
+        and isinstance(workspace_cfg, dict)
+        and workspace_cfg.get("enabled", False)
+        and workspace_cfg.get("require_sealed_workspace_before_executor_complete", True)
+    ):
         from .multi_agent_workspace import require_executor_workspace
         require_executor_workspace(root, supervisor_id, worker_key, sealed=True)
+    from .completion_verification import request_completion
+    subject = worker_completion_subject(root, supervisor_id, worker_key)
+    return request_completion(
+        root,
+        subject_type="multi_agent_worker",
+        subject_id=f"{int(supervisor_id)}:{worker_key}",
+        task_id=str(worker["task_id"]),
+        producer_task_id=str(caller_task_id),
+        producer_session_id=str(caller_session_id),
+        subject_payload=subject,
+        required_checks=["evidence", "tests"],
+    )
+
+
+def worker_completion_verify(
+    root: Path,
+    request_id: str,
+    verifier_task_id: str,
+    verifier_session_id: str,
+    *,
+    verdict: str,
+    checks: dict[str, Any],
+    evidence: dict[str, Any],
+) -> dict[str, Any]:
+    """Verify current worker state and terminalize only on independent pass."""
+    from .completion_verification import require_current_verification, verify_completion
+    with connect_read_only(root) as c:
+        request = c.execute(
+            "SELECT subject_type,subject_id FROM completion_verification_requests WHERE request_id=?",
+            (str(request_id),),
+        ).fetchone()
+        if not request:
+            raise ValueError("completion_verification_request_not_found")
+        if str(request["subject_type"]) != "multi_agent_worker":
+            raise PermissionError("worker_completion_request_type_required")
+        try:
+            supervisor_text, worker_key = str(request["subject_id"]).split(":", 1)
+            supervisor_id = int(supervisor_text)
+        except Exception as exc:
+            raise RuntimeError("invalid_worker_completion_subject_id") from exc
+    subject = worker_completion_subject(root, supervisor_id, worker_key)
+    result = verify_completion(
+        root,
+        request_id=str(request_id),
+        verifier_task_id=str(verifier_task_id),
+        verifier_session_id=str(verifier_session_id),
+        observed_subject_payload=subject,
+        verdict=str(verdict),
+        checks=checks,
+        evidence=evidence,
+    )
+    if str(result["verdict"]) != "pass":
+        return {**result, "worker_status": "running", "supervisor_completed": False}
+    current_subject = worker_completion_subject(root, supervisor_id, worker_key)
+    require_current_verification(
+        root,
+        subject_type="multi_agent_worker",
+        subject_id=f"{int(supervisor_id)}:{worker_key}",
+        current_subject_payload=current_subject,
+    )
+    with connect(root, immediate=True) as c:
+        worker = _worker_row(c, supervisor_id, worker_key)
+        if str(worker["status"]) != "running":
+            raise PermissionError("worker_not_running")
+        now = _now()
+        c.execute(
+            "UPDATE multi_agent_workers SET status='completed',last_heartbeat_at=?,completed_at=? WHERE id=?",
+            (now, now, int(worker["id"])),
+        )
+        worker_id = int(worker["id"])
+        pending = int(c.execute(
+            "SELECT COUNT(*) AS n FROM multi_agent_workers WHERE supervisor_id=? AND status NOT IN ('completed','removed')",
+            (int(supervisor_id),),
+        ).fetchone()["n"])
+        completed_supervisor = False
+        if pending == 0:
+            c.execute(
+                "UPDATE multi_agent_supervisor_runs SET status='completed',completed_at=? WHERE id=? AND status='active'",
+                (now, int(supervisor_id)),
+            )
+            completed_supervisor = True
+    _record_event(
+        root,
+        supervisor_id,
+        "worker_completion_verified",
+        {
+            "worker_key": worker_key,
+            "request_id": str(request_id),
+            "verification_result_hash": str(result["result_hash"]),
+            "verifier_task_id": str(verifier_task_id),
+            "verifier_session_id": str(verifier_session_id),
+        },
+        worker_id=worker_id,
+    )
+    if completed_supervisor:
+        _record_event(
+            root,
+            supervisor_id,
+            "supervisor_completed",
+            {"trigger_worker_key": worker_key, "completion_request_id": str(request_id)},
+            worker_id=worker_id,
+        )
+    return {**result, "worker_status": "completed", "supervisor_completed": completed_supervisor}
+
+
+def worker_update(root: Path, supervisor_id: int, worker_key: str, caller_task_id: str, caller_session_id: str, status: str) -> dict[str, Any]:
+    """Update a running worker to failed/blocked; completion requires independent verification."""
+    target = str(status)
+    if target == "completed":
+        raise PermissionError("independent_completion_verification_required")
+    if target not in {"failed", "blocked"}:
+        raise ValueError("unsupported_worker_update_status")
     with connect(root) as c:
         worker = _worker_row(c, supervisor_id, worker_key)
         if str(worker["task_id"]) != str(caller_task_id) or str(worker["session_id"]) != str(caller_session_id):
@@ -790,22 +953,8 @@ def worker_update(root: Path, supervisor_id: int, worker_key: str, caller_task_i
             (target, now, now if target in {"completed", "failed"} else None, int(worker["id"])),
         )
         worker_id = int(worker["id"])
-        completed_supervisor = False
-        if target == "completed":
-            pending = int(c.execute(
-                "SELECT COUNT(*) AS n FROM multi_agent_workers WHERE supervisor_id=? AND status NOT IN ('completed','removed')",
-                (int(supervisor_id),),
-            ).fetchone()["n"])
-            if pending == 0:
-                c.execute(
-                    "UPDATE multi_agent_supervisor_runs SET status='completed', completed_at=? WHERE id=? AND status='active'",
-                    (now, int(supervisor_id)),
-                )
-                completed_supervisor = True
     _record_event(root, supervisor_id, "worker_status_updated", {"worker_key": worker_key, "status": target}, worker_id=worker_id)
-    if completed_supervisor:
-        _record_event(root, supervisor_id, "supervisor_completed", {"trigger_worker_key": worker_key}, worker_id=worker_id)
-    return {"supervisor_id": int(supervisor_id), "worker_key": worker_key, "status": target, "supervisor_completed": completed_supervisor}
+    return {"supervisor_id": int(supervisor_id), "worker_key": worker_key, "status": target, "supervisor_completed": False}
 
 
 def supervisor_status(root: Path, supervisor_id: int) -> dict[str, Any]:

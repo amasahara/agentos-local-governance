@@ -24,7 +24,7 @@ import shutil
 import urllib.error
 import urllib.parse
 import urllib.request
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from .core import check_write
@@ -93,7 +93,11 @@ def _inside(root: Path, value: str | None) -> Path:
 def _command_profile(command: list[str], policy: dict[str, Any]) -> str:
     if not command or not all(isinstance(x, str) and x for x in command):
         raise RuntimeError("command must be a non-empty JSON array of strings")
-    executable = Path(command[0]).name.lower()
+    # Parse executable identity independently of the host OS.
+    # PureWindowsPath accepts both Windows backslashes and POSIX-style
+    # forward slashes, so a Windows command transported to a Linux
+    # governance runner still resolves to the same executable name.
+    executable = PureWindowsPath(command[0]).name.lower()
 
     # Windows executable suffixes are transport details, not
     # different process-policy identities.

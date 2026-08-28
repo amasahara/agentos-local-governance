@@ -605,8 +605,8 @@
     },
     {
       "path": ".agents/agentos/proxy.py",
-      "size": 28710,
-      "sha256": "54a4c0e5af2ee3fad57c68b37af88563ceb26de0b6b53e4b54c59bbe6d669444"
+      "size": 29006,
+      "sha256": "9da7f7f49ddf6e1304e71c399244af14c349c93cf81216b474b1c6c87c90b7fc"
     },
     {
       "path": ".agents/agentos/read_only_extraction.py",

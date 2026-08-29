@@ -104,10 +104,101 @@ def _policy_version_tuple(policy: dict[str, Any]) -> tuple[int, int, int]:
     return tuple(int(part) for part in parts)  # type: ignore[return-value]
 
 
+def _validate_windows_process_tree_policy_v0291(
+    policy: dict[str, Any],
+    version: tuple[int, ...],
+) -> None:
+    """Fail closed on the bounded v0.29.1 Windows containment contract."""
+    if version < (0, 29, 1):
+        return
+
+    containment = policy.get(
+        "windows_process_tree_containment_policy"
+    )
+    if not isinstance(containment, dict):
+        raise RuntimeError(
+            "windows process-tree containment policy is required"
+        )
+
+    required_true = (
+        "enabled",
+        "windows_only",
+        "job_objects_required_on_windows",
+        "root_created_suspended",
+        "assignment_before_resume_required",
+        "synchronous_exec_enforced",
+        "async_job_enforced",
+        "sync_kill_on_job_close_required",
+        "async_broker_required",
+        "async_broker_kill_on_close_required",
+        "timeout_terminates_tree",
+        "cancellation_terminates_tree",
+        "broker_failure_terminates_tree",
+        "completion_receipt_required",
+        "windows_ci_required",
+        "windows_ci_containment_suite_required",
+        "windows_ci_full_regression_required",
+        "process_tree_containment_attested",
+    )
+    disabled = [
+        key
+        for key in required_true
+        if containment.get(key) is not True
+    ]
+    if disabled:
+        raise RuntimeError(
+            "windows process-tree containment invariant disabled: "
+            f"{disabled}"
+        )
+
+    required_false = (
+        "same_user_host_bypass_resistance_claimed",
+        "general_os_process_isolation_attested",
+        "arbitrary_host_process_containment_attested",
+    )
+    overclaims = [
+        key
+        for key in required_false
+        if containment.get(key) is not False
+    ]
+    if overclaims:
+        raise RuntimeError(
+            "windows process-tree containment overclaim: "
+            f"{overclaims}"
+        )
+
+    if int(containment.get("containment_version", 0)) != 1:
+        raise RuntimeError(
+            "windows process-tree containment version is invalid"
+        )
+    if int(containment.get("database_schema", 0)) != 62:
+        raise RuntimeError(
+            "windows process-tree containment schema is invalid"
+        )
+    if (
+        containment.get("scope")
+        != "agentos_mediated_process_execution"
+    ):
+        raise RuntimeError(
+            "windows process-tree containment scope is invalid"
+        )
+    if (
+        containment.get("windows_ci_runner")
+        != "windows-latest"
+    ):
+        raise RuntimeError(
+            "windows process-tree containment CI runner is invalid"
+        )
+
+
 def validate_policy(policy: dict[str, Any]) -> None:
     """Fail closed while preserving historical policy contracts by release version."""
     required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy"}
     version = _policy_version_tuple(policy)
+    _validate_windows_process_tree_policy_v0291(
+        policy,
+        version,
+    )
     if version >= (0, 27, 0):
         required.add("governed_skill_contract_policy")
     if version >= (0, 27, 1):

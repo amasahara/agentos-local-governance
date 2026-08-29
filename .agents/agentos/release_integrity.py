@@ -64,6 +64,8 @@ CORE_FILES = (
     ".agents/agentos/completion_surface.py",
     ".agents/agentos/completion_cli.py",
     ".agents/agentos/mcp_v0290.py",
+    ".agents/agentos/windows_process_tree.py",
+    ".agents/agentos/windows_job_broker.py",
 )
 RELEASE_FILES = (
     ".agents/tests/test_release_line_endings_v0242.py",
@@ -127,6 +129,15 @@ RELEASE_FILES = (
     ".agents/tests/test_completion_surface_v0290.py",
     ".agents/tests/test_completion_attestation_v0290.py",
     ".agents/tests/test_completion_activation_v0290.py",
+    ".agents/tests/test_windows_process_tree_v0291.py",
+    ".agents/tests/test_windows_process_exec_containment_v0291.py",
+    ".agents/tests/test_windows_job_broker_v0291.py",
+    ".agents/tests/test_windows_async_job_containment_v0291.py",
+    ".agents/tests/test_windows_async_timeout_v0291.py",
+    ".agents/tests/test_windows_process_tree_attestation_v0291.py",
+    ".agents/docs/WINDOWS_PROCESS_TREE_CONTAINMENT_V0291.md",
+    ".agents/tests/test_windows_process_tree_activation_v0291.py",
+    ".agents/tests/test_windows_ci_gate_v0291.py",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -311,6 +322,67 @@ def _db_contract_findings(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
+
+def _windows_ci_contract(root: Path) -> dict:
+    workflow_path = (
+        root
+        / ".github/workflows/agentos-release-validation.yml"
+    )
+    if not workflow_path.is_file():
+        return {
+            "ok": False,
+            "workflow": str(workflow_path.relative_to(root)),
+            "runner": "windows-latest",
+            "missing_markers": ["workflow_missing"],
+        }
+
+    text = workflow_path.read_text(encoding="utf-8")
+    focused_tests = (
+        "test_windows_process_tree_v0291.py",
+        "test_windows_process_exec_containment_v0291.py",
+        "test_windows_job_broker_v0291.py",
+        "test_windows_async_job_containment_v0291.py",
+        "test_windows_async_timeout_v0291.py",
+        "test_windows_process_tree_attestation_v0291.py",
+        "test_windows_process_tree_activation_v0291.py",
+    )
+    required_markers = (
+        "validate-windows:",
+        "runs-on: windows-latest",
+        "python-version: '3.13'",
+        "python tools/validate_release.py . --skip-manifest",
+        "python tools/verify_manifest.py .",
+        r".\.agents\bin\agentos.cmd runtime-health",
+        r".\.agents\bin\agentos.cmd docs-check",
+        r".\.agents\bin\agentos.cmd instruction-check",
+        *focused_tests,
+        "python -m pytest -q .agents/tests -rs",
+    )
+    missing = [
+        marker
+        for marker in required_markers
+        if marker not in text
+    ]
+    return {
+        "ok": not missing,
+        "workflow": ".github/workflows/agentos-release-validation.yml",
+        "runner": "windows-latest",
+        "focused_containment_suite": not any(
+            marker in missing
+            for marker in focused_tests
+        ),
+        "activation_suite": (
+            "test_windows_process_tree_activation_v0291.py"
+            not in missing
+        ),
+        "full_regression_suite": (
+            "python -m pytest -q .agents/tests -rs"
+            not in missing
+        ),
+        "missing_markers": missing,
+    }
+
+
 def check_release_integrity(root: Path) -> dict[str, Any]:
     """Return a fail-closed package/core reintegration report.
 
@@ -406,6 +478,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 required_policy_sections.add("isolated_workspace_integration_policy")
             if release_version >= (0, 28, 3):
                 required_policy_sections.add("privileged_control_plane_policy")
+                if release_version >= (0, 29, 1):
+                    required_policy_sections.add("windows_process_tree_containment_policy")
             missing = sorted(required_policy_sections - set(policy))
             if missing:
                 findings.append(_finding("missing_policy_sections", f"missing policy sections: {missing}", ".agents/config/governance.json"))
@@ -502,6 +576,83 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                     )
                 )
 
+        process_tree_attestation = (
+            attestation_report.get(
+                "windows_process_tree_containment"
+            )
+            or {}
+        )
+        required_process_tree_assertions = (
+            "structurally_attested",
+            "sync_enforced",
+            "async_enforced",
+            "assignment_before_resume",
+            "timeout_tree_termination",
+            "cancellation_tree_termination",
+            "broker_fail_closed",
+            "completion_evidence_bound",
+            "broad_nonclaims_preserved",
+            "windows_only",
+        )
+        invalid_process_tree_assertions = [
+            key
+            for key in required_process_tree_assertions
+            if process_tree_attestation.get(key) is not True
+        ]
+        if invalid_process_tree_assertions:
+            findings.append(
+                _finding(
+                    "windows_process_tree_attestation_failed",
+                    "Windows process-tree structural attestation is not green: "
+                    f"{invalid_process_tree_assertions}",
+                    ".agents/agentos/enforcement_attestation.py",
+                )
+            )
+
+        if attested_release_version >= (0, 29, 1):
+            if (
+                process_tree_attestation.get(
+                    "policy_declared_attested"
+                )
+                is not True
+            ):
+                findings.append(
+                    _finding(
+                        "windows_process_tree_policy_not_activated",
+                        "v0.29.1+ requires policy-declared Windows process-tree containment attestation",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
+            if (
+                process_tree_attestation.get("policy_scope")
+                != "agentos_mediated_process_execution"
+            ):
+                findings.append(
+                    _finding(
+                        "windows_process_tree_scope_invalid",
+                        "v0.29.1 containment scope must remain bounded to AgentOS-mediated process execution",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+        windows_ci_validation = (
+            _windows_ci_contract(root)
+        )
+
+        if (
+            attested_release_version
+            >= (0, 29, 1)
+            and windows_ci_validation.get("ok")
+            is not True
+        ):
+            findings.append(
+                _finding(
+                    "windows_ci_validation_missing",
+                    "v0.29.1+ requires a Windows GitHub Actions validation job with focused containment and full regression coverage: "
+                    f"{windows_ci_validation.get('missing_markers', [])}",
+                    ".github/workflows/agentos-release-validation.yml",
+                )
+            )
         completion_attestation = (
             attestation_report.get("completion_verification")
             or {}
@@ -860,6 +1011,10 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 "completion_verification": attestation_report.get(
                     "completion_verification"
                 ),
+                "windows_process_tree_containment": attestation_report.get(
+                    "windows_process_tree_containment"
+                ),
+                "windows_ci_validation": windows_ci_validation,
                 "finding_count": len(
                     attestation_report.get("findings", [])
                 ),

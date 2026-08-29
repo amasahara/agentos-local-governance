@@ -1,4 +1,4 @@
-# AgentOS v0.29.0 Quickstart
+# AgentOS v0.29.1 Quickstart
 Chọn đúng hành trình:
 
 - Project mới: [NEW_PROJECT.md](NEW_PROJECT.md)

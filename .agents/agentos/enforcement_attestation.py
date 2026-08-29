@@ -297,6 +297,10 @@ def attest_enforcement(
         "completion_verification_policy",
         {},
     )
+    process_tree_policy = policy.get(
+        "windows_process_tree_containment_policy",
+        {},
+    )
 
     checks: dict[str, bool] = {}
     findings: list[dict[str, str]] = []
@@ -1024,6 +1028,182 @@ def attest_enforcement(
     # Final derived assertion
     # --------------------------------------------------------
 
+
+    # --------------------------------------------------------
+    # Windows process-tree containment
+    # --------------------------------------------------------
+    process_tree_check_names: list[str] = []
+
+    def require_process_tree(
+        name: str,
+        condition: bool,
+        message: str,
+    ) -> None:
+        process_tree_check_names.append(name)
+        require(name, condition, message)
+
+    sync_route_source = _function_source(
+        root, '.agents/agentos/proxy.py', '_run_process_command'
+    )
+    spawn_source = _function_source(
+        root, '.agents/agentos/windows_process_tree.py', 'spawn_suspended_in_job'
+    )
+    sync_capture_source = _function_source(
+        root, '.agents/agentos/windows_process_tree.py', 'run_contained_capture'
+    )
+    named_kill_job_source = _function_source(
+        root, '.agents/agentos/windows_process_tree.py', 'create_named_kill_on_close_job'
+    )
+    broker_source = _function_source(
+        root, '.agents/agentos/windows_job_broker.py', 'run_broker'
+    )
+    async_launch_source = _function_source(
+        root, '.agents/agentos/jobs.py', '_launch_windows_job_broker'
+    )
+    async_start_source = _function_source(
+        root, '.agents/agentos/jobs.py', 'start_job'
+    )
+    async_status_source = _function_source(
+        root, '.agents/agentos/jobs.py', 'job_status'
+    )
+    async_cancel_source = _function_source(
+        root, '.agents/agentos/jobs.py', 'cancel_job'
+    )
+    async_timeout_source = _function_source(
+        root, '.agents/agentos/jobs.py', '_materialize_windows_timeout'
+    )
+    async_completion_source = _function_source(
+        root, '.agents/agentos/jobs.py', '_materialize_windows_completion'
+    )
+    async_recover_source = _function_source(
+        root, '.agents/agentos/jobs.py', 'recover_jobs'
+    )
+
+    require_process_tree(
+        'windows_process_tree_policy_enabled',
+        (
+            process_tree_policy.get('enabled') is True
+            and process_tree_policy.get('windows_only') is True
+            and process_tree_policy.get('scope')
+            == 'agentos_mediated_process_execution'
+        ),
+        'Windows process-tree containment policy is not enabled with the bounded AgentOS-mediated scope',
+    )
+    require_process_tree(
+        'windows_process_tree_policy_fail_closed',
+        (
+            process_tree_policy.get('job_objects_required_on_windows') is True
+            and process_tree_policy.get('root_created_suspended') is True
+            and process_tree_policy.get('assignment_before_resume_required') is True
+            and process_tree_policy.get('sync_kill_on_job_close_required') is True
+            and process_tree_policy.get('async_broker_required') is True
+            and process_tree_policy.get('async_broker_kill_on_close_required') is True
+        ),
+        'Windows containment policy does not declare fail-closed Job Object ownership',
+    )
+    require_process_tree(
+        'windows_sync_process_exec_contained',
+        (
+            '_is_windows_host()' in sync_route_source
+            and 'run_contained_capture(' in sync_route_source
+            and 'process_tree_contained' in sync_route_source
+            and 'CREATE_SUSPENDED' in spawn_source
+            and 'assign_process_handle(' in spawn_source
+            and 'ResumeThread(' in spawn_source
+            and spawn_source.find('assign_process_handle(')
+            < spawn_source.find('ResumeThread(')
+        ),
+        'Windows synchronous process.exec is not structurally bound to assign-before-resume Job Object containment',
+    )
+    require_process_tree(
+        'windows_sync_tree_teardown_enforced',
+        (
+            'terminate_tree(' in sync_capture_source
+            and 'subprocess.TimeoutExpired(' in sync_capture_source
+            and 'proc.close()' in sync_capture_source
+        ),
+        'Windows synchronous timeout/teardown does not terminate or close the contained Job tree',
+    )
+    require_process_tree(
+        'windows_async_broker_job_kill_on_close',
+        (
+            'JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE' in named_kill_job_source
+            and 'create_named_kill_on_close_job(' in broker_source
+            and 'spawn_suspended_in_job(' in broker_source
+            and 'named_job_active_process_count(' in broker_source
+        ),
+        'Windows async broker does not own a named kill-on-close Job Object',
+    )
+    require_process_tree(
+        'windows_async_launch_guarded_before_broker',
+        (
+            'validate_execution_token(' in async_start_source
+            and '_launch_windows_job_broker(' in async_start_source
+            and async_start_source.find('validate_execution_token(')
+            < async_start_source.find('_launch_windows_job_broker(')
+            and 'subprocess.Popen(' in async_launch_source
+            and 'agentos.windows_job_broker' in async_launch_source
+            and 'shell=False' in async_launch_source
+        ),
+        'Windows async broker launch is not guarded before the process side effect',
+    )
+    require_process_tree(
+        'windows_async_liveness_job_membership',
+        (
+            'named_job_active_process_count(' in async_status_source
+            and 'windows_job_broker_missing' in async_status_source
+            and '_windows_completion_record(' in async_status_source
+        ),
+        'Windows async status is not bound to Job membership and broker evidence',
+    )
+    require_process_tree(
+        'windows_async_cancel_tree_termination',
+        (
+            '_is_windows_host()' in async_cancel_source
+            and 'terminate_named_job(' in async_cancel_source
+            and 'async_job_object_name(' in async_cancel_source
+        ),
+        'Windows async cancellation is not routed through whole-Job termination',
+    )
+    require_process_tree(
+        'windows_async_timeout_tree_termination',
+        (
+            'terminate_named_job(' in async_timeout_source
+            and 'exit_code=124' in async_timeout_source
+            and 'timed_out' in async_status_source
+            and '_job_timeout_evidence(' in async_recover_source
+        ),
+        'Windows async timeout is not fail-closed on whole-tree termination and persisted timeout state',
+    )
+    require_process_tree(
+        'windows_async_completion_exit_evidence',
+        (
+            'worker_exit_code' in async_completion_source
+            and 'succeeded' in async_completion_source
+            and 'failed' in async_completion_source
+            and '_windows_completion_record(' in async_status_source
+            and '_windows_completion_record(' in async_recover_source
+        ),
+        'Windows async completion is not bound to broker exit-code evidence',
+    )
+    require_process_tree(
+        'windows_process_tree_broad_nonclaims_preserved',
+        (
+            process_tree_policy.get('same_user_host_bypass_resistance_claimed') is False
+            and process_tree_policy.get('general_os_process_isolation_attested') is False
+            and process_tree_policy.get('arbitrary_host_process_containment_attested') is False
+        ),
+        'Windows process-tree policy overclaims same-user, general OS isolation, or arbitrary host containment',
+    )
+
+    process_tree_structural_ok = all(
+        checks.get(name) is True
+        for name in process_tree_check_names
+    )
+    process_tree_policy_declared = bool(
+        process_tree_policy.get('process_tree_containment_attested', False)
+    )
+
     ok = not findings
 
     return {
@@ -1086,6 +1266,39 @@ def attest_enforcement(
             ),
             "policy_declared_attested": completion_policy_declared,
             "policy_scope": completion_policy.get("scope"),
+        },
+        "windows_process_tree_containment": {
+            "structurally_attested": process_tree_structural_ok,
+            "sync_enforced": bool(
+                checks.get("windows_sync_process_exec_contained")
+                and checks.get("windows_sync_tree_teardown_enforced")
+            ),
+            "async_enforced": bool(
+                checks.get("windows_async_broker_job_kill_on_close")
+                and checks.get("windows_async_launch_guarded_before_broker")
+                and checks.get("windows_async_liveness_job_membership")
+            ),
+            "assignment_before_resume": checks.get(
+                "windows_sync_process_exec_contained"
+            ) is True,
+            "timeout_tree_termination": checks.get(
+                "windows_async_timeout_tree_termination"
+            ) is True,
+            "cancellation_tree_termination": checks.get(
+                "windows_async_cancel_tree_termination"
+            ) is True,
+            "broker_fail_closed": checks.get(
+                "windows_async_broker_job_kill_on_close"
+            ) is True,
+            "completion_evidence_bound": checks.get(
+                "windows_async_completion_exit_evidence"
+            ) is True,
+            "broad_nonclaims_preserved": checks.get(
+                "windows_process_tree_broad_nonclaims_preserved"
+            ) is True,
+            "policy_declared_attested": process_tree_policy_declared,
+            "policy_scope": process_tree_policy.get("scope"),
+            "windows_only": process_tree_policy.get("windows_only") is True,
         },
         "mcp": {
             "ok": bool(

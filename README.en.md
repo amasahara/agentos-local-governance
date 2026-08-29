@@ -92,14 +92,16 @@ State the problem and acceptance criteria, place changes by responsibility and l
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
 
 ## Current release
-**v0.29.0 — Independent Completion Verification** · schema **62**
+**v0.29.1 — Windows Process-Tree Containment** · schema **62**
 
-v0.29.0 adds an independent completion boundary for AgentOS-governed workflows. Completion accepted by AgentOS cannot be established solely by the producer; it requires a fresh verification receipt bound to the immutable completion subject and reviewer authority independent from the producer task/session/assignment.
+v0.29.1 hardens AgentOS-mediated Windows process execution with native Job Objects within `agentos_mediated_process_execution`.
 
-The receipt is bound to the subject hash, required checks, and evidence. Subject mutation makes the receipt stale and completion fails closed. The rule applies to single-task workflow completion, multi-agent worker completion, and controlled integration readiness.
+Synchronous `process.exec` creates the root process suspended, assigns it to a Job Object before resume, and tears down the whole Job tree on timeout or governed teardown. Async jobs use a dedicated AgentOS Job broker that owns a durable `KILL_ON_JOB_CLOSE` handle; the broker creates the worker suspended, assigns before resume, maintains named Job membership, and emits a completion receipt carrying the root exit code.
 
-The agent-plane CLI adds `completion-request`, `completion-verify`, and `completion-status`. MCP exposes only the read-only `agentos.completion_status_get`; completion mutation authority is not exposed over MCP.
+Async cancellation and timeout terminate the entire named Job instead of only the root PID. Broker failure closes the durable Job handle and fails closed on the worker tree. Normal completion is materialized only from the broker drain receipt; a non-zero root exit is recorded as `failed`.
 
-The runtime has **344** canonical commands, **248** agent-plane commands, **98** privileged-control-plane commands, and **124** MCP tools.
+The release adds a `windows-latest` CI job with both the focused process-tree containment suite and the full regression suite. Release integrity requires this CI contract for v0.29.1+.
 
-The release claim is deliberately narrow: **AgentOS completion is producer-independent and evidence-bound** within `agentos_mediated_agent_execution`. This release does not guarantee semantic correctness, attest model/provider independence, replace human review/approval, or change the existing host/OS isolation non-claims.
+The claim remains bounded: **AgentOS-mediated Windows process trees are Job Object contained before root execution resumes, with whole-tree termination on governed timeout, cancellation, broker failure, and synchronous teardown.**
+
+This release does not claim same-user host bypass resistance, general OS process isolation, or arbitrary host-process containment.

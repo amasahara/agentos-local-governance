@@ -117,14 +117,16 @@ Trước khi gửi thay đổi:
 Các thay đổi governance phải giữ `AGENTS.md`, structured policy, runtime, tests, documentation, changelog và release identity nhất quán.
 
 ## Bản phát hành hiện hành
-**v0.29.0 — Independent Completion Verification** · schema **62**
+**v0.29.1 — Windows Process-Tree Containment** · schema **62**
 
-v0.29.0 bổ sung independent completion boundary cho workflow do AgentOS quản lý. Completion được AgentOS chấp nhận không thể chỉ do chính producer xác lập; nó phải có fresh verification receipt gắn với immutable completion subject và reviewer authority độc lập với producer task/session/assignment.
+v0.29.1 harden các process execution surface trên Windows bằng native Job Objects trong phạm vi `agentos_mediated_process_execution`.
 
-Receipt được bind với subject hash, required checks và evidence. Subject thay đổi sau verification làm receipt stale và completion fail closed. Cơ chế này áp dụng cho single-task workflow, multi-agent worker completion và controlled integration readiness.
+Synchronous `process.exec` tạo root process ở trạng thái suspended, gán process vào Job Object trước khi resume, và đóng/terminate toàn bộ Job tree khi timeout hoặc governed teardown. Async jobs dùng một AgentOS Job broker riêng để giữ durable `KILL_ON_JOB_CLOSE` handle; broker tạo worker suspended, assign-before-resume, duy trì named Job membership và phát completion receipt có root exit code.
 
-CLI bổ sung `completion-request`, `completion-verify`, `completion-status` trên agent plane. MCP chỉ expose read-only `agentos.completion_status_get`; completion mutation authority không được expose qua MCP.
+Cancellation và timeout của async job terminate toàn bộ named Job thay vì chỉ root PID. Broker failure làm đóng durable Job handle và fail-closed toàn bộ worker tree. Normal completion chỉ được materialize từ broker drain receipt; non-zero root exit được ghi nhận là `failed`.
 
-Runtime hiện có **344** canonical commands, **248** agent-plane commands, **98** privileged-control-plane commands và **124** MCP tools.
+Release bổ sung Windows CI `windows-latest` với focused process-tree containment suite và full regression suite. Release integrity yêu cầu CI contract này cho v0.29.1+.
 
-Claim release được giới hạn: **AgentOS completion is producer-independent and evidence-bound** trong scope `agentos_mediated_agent_execution`. Release không bảo đảm semantic correctness, không attest model/provider independence, không thay thế human review/approval, và giữ nguyên các non-claim về same-user host bypass, OS-level process isolation và arbitrary host-process containment.
+Claim được giới hạn: **AgentOS-mediated Windows process trees are Job Object contained before root execution resumes, with whole-tree termination on governed timeout, cancellation, broker failure, and synchronous teardown.**
+
+Release này không claim same-user host bypass resistance, general OS process isolation hoặc arbitrary host-process containment.

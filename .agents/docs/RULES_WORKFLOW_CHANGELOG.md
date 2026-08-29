@@ -1,3 +1,16 @@
+## v0.29.1 — Windows Process-Tree Containment
+
+- Windows process execution mediated by AgentOS must use Job Object containment.
+- Root user-mode execution begins only after successful Job assignment.
+- Synchronous timeout/teardown terminates or closes the contained Job tree.
+- Async execution uses a dedicated broker that owns a named `KILL_ON_JOB_CLOSE` Job Object.
+- Async cancellation and timeout terminate the named Job tree, not only the root PID.
+- Broker loss is fail-closed for the contained worker tree.
+- Normal async terminal state is bound to broker completion evidence including the root exit code.
+- v0.29.1 release integrity requires a `windows-latest` CI job containing both the focused containment suite and full regression.
+- Release scope is `agentos_mediated_process_execution`; same-user host bypass resistance, general OS isolation, and arbitrary host-process containment are not claimed.
+- Release is **0.29.1**; database schema remains **62**.
+
 ## v0.29.0 — Independent Completion Verification
 
 - Added schema 62 independent completion receipts bound to exact subject hash, required checks, evidence, and reviewer authority.

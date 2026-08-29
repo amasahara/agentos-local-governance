@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.29.1 — Windows Process-Tree Containment
+
+- Added native Windows Job Object containment for AgentOS-mediated process execution.
+- Synchronous roots are created suspended, assigned to a Job Object before resume, and whole-tree terminated on timeout/teardown.
+- Async execution now uses a dedicated Job broker that durably owns a named `KILL_ON_JOB_CLOSE` Job Object.
+- Async status uses Job membership and broker evidence rather than root-PID liveness.
+- Async cancellation and timeout terminate the entire named Job; timeout persists `timed_out` with exit code 124.
+- Broker failure is fail-closed for the associated worker process tree.
+- Broker completion receipts carry the worker root exit code; non-zero exit materializes `failed`.
+- Added bounded machine-verifiable process-tree attestation under `agentos_mediated_process_execution`.
+- Added a `windows-latest` GitHub Actions validation job with focused containment and full regression coverage.
+- Database schema remains **62**.
+- Broad nonclaims remain unchanged: no same-user host bypass resistance, no general OS process isolation, and no arbitrary host-process containment claim.
+
 ## v0.29.0 — Independent Completion Verification
 
 - Added schema **62** completion verification request/attempt state.

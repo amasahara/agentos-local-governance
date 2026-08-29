@@ -9,14 +9,26 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_release_identity_is_v0290_schema62():
+def test_release_identity_preserves_v0290_schema62_contract():
     import agentos
     from agentos.db import SCHEMA_VERSION
     from agentos.schema_version import CURRENT_SCHEMA_VERSION
     from agentos.completion_verification import MIGRATION_VERSION
 
-    assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == "0.29.0"
-    assert agentos.__version__ == "0.29.0"
+    release = (
+        ROOT
+        / "VERSION"
+    ).read_text(
+        encoding="utf-8"
+    ).strip()
+
+    release_tuple = tuple(
+        int(part)
+        for part in release.split(".")
+    )
+
+    assert release_tuple >= (0, 29, 0)
+    assert agentos.__version__ == release
     assert SCHEMA_VERSION == 62
     assert CURRENT_SCHEMA_VERSION == 62
     assert MIGRATION_VERSION == 62
@@ -46,21 +58,42 @@ def test_fresh_database_materializes_schema62():
     assert "completion_verification_attempts" in tables
 
 
-def test_v0290_policy_activation_is_fail_closed():
+def test_v0290_policy_activation_remains_fail_closed():
     from agentos.policy import load_policy, validate_policy
 
     policy = load_policy(ROOT)
-    completion = policy["completion_verification_policy"]
-    assert policy["version"] == "0.29.0"
+    completion = policy[
+        "completion_verification_policy"
+    ]
+
+    version_tuple = tuple(
+        int(part)
+        for part in str(
+            policy["version"]
+        ).split(".")
+    )
+
+    assert version_tuple >= (0, 29, 0)
     assert completion["independent_completion_attested"] is True
     assert completion["database_schema"] == 62
-    assert completion["scope"] == "agentos_mediated_agent_execution"
+    assert (
+        completion["scope"]
+        == "agentos_mediated_agent_execution"
+    )
     assert completion["mcp_status_read_only"] is True
     assert completion["mcp_mutation_allowed"] is False
 
     poisoned = copy.deepcopy(policy)
-    poisoned["completion_verification_policy"]["semantic_correctness_guaranteed"] = True
-    with pytest.raises(RuntimeError, match="overclaim"):
+    poisoned[
+        "completion_verification_policy"
+    ][
+        "semantic_correctness_guaranteed"
+    ] = True
+
+    with pytest.raises(
+        RuntimeError,
+        match="overclaim",
+    ):
         validate_policy(poisoned)
 
 

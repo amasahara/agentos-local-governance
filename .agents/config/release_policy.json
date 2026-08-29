@@ -1,12 +1,12 @@
 {
-  "version": "0.29.0",
+  "version": "0.29.1",
   "documentation_policy": {
     "current_release_identity_files": [
       "README.md",
       "README.en.md",
       "RELEASE_NOTES.md"
     ],
-    "current_release_name": "Independent Completion Verification",
+    "current_release_name": "Windows Process-Tree Containment",
     "current_schema": 62,
     "current_schema_files": [
       "README.md",
@@ -272,5 +272,32 @@
     "model_provider_independence_attested": false,
     "human_review_replaced": false,
     "human_approval_replaced": false
+  },
+  "windows_process_tree_containment_policy": {
+    "enabled": true,
+    "containment_version": 1,
+    "database_schema": 62,
+    "scope": "agentos_mediated_process_execution",
+    "windows_only": true,
+    "job_objects_required_on_windows": true,
+    "root_created_suspended": true,
+    "assignment_before_resume_required": true,
+    "synchronous_exec_enforced": true,
+    "async_job_enforced": true,
+    "sync_kill_on_job_close_required": true,
+    "async_broker_required": true,
+    "async_broker_kill_on_close_required": true,
+    "timeout_terminates_tree": true,
+    "cancellation_terminates_tree": true,
+    "broker_failure_terminates_tree": true,
+    "completion_receipt_required": true,
+    "windows_ci_required": true,
+    "windows_ci_runner": "windows-latest",
+    "windows_ci_containment_suite_required": true,
+    "windows_ci_full_regression_required": true,
+    "process_tree_containment_attested": true,
+    "same_user_host_bypass_resistance_claimed": false,
+    "general_os_process_isolation_attested": false,
+    "arbitrary_host_process_containment_attested": false
   }
 }

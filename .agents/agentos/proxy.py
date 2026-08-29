@@ -268,6 +268,52 @@ def _preflight(root: Path, task_id: str, session_id: str, capability: str, args:
     return metadata
 
 
+
+def _is_windows_host() -> bool:
+    return os.name == 'nt'
+
+
+def _run_process_command(
+    command: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str],
+    timeout: int,
+) -> tuple[Any, dict[str, Any]]:
+    """Run sync process.exec with host-appropriate containment semantics."""
+    if _is_windows_host():
+        from .windows_process_tree import (
+            CONTAINMENT_PROFILE,
+            run_contained_capture,
+        )
+        result = run_contained_capture(
+            command,
+            cwd=cwd,
+            env=env,
+            timeout=timeout,
+        )
+        return result, {
+            'process_tree_contained': True,
+            'process_tree_containment_profile': CONTAINMENT_PROFILE,
+            'process_tree_containment_scope': 'agentos_mediated_process_execution',
+        }
+
+    result = subprocess.run(
+        command,
+        cwd=cwd,
+        text=True,
+        capture_output=True,
+        timeout=timeout,
+        shell=False,
+        env=env,
+    )
+    return result, {
+        'process_tree_contained': False,
+        'process_tree_containment_profile': None,
+        'process_tree_containment_scope': None,
+    }
+
+
 def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str, args: dict[str, Any], metadata: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
     policy = load_policy(root)
     if capability == "filesystem.read":
@@ -320,13 +366,25 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
         cwd = _isolated_workspace(root, task_id, source_cwd)
         command = list(args["command"])
         env = _filtered_env(args.get("env")); env.pop("PYTHONPATH", None)
-        proc = subprocess.run(command, cwd=cwd, text=True, capture_output=True, timeout=timeout, shell=False, env=env)
+        proc, containment = _run_process_command(
+            command,
+            cwd=cwd,
+            env=env,
+            timeout=timeout,
+        )
         command_hash = hashlib.sha256(json.dumps(command, sort_keys=True).encode()).hexdigest()
         environment_hash = hashlib.sha256(json.dumps(env, sort_keys=True).encode()).hexdigest()
         with connect(root) as c:
             c.execute("INSERT INTO execution_manifests(task_id,session_id,command_hash,cwd,sandbox_profile,workspace_path,environment_hash,decision) VALUES(?,?,?,?,?,?,?,?)", (task_id,session_id,command_hash,metadata["cwd"],metadata.get("sandbox_profile", "isolated-workspace"),str(cwd),environment_hash,"allowed"))
         limit = int(cfg.get("max_output_bytes", 65536))
-        return proc.returncode == 0, {"exit_code": proc.returncode, "profile": metadata["command_profile"], "cwd": metadata["cwd"], "stdout": proc.stdout[:limit], "stderr": proc.stderr[:limit]}
+        return proc.returncode == 0, {
+            'exit_code': proc.returncode,
+            'profile': metadata['command_profile'],
+            'cwd': metadata['cwd'],
+            'stdout': proc.stdout[:limit],
+            'stderr': proc.stderr[:limit],
+            **containment,
+        }
     if capability == "network.http":
         url = str(args["url"]); _validate_url(url, policy)
         method = str(args.get("method", "GET")).upper()

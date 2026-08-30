@@ -117,16 +117,18 @@ Trước khi gửi thay đổi:
 Các thay đổi governance phải giữ `AGENTS.md`, structured policy, runtime, tests, documentation, changelog và release identity nhất quán.
 
 ## Bản phát hành hiện hành
-**v0.29.1 — Windows Process-Tree Containment** · schema **62**
+**v0.29.2 — Windows Sandbox Workspace & Tool Runtime Profiles** · schema **62**
 
-v0.29.1 harden các process execution surface trên Windows bằng native Job Objects trong phạm vi `agentos_mediated_process_execution`.
+v0.29.2 bổ sung deterministic tool runtime profiles và bounded sandbox workspace
+cho process execution đi qua AgentOS. Sync và async execution đều được bind vào
+runtime-profile contract; async job còn pin snapshot/hash và revalidate ngay
+trước launch.
 
-Synchronous `process.exec` tạo root process ở trạng thái suspended, gán process vào Job Object trước khi resume, và đóng/terminate toàn bộ Job tree khi timeout hoặc governed teardown. Async jobs dùng một AgentOS Job broker riêng để giữ durable `KILL_ON_JOB_CLOSE` handle; broker tạo worker suspended, assign-before-resume, duy trì named Job membership và phát completion receipt có root exit code.
+Release kế thừa process-tree containment của v0.29.1 và giữ Windows CI regression
+cho containment, focused runtime-profile/sandbox tests, activation tests và full
+suite.
 
-Cancellation và timeout của async job terminate toàn bộ named Job thay vì chỉ root PID. Broker failure làm đóng durable Job handle và fail-closed toàn bộ worker tree. Normal completion chỉ được materialize từ broker drain receipt; non-zero root exit được ghi nhận là `failed`.
-
-Release bổ sung Windows CI `windows-latest` với focused process-tree containment suite và full regression suite. Release integrity yêu cầu CI contract này cho v0.29.1+.
-
-Claim được giới hạn: **AgentOS-mediated Windows process trees are Job Object contained before root execution resumes, with whole-tree termination on governed timeout, cancellation, broker failure, and synchronous teardown.**
-
-Release này không claim same-user host bypass resistance, general OS process isolation hoặc arbitrary host-process containment.
+Claim được giới hạn ở `agentos_mediated_process_execution`.
+`runtime_profile_sandbox_attested = true`, nhưng credential isolation,
+Restricted Token, Low Integrity, host-filesystem isolation, OS write confinement
+và same-user host-bypass resistance vẫn **không được claim**.

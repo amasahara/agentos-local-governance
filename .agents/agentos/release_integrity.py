@@ -66,6 +66,7 @@ CORE_FILES = (
     ".agents/agentos/mcp_v0290.py",
     ".agents/agentos/windows_process_tree.py",
     ".agents/agentos/windows_job_broker.py",
+    ".agents/agentos/tool_runtime_profiles.py",
 )
 RELEASE_FILES = (
     ".agents/tests/test_release_line_endings_v0242.py",
@@ -138,6 +139,14 @@ RELEASE_FILES = (
     ".agents/docs/WINDOWS_PROCESS_TREE_CONTAINMENT_V0291.md",
     ".agents/tests/test_windows_process_tree_activation_v0291.py",
     ".agents/tests/test_windows_ci_gate_v0291.py",
+    ".agents/tests/test_tool_runtime_profiles_v0292.py",
+    ".agents/tests/test_sync_tool_runtime_profiles_v0292.py",
+    ".agents/tests/test_async_tool_runtime_profiles_v0292.py",
+    ".agents/tests/test_async_sandbox_lifecycle_v0292.py",
+    ".agents/tests/test_sandbox_runtime_attestation_v0292.py",
+    ".agents/tests/test_windows_sandbox_ci_gate_v0292.py",
+    ".agents/tests/test_windows_sandbox_activation_v0292.py",
+    ".agents/docs/WINDOWS_SANDBOX_WORKSPACE_TOOL_RUNTIME_PROFILES_V0292.md",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -382,6 +391,73 @@ def _windows_ci_contract(root: Path) -> dict:
         "missing_markers": missing,
     }
 
+def _windows_sandbox_ci_contract_v0292(root: Path) -> dict:
+    workflow_path = (
+        root
+        / ".github/workflows/agentos-release-validation.yml"
+    )
+
+    if not workflow_path.is_file():
+        return {
+            "ok": False,
+            "workflow": str(workflow_path.relative_to(root)),
+            "runner": "windows-latest",
+            "v0291_containment_regression": False,
+            "focused_runtime_profile_suite": False,
+            "activation_suite": False,
+            "full_regression_suite": False,
+            "missing_markers": ["workflow_missing"],
+        }
+
+    text = workflow_path.read_text(encoding="utf-8")
+
+    focused_tests = (
+        "test_tool_runtime_profiles_v0292.py",
+        "test_sync_tool_runtime_profiles_v0292.py",
+        "test_async_tool_runtime_profiles_v0292.py",
+        "test_async_sandbox_lifecycle_v0292.py",
+        "test_sandbox_runtime_attestation_v0292.py",
+    )
+
+    activation_test = (
+        "test_windows_sandbox_activation_v0292.py"
+    )
+
+    required_markers = (
+        "validate-windows:",
+        "runs-on: windows-latest",
+        "Windows sandbox workspace and runtime profiles",
+        "test_windows_process_tree_activation_v0291.py",
+        *focused_tests,
+        activation_test,
+        "python -m pytest -q .agents/tests -rs",
+    )
+
+    missing = [
+        marker
+        for marker in required_markers
+        if marker not in text
+    ]
+
+    return {
+        "ok": not missing,
+        "workflow": ".github/workflows/agentos-release-validation.yml",
+        "runner": "windows-latest",
+        "v0291_containment_regression": (
+            "test_windows_process_tree_activation_v0291.py"
+            not in missing
+        ),
+        "focused_runtime_profile_suite": not any(
+            marker in missing
+            for marker in focused_tests
+        ),
+        "activation_suite": activation_test not in missing,
+        "full_regression_suite": (
+            "python -m pytest -q .agents/tests -rs"
+            not in missing
+        ),
+        "missing_markers": missing,
+    }
 
 def check_release_integrity(root: Path) -> dict[str, Any]:
     """Return a fail-closed package/core reintegration report.
@@ -653,6 +729,96 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                     ".github/workflows/agentos-release-validation.yml",
                 )
             )
+        windows_sandbox_ci_validation = (
+            _windows_sandbox_ci_contract_v0292(root)
+        )
+        sandbox_runtime_profile_attestation = (
+            attestation_report.get(
+                "sandbox_workspace_runtime_profiles"
+            )
+            or {}
+        )
+
+        if attested_release_version >= (0, 29, 2):
+            required_sandbox_assertions = (
+                "structurally_attested",
+                "sync_enforced",
+                "async_enforced",
+                "snapshot_hash_bound",
+                "mutable_state_redirected",
+                "terminal_cleanup_guarded",
+                "windows_process_tree_containment_preserved",
+                "broad_nonclaims_preserved",
+            )
+            missing_sandbox_assertions = [
+                key
+                for key in required_sandbox_assertions
+                if sandbox_runtime_profile_attestation.get(key) is not True
+            ]
+
+            if missing_sandbox_assertions:
+                findings.append(
+                    _finding(
+                        "sandbox_runtime_profile_attestation_failed",
+                        "v0.29.2+ requires green structural sandbox/runtime-profile attestation: "
+                        + repr(missing_sandbox_assertions),
+                        ".agents/agentos/enforcement_attestation.py",
+                    )
+                )
+
+            if (
+                sandbox_runtime_profile_attestation.get(
+                    "policy_declared_attested"
+                )
+                is not True
+            ):
+                findings.append(
+                    _finding(
+                        "sandbox_runtime_profile_policy_not_activated",
+                        "v0.29.2+ requires runtime_profile_sandbox_attested=true",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
+            if (
+                sandbox_runtime_profile_attestation.get("policy_scope")
+                != "agentos_mediated_process_execution"
+            ):
+                findings.append(
+                    _finding(
+                        "sandbox_runtime_profile_scope_mismatch",
+                        "v0.29.2 sandbox/runtime-profile attestation must remain bounded to agentos_mediated_process_execution",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
+            if (
+                sandbox_runtime_profile_attestation.get(
+                    "broad_nonclaims_preserved"
+                )
+                is not True
+            ):
+                findings.append(
+                    _finding(
+                        "sandbox_runtime_profile_overclaim",
+                        "v0.29.2 sandbox/runtime-profile release must preserve broad security nonclaims",
+                        ".agents/agentos/enforcement_attestation.py",
+                    )
+                )
+
+            if windows_sandbox_ci_validation.get("ok") is not True:
+                findings.append(
+                    _finding(
+                        "windows_sandbox_ci_validation_missing",
+                        "v0.29.2+ requires windows-latest CI with the v0.29.1 containment activation regression, the focused sandbox/runtime-profile suite, and the full regression suite: "
+                        + repr(
+                            windows_sandbox_ci_validation.get(
+                                "missing_markers", []
+                            )
+                        ),
+                        ".github/workflows/agentos-release-validation.yml",
+                    )
+                )
         completion_attestation = (
             attestation_report.get("completion_verification")
             or {}
@@ -1015,6 +1181,7 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                     "windows_process_tree_containment"
                 ),
                 "windows_ci_validation": windows_ci_validation,
+                "windows_sandbox_ci_validation": windows_sandbox_ci_validation,
                 "finding_count": len(
                     attestation_report.get("findings", [])
                 ),
@@ -1080,6 +1247,7 @@ DOC_FILES = (
     ".agents/docs/UPGRADE_FROM_0.25.4.md",
     ".agents/docs/UPGRADE_FROM_0.25.5.md",
     ".agents/docs/UPGRADE_FROM_0.26.0.md",
+    ".agents/docs/WINDOWS_SANDBOX_WORKSPACE_TOOL_RUNTIME_PROFILES_V0292.md",
 )
 
 

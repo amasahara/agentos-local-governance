@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_v0291_release_identity_and_schema():
+    """Preserve the v0.29.1 activation floor under successor releases."""
     version = (
         ROOT
         / "VERSION"
@@ -23,9 +24,15 @@ def test_v0291_release_identity_and_schema():
         encoding="utf-8"
     ).strip()
 
-    assert version == "0.29.1"
-    assert __version__ == "0.29.1"
-    assert CURRENT_SCHEMA_VERSION == 62
+    assert __version__ == version
+
+    release_tuple = tuple(
+        int(part)
+        for part in version.split(".")
+    )
+    assert release_tuple >= (0, 29, 1)
+
+    assert CURRENT_SCHEMA_VERSION >= 62
 
 
 def test_v0291_release_policy_activation_is_bounded():
@@ -78,14 +85,27 @@ def test_v0291_windows_ci_activation_contract_is_complete():
 
 
 def test_v0291_release_integrity_is_green_after_artifact_rebuild():
+    """Require inherited v0.29.1 containment gates in the current release."""
+    current_version = (
+        ROOT
+        / "VERSION"
+    ).read_text(
+        encoding="utf-8"
+    ).strip()
+
     report = check_release_integrity(ROOT)
     assert report["ok"], report["findings"]
-    assert report["version"] == "0.29.1"
-    assert report["schema"] == 62
+    assert report["version"] == current_version
+    assert tuple(
+        int(part)
+        for part in current_version.split(".")
+    ) >= (0, 29, 1)
+    assert report["schema"] >= 62
 
     attestation = report[
         "enforcement_attestation"
     ]
+
     assert (
         attestation[
             "windows_process_tree_containment"
@@ -94,6 +114,7 @@ def test_v0291_release_integrity_is_green_after_artifact_rebuild():
         ]
         is True
     )
+
     assert (
         attestation[
             "windows_ci_validation"

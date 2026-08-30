@@ -10,6 +10,11 @@ import pytest
 from agentos import jobs
 from agentos.core import start_task
 from agentos.db import connect
+from agentos.tool_runtime_profiles import (
+    build_runtime_environment,
+    create_sandbox_workspace,
+    resolve_runtime_profile,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -38,6 +43,14 @@ def queued_job(
     *,
     job_id: str,
 ) -> tuple[dict, dict]:
+    """
+    Materialize a queued job using the current v0.29.2 async runtime contract.
+
+    The assertions in this historical v0.29.1 test file still verify the
+    Windows Job broker behavior introduced by v0.29.1; only the fixture shape
+    is modernized so start_job receives the runtime-profile/sandbox evidence
+    now required by v0.29.2.
+    """
     with connect(root) as c:
         task_exists = c.execute(
             "SELECT 1 FROM tasks WHERE id=?",
@@ -51,8 +64,8 @@ def queued_job(
             "Async containment test",
         )
 
-    workspace = root / "src"
-    workspace.mkdir(
+    source = root / "src"
+    source.mkdir(
         exist_ok=True,
     )
 
@@ -66,7 +79,28 @@ def queued_job(
         exist_ok=True,
     )
 
-    env = jobs._filtered_env({})
+    profile = "test"
+    runtime_profile = resolve_runtime_profile(
+        profile
+    )
+    sandbox = create_sandbox_workspace(
+        root,
+        source,
+        "T1",
+        "S1",
+        job_id,
+        profile,
+    )
+
+    clean_env = jobs._filtered_env({})
+    clean_env.pop(
+        "PYTHONPATH",
+        None,
+    )
+    launch_env = build_runtime_environment(
+        clean_env,
+        sandbox,
+    )
 
     spec = {
         "job_id": job_id,
@@ -79,13 +113,31 @@ def queued_job(
             "--version",
         ],
         "cwd": ".",
-        "workspace": str(workspace),
+        "workspace": sandbox[
+            "workspace"
+        ],
         "timeout_seconds": 30,
-        "profile": "test",
+        "profile": profile,
+        "runtime_profile": runtime_profile[
+            "name"
+        ],
+        "runtime_profile_hash": runtime_profile[
+            "profile_hash"
+        ],
+        "runtime_profile_version": runtime_profile[
+            "profile_version"
+        ],
+        "runtime_profile_scope": runtime_profile[
+            "scope"
+        ],
+        "sandbox": sandbox,
+        "snapshot_hash": sandbox[
+            "snapshot_hash"
+        ],
         "network_policy": "none",
         "environment_hash": hashlib.sha256(
             json.dumps(
-                env,
+                launch_env,
                 sort_keys=True,
             ).encode()
         ).hexdigest(),
@@ -115,8 +167,14 @@ def queued_job(
                 ),
                 spec_hash,
                 30,
-                str(job_dir / "stdout.log"),
-                str(job_dir / "stderr.log"),
+                str(
+                    job_dir
+                    / "stdout.log"
+                ),
+                str(
+                    job_dir
+                    / "stderr.log"
+                ),
                 jobs._now(),
             ),
         )

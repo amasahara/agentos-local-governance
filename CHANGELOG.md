@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.29.2 — Windows Sandbox Workspace & Tool Runtime Profiles
+
+- Added deterministic runtime profiles and bounded sandbox workspaces for
+  AgentOS-mediated process execution.
+- Added sync/async enforcement, async snapshot/hash binding and pre-launch
+  revalidation, mutable-state redirects, and cleanup evidence.
+- Preserved v0.29.1 Windows process-tree containment and its activation
+  regression.
+- Added v0.29.2 Windows CI activation coverage.
+- Activated only the bounded runtime-profile sandbox attestation.
+- Kept Restricted Token, Low Integrity, credential isolation,
+  host-filesystem isolation, OS write confinement, and same-user host-bypass
+  resistance claims false.
+- Schema remains 62.
+
 ## v0.29.1 — Windows Process-Tree Containment
 
 - Added native Windows Job Object containment for AgentOS-mediated process execution.

@@ -24,6 +24,7 @@ import shutil
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from pathlib import Path, PureWindowsPath
 from typing import Any
 
@@ -35,6 +36,12 @@ from .drift import drift_check
 from .external_audit import append_signed_event
 from .policy import load_policy, local_override_status
 from .tooling import append_audit_event, complete_tool, guard_tool, redact_value
+from .tool_runtime_profiles import (
+    build_runtime_environment,
+    cleanup_sandbox_workspace,
+    create_sandbox_workspace,
+    resolve_runtime_profile,
+)
 from .workflow import workflow_status
 
 CAPABILITIES = {
@@ -215,17 +222,9 @@ def _scan_agentos_imports(root: Path, command: list[str], cwd: Path) -> None:
                 raise RuntimeError("agentos_internal_import_denied")
 
 
-def _isolated_workspace(root: Path, task_id: str, cwd: Path) -> Path:
-    """Create a temporary project view without .agents internals."""
-    base = root / ".agents" / "runtime" / "isolated" / task_id
-    base.mkdir(parents=True, exist_ok=True)
-    workspace = Path(tempfile.mkdtemp(prefix="exec-", dir=base))
-    for child in cwd.iterdir():
-        if child.name in {".agents", ".git", "__pycache__"}: continue
-        target = workspace / child.name
-        if child.is_dir(): shutil.copytree(child, target, symlinks=False, ignore=shutil.ignore_patterns(".agents", ".git", "__pycache__"))
-        elif child.is_file(): shutil.copy2(child, target)
-    return workspace
+
+
+
 
 
 def _preflight(root: Path, task_id: str, session_id: str, capability: str, args: dict[str, Any]) -> dict[str, Any]:
@@ -257,12 +256,55 @@ def _preflight(root: Path, task_id: str, session_id: str, capability: str, args:
         metadata["workspace_bound"] = workspace_bound
     if capability == "process.exec":
         if steps.get("prepare_change") != "done":
-            raise RuntimeError("proxy blocked: prepare_change is incomplete")
-        metadata["command_profile"] = _command_profile(args.get("command"), policy)
-        resolved_cwd = _inside(execution_root, str(args.get("cwd", ".")))
-        _scan_agentos_imports(root, args.get("command", []), resolved_cwd)
-        metadata["cwd"] = resolved_cwd.relative_to(execution_root).as_posix() or "."
-        metadata["sandbox_profile"] = "isolated-worker-worktree" if workspace_bound else "isolated-workspace"
+            raise RuntimeError(
+                "proxy blocked: prepare_change is incomplete"
+            )
+
+        command_profile = _command_profile(
+            args.get("command"),
+            policy,
+        )
+        runtime_profile = resolve_runtime_profile(
+            command_profile
+        )
+
+        metadata["command_profile"] = command_profile
+        metadata["runtime_profile"] = runtime_profile["name"]
+        metadata["runtime_profile_hash"] = (
+            runtime_profile["profile_hash"]
+        )
+        metadata["runtime_profile_version"] = (
+            runtime_profile["profile_version"]
+        )
+        metadata["runtime_profile_scope"] = (
+            runtime_profile["scope"]
+        )
+
+        resolved_cwd = _inside(
+            execution_root,
+            str(args.get("cwd", ".")),
+        )
+        _scan_agentos_imports(
+            root,
+            args.get("command", []),
+            resolved_cwd,
+        )
+
+        metadata["cwd"] = (
+            resolved_cwd
+            .relative_to(execution_root)
+            .as_posix()
+            or "."
+        )
+        metadata["sandbox_profile"] = (
+            "tool-runtime-profile-v1"
+        )
+        metadata[
+            "host_filesystem_isolation_attested"
+        ] = False
+        metadata[
+            "os_write_confinement_attested"
+        ] = False
     if capability == "network.http":
         _validate_url(str(args.get("url", "")), policy)
     return metadata
@@ -359,32 +401,151 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
         return bool(result.get("allowed")), result
     if capability == "process.exec":
         cfg = policy["proxy_policy"]["process_exec"]
-        timeout = min(int(args.get("timeout", 120)), int(cfg.get("max_timeout_seconds", 600)))
-        from .multi_agent_workspace import workspace_execution_root
-        execution_root = workspace_execution_root(root, task_id, session_id)
-        source_cwd = _inside(execution_root, str(args.get("cwd", ".")))
-        cwd = _isolated_workspace(root, task_id, source_cwd)
-        command = list(args["command"])
-        env = _filtered_env(args.get("env")); env.pop("PYTHONPATH", None)
-        proc, containment = _run_process_command(
-            command,
-            cwd=cwd,
-            env=env,
-            timeout=timeout,
+        timeout = min(
+            int(args.get("timeout", 120)),
+            int(
+                cfg.get(
+                    "max_timeout_seconds",
+                    600,
+                )
+            ),
         )
-        command_hash = hashlib.sha256(json.dumps(command, sort_keys=True).encode()).hexdigest()
-        environment_hash = hashlib.sha256(json.dumps(env, sort_keys=True).encode()).hexdigest()
-        with connect(root) as c:
-            c.execute("INSERT INTO execution_manifests(task_id,session_id,command_hash,cwd,sandbox_profile,workspace_path,environment_hash,decision) VALUES(?,?,?,?,?,?,?,?)", (task_id,session_id,command_hash,metadata["cwd"],metadata.get("sandbox_profile", "isolated-workspace"),str(cwd),environment_hash,"allowed"))
-        limit = int(cfg.get("max_output_bytes", 65536))
-        return proc.returncode == 0, {
-            'exit_code': proc.returncode,
-            'profile': metadata['command_profile'],
-            'cwd': metadata['cwd'],
-            'stdout': proc.stdout[:limit],
-            'stderr': proc.stderr[:limit],
-            **containment,
-        }
+
+        from .multi_agent_workspace import (
+            workspace_execution_root,
+        )
+
+        execution_root = workspace_execution_root(
+            root,
+            task_id,
+            session_id,
+        )
+        source_cwd = _inside(
+            execution_root,
+            str(args.get("cwd", ".")),
+        )
+        command = list(args["command"])
+
+        runtime_profile = resolve_runtime_profile(
+            metadata["command_profile"]
+        )
+
+        if (
+            runtime_profile["profile_hash"]
+            != metadata.get("runtime_profile_hash")
+        ):
+            raise RuntimeError(
+                "runtime_profile_hash_drift"
+            )
+
+        sandbox = create_sandbox_workspace(
+            root,
+            source_cwd,
+            task_id,
+            session_id,
+            uuid.uuid4().hex,
+            metadata["command_profile"],
+        )
+
+        cwd = Path(
+            sandbox["workspace"]
+        )
+
+        env = _filtered_env(
+            args.get("env")
+        )
+        env.pop(
+            "PYTHONPATH",
+            None,
+        )
+        env = build_runtime_environment(
+            env,
+            sandbox,
+        )
+
+        try:
+            proc, containment = _run_process_command(
+                command,
+                cwd=cwd,
+                env=env,
+                timeout=timeout,
+            )
+
+            command_hash = hashlib.sha256(
+                json.dumps(
+                    command,
+                    sort_keys=True,
+                ).encode()
+            ).hexdigest()
+
+            environment_hash = hashlib.sha256(
+                json.dumps(
+                    env,
+                    sort_keys=True,
+                ).encode()
+            ).hexdigest()
+
+            with connect(root) as c:
+                c.execute(
+                    "INSERT INTO execution_manifests("
+                    "task_id,session_id,command_hash,cwd,"
+                    "sandbox_profile,workspace_path,"
+                    "environment_hash,decision"
+                    ") VALUES(?,?,?,?,?,?,?,?)",
+                    (
+                        task_id,
+                        session_id,
+                        command_hash,
+                        metadata["cwd"],
+                        metadata.get(
+                            "sandbox_profile",
+                            "tool-runtime-profile-v1",
+                        ),
+                        str(cwd),
+                        environment_hash,
+                        "allowed",
+                    ),
+                )
+
+            limit = int(
+                cfg.get(
+                    "max_output_bytes",
+                    65536,
+                )
+            )
+
+            return proc.returncode == 0, {
+                "exit_code": proc.returncode,
+                "profile": metadata[
+                    "command_profile"
+                ],
+                "runtime_profile": runtime_profile[
+                    "name"
+                ],
+                "runtime_profile_hash": runtime_profile[
+                    "profile_hash"
+                ],
+                "runtime_profile_version": runtime_profile[
+                    "profile_version"
+                ],
+                "sandbox_scope": sandbox[
+                    "scope"
+                ],
+                "sandbox_workspace_version": sandbox[
+                    "sandbox_version"
+                ],
+                "host_filesystem_isolation_attested": False,
+                "os_write_confinement_attested": False,
+                "cwd": metadata["cwd"],
+                "stdout": proc.stdout[:limit],
+                "stderr": proc.stderr[:limit],
+                **containment,
+            }
+        finally:
+            cleanup_sandbox_workspace(
+                root,
+                Path(sandbox["root"]),
+            )
     if capability == "network.http":
         url = str(args["url"]); _validate_url(url, policy)
         method = str(args.get("method", "GET")).upper()

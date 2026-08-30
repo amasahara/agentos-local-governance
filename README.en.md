@@ -92,16 +92,18 @@ State the problem and acceptance criteria, place changes by responsibility and l
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
 
 ## Current release
-**v0.29.1 — Windows Process-Tree Containment** · schema **62**
+**v0.29.2 — Windows Sandbox Workspace & Tool Runtime Profiles** · schema **62**
 
-v0.29.1 hardens AgentOS-mediated Windows process execution with native Job Objects within `agentos_mediated_process_execution`.
+v0.29.2 adds deterministic tool runtime profiles and bounded sandbox workspaces
+for AgentOS-mediated process execution. Sync and async execution are bound to
+the runtime-profile contract; queued async jobs additionally pin a snapshot/hash
+and revalidate it immediately before launch.
 
-Synchronous `process.exec` creates the root process suspended, assigns it to a Job Object before resume, and tears down the whole Job tree on timeout or governed teardown. Async jobs use a dedicated AgentOS Job broker that owns a durable `KILL_ON_JOB_CLOSE` handle; the broker creates the worker suspended, assigns before resume, maintains named Job membership, and emits a completion receipt carrying the root exit code.
+The release preserves v0.29.1 Windows process-tree containment and keeps
+Windows CI coverage for containment regression, the focused
+runtime-profile/sandbox suite, activation tests, and the full suite.
 
-Async cancellation and timeout terminate the entire named Job instead of only the root PID. Broker failure closes the durable Job handle and fails closed on the worker tree. Normal completion is materialized only from the broker drain receipt; a non-zero root exit is recorded as `failed`.
-
-The release adds a `windows-latest` CI job with both the focused process-tree containment suite and the full regression suite. Release integrity requires this CI contract for v0.29.1+.
-
-The claim remains bounded: **AgentOS-mediated Windows process trees are Job Object contained before root execution resumes, with whole-tree termination on governed timeout, cancellation, broker failure, and synchronous teardown.**
-
-This release does not claim same-user host bypass resistance, general OS process isolation, or arbitrary host-process containment.
+The claim remains bounded to `agentos_mediated_process_execution`.
+`runtime_profile_sandbox_attested = true`; credential isolation, Restricted
+Token, Low Integrity, host-filesystem isolation, OS write confinement, and
+same-user host-bypass resistance remain explicitly unclaimed.

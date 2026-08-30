@@ -27,7 +27,14 @@ from typing import Any
 
 from .db import connect
 from .external_audit import append_signed_event
-from .proxy import _command_profile, _filtered_env, _inside, _isolated_workspace, _scan_agentos_imports
+from .proxy import _command_profile, _filtered_env, _inside, _scan_agentos_imports
+from .tool_runtime_profiles import (
+    build_runtime_environment,
+    cleanup_sandbox_workspace,
+    create_sandbox_workspace,
+    resolve_runtime_profile,
+    sandbox_workspace_hash,
+)
 from .policy import load_policy
 from .tooling import validate_execution_token
 from .workflow import workflow_status
@@ -355,6 +362,164 @@ def _job_dir(root: Path, job_id: str) -> Path:
     return path
 
 
+def _assert_async_runtime_spec_current(
+    spec: dict[str, Any],
+    guarded_env: dict[str, Any],
+) -> tuple[dict[str, str], dict[str, Any]]:
+    """
+    Revalidate the immutable async runtime-profile/sandbox contract immediately
+    before process launch.
+    """
+    profile_name = str(
+        spec.get("profile")
+        or ""
+    )
+    runtime_profile = resolve_runtime_profile(
+        profile_name
+    )
+
+    if (
+        spec.get(
+            "runtime_profile"
+        )
+        != runtime_profile["name"]
+        or spec.get(
+            "runtime_profile_hash"
+        )
+        != runtime_profile["profile_hash"]
+        or int(
+            spec.get(
+                "runtime_profile_version",
+                0,
+            )
+        )
+        != int(
+            runtime_profile[
+                "profile_version"
+            ]
+        )
+        or spec.get(
+            "runtime_profile_scope"
+        )
+        != runtime_profile["scope"]
+    ):
+        raise RuntimeError(
+            "runtime_profile_hash_drift"
+        )
+
+    sandbox = spec.get(
+        "sandbox"
+    )
+
+    if not isinstance(
+        sandbox,
+        dict,
+    ):
+        raise RuntimeError(
+            "async_job_sandbox_contract_missing"
+        )
+
+    if (
+        sandbox.get(
+            "profile_name"
+        )
+        != runtime_profile["name"]
+        or sandbox.get(
+            "profile_hash"
+        )
+        != runtime_profile["profile_hash"]
+        or int(
+            sandbox.get(
+                "profile_version",
+                0,
+            )
+        )
+        != int(
+            runtime_profile[
+                "profile_version"
+            ]
+        )
+    ):
+        raise RuntimeError(
+            "async_job_sandbox_profile_drift"
+        )
+
+    workspace = Path(
+        str(
+            sandbox.get(
+                "workspace"
+            )
+            or ""
+        )
+    )
+
+    if (
+        str(workspace)
+        != str(
+            spec.get(
+                "workspace"
+            )
+        )
+    ):
+        raise RuntimeError(
+            "async_job_workspace_binding_mismatch"
+        )
+
+    actual_snapshot_hash = (
+        sandbox_workspace_hash(
+            workspace
+        )
+    )
+
+    if (
+        actual_snapshot_hash
+        != spec.get(
+            "snapshot_hash"
+        )
+        or actual_snapshot_hash
+        != sandbox.get(
+            "snapshot_hash"
+        )
+    ):
+        raise RuntimeError(
+            "sandbox_snapshot_hash_mismatch"
+        )
+
+    launch_env = _filtered_env(
+        guarded_env
+    )
+    launch_env.pop(
+        "PYTHONPATH",
+        None,
+    )
+    launch_env = build_runtime_environment(
+        launch_env,
+        sandbox,
+    )
+
+    environment_hash = hashlib.sha256(
+        json.dumps(
+            launch_env,
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
+
+    if (
+        spec.get(
+            "environment_hash"
+        )
+        != environment_hash
+    ):
+        raise RuntimeError(
+            "queued job environment does not match guarded arguments"
+        )
+
+    return (
+        launch_env,
+        runtime_profile,
+    )
+
+
 def submit_job(
     root: Path,
     task_id: str,
@@ -367,21 +532,7 @@ def submit_job(
     *,
     execution_token: str,
 ) -> dict[str, Any]:
-    """Create an immutable governed job and optionally start it.
-
-    Args:
-        root: Governed project root.
-        task_id: Owning task identifier.
-        session_id: Owning session identifier.
-        command: Allowlisted executable and arguments.
-        cwd: Project-relative working directory.
-        timeout_seconds: Maximum job runtime.
-        env: Optional non-sensitive environment additions.
-        auto_start: Whether to launch immediately.
-
-    Returns:
-        Serialized job status.
-    """
+    """Create an immutable governed async job with a pinned sandbox snapshot."""
     guarded_args = {
         "command": list(command),
         "cwd": cwd,
@@ -400,34 +551,245 @@ def submit_job(
     )
 
     policy = load_policy(root)
-    profile = _command_profile(command, policy)
-    source_cwd = _inside(root, cwd)
-    _scan_agentos_imports(root, command, source_cwd)
-    workspace = _isolated_workspace(root, task_id, source_cwd)
+    profile = _command_profile(
+        command,
+        policy,
+    )
+    runtime_profile = (
+        resolve_runtime_profile(
+            profile
+        )
+    )
+
+    source_cwd = _inside(
+        root,
+        cwd,
+    )
+    _scan_agentos_imports(
+        root,
+        command,
+        source_cwd,
+    )
+
     job_id = uuid.uuid4().hex
-    job_path = _job_dir(root, job_id)
-    stdout_path = job_path / "stdout.log"
-    stderr_path = job_path / "stderr.log"
-    clean_env = _filtered_env(env)
+
+    sandbox = create_sandbox_workspace(
+        root,
+        source_cwd,
+        task_id,
+        session_id,
+        job_id,
+        profile,
+    )
+
+    job_path = _job_dir(
+        root,
+        job_id,
+    )
+    stdout_path = (
+        job_path
+        / "stdout.log"
+    )
+    stderr_path = (
+        job_path
+        / "stderr.log"
+    )
+
+    clean_env = _filtered_env(
+        env
+    )
+    clean_env.pop(
+        "PYTHONPATH",
+        None,
+    )
+    launch_env = (
+        build_runtime_environment(
+            clean_env,
+            sandbox,
+        )
+    )
+
     spec = {
         "job_id": job_id,
         "task_id": task_id,
         "session_id": session_id,
-        "command": command,
+        "command": list(command),
         "cwd": cwd,
-        "workspace": str(workspace),
-        "timeout_seconds": int(timeout_seconds),
+        "workspace": sandbox[
+            "workspace"
+        ],
+        "timeout_seconds": int(
+            timeout_seconds
+        ),
         "profile": profile,
-        "network_policy": "none",
-        "environment_hash": hashlib.sha256(json.dumps(clean_env, sort_keys=True).encode()).hexdigest(),
+        "runtime_profile": (
+            runtime_profile["name"]
+        ),
+        "runtime_profile_hash": (
+            runtime_profile[
+                "profile_hash"
+            ]
+        ),
+        "runtime_profile_version": (
+            runtime_profile[
+                "profile_version"
+            ]
+        ),
+        "runtime_profile_scope": (
+            runtime_profile[
+                "scope"
+            ]
+        ),
+        "sandbox": sandbox,
+        "snapshot_hash": sandbox[
+            "snapshot_hash"
+        ],
+        "network_policy": (
+            runtime_profile[
+                "profile"
+            ][
+                "network_policy"
+            ]
+        ),
+        "environment_hash": hashlib.sha256(
+            json.dumps(
+                launch_env,
+                sort_keys=True,
+            ).encode()
+        ).hexdigest(),
     }
-    spec_hash = hashlib.sha256(json.dumps(spec, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-    with connect(root) as c:
-        c.execute("INSERT INTO async_jobs(job_id,task_id,session_id,spec_json,spec_hash,state,timeout_seconds,stdout_path,stderr_path,created_at) VALUES(?,?,?,?,?,'queued',?,?,?,?)", (job_id, task_id, session_id, json.dumps(spec, sort_keys=True), spec_hash, int(timeout_seconds), str(stdout_path), str(stderr_path), _now()))
-        c.execute("INSERT INTO job_events(job_id,event_type,details_json) VALUES(?,?,?)", (job_id, "queued", json.dumps({"spec_hash": spec_hash})))
-    event = append_signed_event(root, "job.queued", {"job_id": job_id, "spec_hash": spec_hash}, task_id, session_id)
-    with connect(root) as c:
-        c.execute("UPDATE async_jobs SET external_event_hash=? WHERE job_id=?", (event["event_hash"], job_id))
+
+    spec_hash = hashlib.sha256(
+        json.dumps(
+            spec,
+            sort_keys=True,
+            separators=(
+                ",",
+                ":",
+            ),
+        ).encode()
+    ).hexdigest()
+
+    persisted = False
+
+    try:
+        with connect(
+            root
+        ) as c:
+            c.execute(
+                "INSERT INTO async_jobs("
+                "job_id,task_id,session_id,"
+                "spec_json,spec_hash,state,"
+                "timeout_seconds,stdout_path,"
+                "stderr_path,created_at"
+                ") VALUES(?,?,?,?,?,'queued',?,?,?,?)",
+                (
+                    job_id,
+                    task_id,
+                    session_id,
+                    json.dumps(
+                        spec,
+                        sort_keys=True,
+                    ),
+                    spec_hash,
+                    int(
+                        timeout_seconds
+                    ),
+                    str(
+                        stdout_path
+                    ),
+                    str(
+                        stderr_path
+                    ),
+                    _now(),
+                ),
+            )
+            c.execute(
+                "INSERT INTO job_events("
+                "job_id,event_type,details_json"
+                ") VALUES(?,?,?)",
+                (
+                    job_id,
+                    "queued",
+                    json.dumps(
+                        {
+                            "spec_hash": spec_hash,
+                            "runtime_profile": (
+                                runtime_profile[
+                                    "name"
+                                ]
+                            ),
+                            "runtime_profile_hash": (
+                                runtime_profile[
+                                    "profile_hash"
+                                ]
+                            ),
+                            "snapshot_hash": (
+                                sandbox[
+                                    "snapshot_hash"
+                                ]
+                            ),
+                            "sandbox_scope": (
+                                sandbox[
+                                    "scope"
+                                ]
+                            ),
+                        },
+                        sort_keys=True,
+                    ),
+                ),
+            )
+
+        persisted = True
+
+        event = append_signed_event(
+            root,
+            "job.queued",
+            {
+                "job_id": job_id,
+                "spec_hash": spec_hash,
+                "runtime_profile_hash": (
+                    runtime_profile[
+                        "profile_hash"
+                    ]
+                ),
+                "snapshot_hash": (
+                    sandbox[
+                        "snapshot_hash"
+                    ]
+                ),
+            },
+            task_id,
+            session_id,
+        )
+
+        with connect(
+            root
+        ) as c:
+            c.execute(
+                "UPDATE async_jobs "
+                "SET external_event_hash=? "
+                "WHERE job_id=?",
+                (
+                    event[
+                        "event_hash"
+                    ],
+                    job_id,
+                ),
+            )
+
+    except Exception:
+        if not persisted:
+            cleanup_sandbox_workspace(
+                root,
+                Path(
+                    sandbox[
+                        "root"
+                    ]
+                ),
+            )
+        raise
+
     return (
         start_job(
             root,
@@ -436,7 +798,10 @@ def submit_job(
             guarded_args=guarded_args,
         )
         if auto_start
-        else job_status(root, job_id)
+        else job_status(
+            root,
+            job_id,
+        )
     )
 
 
@@ -509,23 +874,15 @@ def start_job(
                 "queued job timeout does not match guarded arguments"
             )
 
-        # Rebuild the launch environment from guarded input.
-        # start_job no longer accepts caller-supplied clean_env.
-        launch_env = _filtered_env(
-            guarded_args.get("env") or {}
-        )
-
-        environment_hash = hashlib.sha256(
-            json.dumps(
-                launch_env,
-                sort_keys=True,
-            ).encode()
-        ).hexdigest()
-
-        if spec.get("environment_hash") != environment_hash:
-            raise RuntimeError(
-                "queued job environment does not match guarded arguments"
+        launch_env, runtime_profile = (
+            _assert_async_runtime_spec_current(
+                spec,
+                guarded_args.get(
+                    "env"
+                )
+                or {},
             )
+        )
 
         # Detect modification of the immutable queued job spec.
         actual_spec_hash = hashlib.sha256(
@@ -638,6 +995,28 @@ def start_job(
                     {
                         "pid": pid,
                         "spec_hash": row["spec_hash"],
+                        "runtime_profile": (
+                            runtime_profile[
+                                "name"
+                            ]
+                        ),
+                        "runtime_profile_hash": (
+                            runtime_profile[
+                                "profile_hash"
+                            ]
+                        ),
+                        "snapshot_hash": (
+                            spec[
+                                "snapshot_hash"
+                            ]
+                        ),
+                        "sandbox_scope": (
+                            spec[
+                                "sandbox"
+                            ][
+                                "scope"
+                            ]
+                        ),
                         **containment_details,
                     },
                     sort_keys=True,
@@ -882,6 +1261,282 @@ def _materialize_windows_timeout(
     return details
 
 
+def _terminal_sandbox_cleanup_readiness(
+    root: Path,
+    row: Any,
+    terminal_details: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """
+    Decide whether a terminal async sandbox can be removed safely.
+
+    Orphaned/uncertain containment states are intentionally not eligible.
+    """
+    state = str(row["state"])
+
+    if state not in _FINAL:
+        return {
+            "eligible": False,
+            "safe": False,
+            "reason": "job_not_terminal",
+        }
+
+    try:
+        spec = json.loads(row["spec_json"])
+    except (TypeError, json.JSONDecodeError):
+        return {
+            "eligible": False,
+            "safe": False,
+            "reason": "job_spec_unreadable",
+        }
+
+    sandbox = spec.get("sandbox")
+    if not isinstance(sandbox, dict):
+        return {
+            "eligible": False,
+            "safe": False,
+            "reason": "legacy_job_without_sandbox_contract",
+        }
+
+    sandbox_root = str(sandbox.get("root") or "")
+    if not sandbox_root:
+        return {
+            "eligible": False,
+            "safe": False,
+            "reason": "sandbox_root_missing",
+        }
+
+    pid = row["pid"]
+
+    if state in {"succeeded", "failed"}:
+        if _is_windows_host():
+            completion = _windows_completion_record(
+                root,
+                row["job_id"],
+            )
+            if (
+                completion is None
+                or completion.get("process_tree_drained") is not True
+            ):
+                return {
+                    "eligible": True,
+                    "safe": False,
+                    "reason": "windows_completion_not_drained",
+                    "sandbox_root": sandbox_root,
+                }
+        elif pid and _pid_alive(int(pid)):
+            return {
+                "eligible": True,
+                "safe": False,
+                "reason": "process_still_alive",
+                "sandbox_root": sandbox_root,
+            }
+
+        return {
+            "eligible": True,
+            "safe": True,
+            "reason": "terminal_completion_drained",
+            "sandbox_root": sandbox_root,
+        }
+
+    if state in {"cancelled", "timed_out"}:
+        if not pid:
+            return {
+                "eligible": True,
+                "safe": True,
+                "reason": "terminal_without_process",
+                "sandbox_root": sandbox_root,
+            }
+
+        if _is_windows_host():
+            active = named_job_active_process_count(
+                async_job_object_name(
+                    row["job_id"]
+                )
+            )
+
+            if active == 0:
+                return {
+                    "eligible": True,
+                    "safe": True,
+                    "reason": "windows_job_tree_empty",
+                    "sandbox_root": sandbox_root,
+                }
+
+            terminated = bool(
+                (terminal_details or {}).get(
+                    "process_tree_terminated"
+                )
+            )
+
+            if active is None and terminated:
+                return {
+                    "eligible": True,
+                    "safe": True,
+                    "reason": "windows_job_termination_confirmed",
+                    "sandbox_root": sandbox_root,
+                }
+
+            return {
+                "eligible": True,
+                "safe": False,
+                "reason": "windows_job_tree_not_confirmed_empty",
+                "sandbox_root": sandbox_root,
+                "active_processes": active,
+            }
+
+        if _pid_alive(int(pid)):
+            return {
+                "eligible": True,
+                "safe": False,
+                "reason": "process_still_alive",
+                "sandbox_root": sandbox_root,
+            }
+
+        return {
+            "eligible": True,
+            "safe": True,
+            "reason": "terminal_process_absent",
+            "sandbox_root": sandbox_root,
+        }
+
+    return {
+        "eligible": False,
+        "safe": False,
+        "reason": "terminal_state_not_supported",
+    }
+
+
+def _latest_terminal_event_details(
+    c,
+    job_id: str,
+    state: str,
+) -> dict[str, Any]:
+    event = c.execute(
+        "SELECT details_json "
+        "FROM job_events "
+        "WHERE job_id=? AND event_type=? "
+        "ORDER BY rowid DESC LIMIT 1",
+        (
+            job_id,
+            state,
+        ),
+    ).fetchone()
+
+    if not event:
+        return {}
+
+    try:
+        value = json.loads(event["details_json"])
+    except (TypeError, json.JSONDecodeError):
+        return {}
+
+    return value if isinstance(value, dict) else {}
+
+
+def _maybe_cleanup_terminal_sandbox(
+    root: Path,
+    job_id: str,
+) -> dict[str, Any]:
+    """
+    Remove a terminal async sandbox only after lifecycle/containment evidence
+    proves that no worker process can still depend on it.
+    """
+    with connect(root) as c:
+        row = c.execute(
+            "SELECT * FROM async_jobs WHERE job_id=?",
+            (job_id,),
+        ).fetchone()
+
+        if not row:
+            raise RuntimeError("job not found")
+
+        details = _latest_terminal_event_details(
+            c,
+            job_id,
+            str(row["state"]),
+        )
+
+    readiness = _terminal_sandbox_cleanup_readiness(
+        root,
+        row,
+        details,
+    )
+
+    if (
+        not readiness.get("eligible")
+        or not readiness.get("safe")
+    ):
+        return {
+            "status": "deferred",
+            **readiness,
+        }
+
+    sandbox_root = Path(
+        str(readiness["sandbox_root"])
+    )
+
+    if not sandbox_root.exists():
+        return {
+            "status": "already_clean",
+            **readiness,
+        }
+
+    try:
+        cleanup_sandbox_workspace(
+            root,
+            sandbox_root,
+        )
+    except OSError as exc:
+        failure = {
+            "status": "failed",
+            "eligible": True,
+            "safe": True,
+            "reason": "sandbox_cleanup_os_error",
+            "error_type": type(exc).__name__,
+        }
+
+        with connect(root) as c:
+            c.execute(
+                "INSERT INTO job_events("
+                "job_id,event_type,details_json"
+                ") VALUES(?,?,?)",
+                (
+                    job_id,
+                    "sandbox_cleanup_failed",
+                    json.dumps(
+                        failure,
+                        sort_keys=True,
+                    ),
+                ),
+            )
+
+        return failure
+
+    cleaned = {
+        "status": "cleaned",
+        "eligible": True,
+        "safe": True,
+        "reason": readiness["reason"],
+        "cleaned_at": _now(),
+    }
+
+    with connect(root) as c:
+        c.execute(
+            "INSERT INTO job_events("
+            "job_id,event_type,details_json"
+            ") VALUES(?,?,?)",
+            (
+                job_id,
+                "sandbox_cleaned",
+                json.dumps(
+                    cleaned,
+                    sort_keys=True,
+                ),
+            ),
+        )
+
+    return cleaned
+
 def job_status(root: Path, job_id: str) -> dict[str, Any]:
     """Poll one job and materialize terminal state when possible.
 
@@ -1093,6 +1748,10 @@ def job_status(root: Path, job_id: str) -> dict[str, Any]:
         result.pop("spec_json")
     )
 
+    result["sandbox_cleanup"] = _maybe_cleanup_terminal_sandbox(
+        root,
+        job_id,
+    )
     return result
 
 
@@ -1271,8 +1930,21 @@ def recover_jobs(root: Path) -> dict[str, Any]:
                     job_id
                 )
 
+    sandbox_cleanup = {}
+    for terminal_job_id in [
+        *completed,
+        *timed_out,
+    ]:
+        sandbox_cleanup[
+            terminal_job_id
+        ] = _maybe_cleanup_terminal_sandbox(
+            root,
+            terminal_job_id,
+        )
+
     return {
         "ok": True,
+        "sandbox_cleanup": sandbox_cleanup,
         "orphaned_jobs": recovered,
         "timed_out_jobs": timed_out,
         "completed_jobs": completed,

@@ -301,6 +301,10 @@ def attest_enforcement(
         "windows_process_tree_containment_policy",
         {},
     )
+    sandbox_policy = policy.get(
+        "sandbox_workspace_runtime_profile_policy",
+        {},
+    )
 
     checks: dict[str, bool] = {}
     findings: list[dict[str, str]] = []
@@ -1204,6 +1208,256 @@ def attest_enforcement(
         process_tree_policy.get('process_tree_containment_attested', False)
     )
 
+    # --------------------------------------------------------
+    # v0.29.2 sandbox workspace and runtime profiles
+    # --------------------------------------------------------
+    sandbox_check_names: list[str] = []
+
+    def require_sandbox(
+        name: str,
+        condition: bool,
+        message: str,
+    ) -> None:
+        sandbox_check_names.append(name)
+        require(
+            name,
+            condition,
+            message,
+        )
+
+    profiles_source = _source(
+        root,
+        ".agents/agentos/tool_runtime_profiles.py",
+    )
+    sync_preflight_source = _function_source(
+        root,
+        ".agents/agentos/proxy.py",
+        "_preflight",
+    )
+    sync_execute_source = _function_source(
+        root,
+        ".agents/agentos/proxy.py",
+        "_execute_adapter",
+    )
+    async_submit_source = _function_source(
+        root,
+        ".agents/agentos/jobs.py",
+        "submit_job",
+    )
+    async_revalidate_source = _function_source(
+        root,
+        ".agents/agentos/jobs.py",
+        "_assert_async_runtime_spec_current",
+    )
+    async_cleanup_source = _function_source(
+        root,
+        ".agents/agentos/jobs.py",
+        "_maybe_cleanup_terminal_sandbox",
+    )
+    async_cleanup_readiness_source = _function_source(
+        root,
+        ".agents/agentos/jobs.py",
+        "_terminal_sandbox_cleanup_readiness",
+    )
+    proxy_source_full = _source(
+        root,
+        ".agents/agentos/proxy.py",
+    )
+    jobs_source_full = _source(
+        root,
+        ".agents/agentos/jobs.py",
+    )
+
+    require_sandbox(
+        "sandbox_policy_enabled",
+        (
+            sandbox_policy.get("enabled") is True
+            and sandbox_policy.get("scope")
+            == "agentos_mediated_process_execution"
+        ),
+        "sandbox workspace/runtime-profile policy is not enabled with bounded process-execution scope",
+    )
+
+    require_sandbox(
+        "sandbox_profiles_deterministic",
+        (
+            "RUNTIME_PROFILE_VERSION = 1"
+            in profiles_source
+            and "resolve_runtime_profile("
+            in profiles_source
+            and "profile_hash"
+            in profiles_source
+            and "inspect"
+            in profiles_source
+            and "test"
+            in profiles_source
+            and "build"
+            in profiles_source
+        ),
+        "deterministic inspect/test/build runtime profiles are missing",
+    )
+
+    require_sandbox(
+        "sandbox_workspace_external_snapshot",
+        (
+            "sandbox_base("
+            in profiles_source
+            and "create_sandbox_workspace("
+            in profiles_source
+            and "snapshot_copy"
+            in profiles_source
+            and "_assert_not_reparse("
+            in profiles_source
+            and "sandbox_workspace_hash("
+            in profiles_source
+        ),
+        "sandbox workspace is not structurally external, snapshot-based, reparse-safe, and hash-bound",
+    )
+
+    require_sandbox(
+        "sandbox_mutable_state_redirected",
+        all(
+            marker in profiles_source
+            for marker in (
+                '"HOME"',
+                '"USERPROFILE"',
+                '"TMP"',
+                '"TEMP"',
+                '"XDG_CACHE_HOME"',
+                '"PIP_CACHE_DIR"',
+                '"npm_config_cache"',
+                '"PYTHONPYCACHEPREFIX"',
+            )
+        ),
+        "sandbox runtime environment does not redirect mutable home/temp/cache state",
+    )
+
+    require_sandbox(
+        "sandbox_sync_profile_bound",
+        (
+            "resolve_runtime_profile("
+            in sync_preflight_source
+            and "runtime_profile_hash"
+            in sync_preflight_source
+            and "create_sandbox_workspace("
+            in sync_execute_source
+            and "build_runtime_environment("
+            in sync_execute_source
+            and "runtime_profile_hash_drift"
+            in sync_execute_source
+            and "cleanup_sandbox_workspace("
+            in sync_execute_source
+        ),
+        "synchronous process.exec is not profile-hash bound to the sandbox workspace lifecycle",
+    )
+
+    require_sandbox(
+        "sandbox_async_profile_snapshot_bound",
+        (
+            "resolve_runtime_profile("
+            in async_submit_source
+            and "create_sandbox_workspace("
+            in async_submit_source
+            and '"runtime_profile_hash"'
+            in async_submit_source
+            and '"snapshot_hash"'
+            in async_submit_source
+            and '"sandbox"'
+            in async_submit_source
+            and "sandbox_workspace_hash("
+            in async_revalidate_source
+            and "runtime_profile_hash_drift"
+            in async_revalidate_source
+            and "sandbox_snapshot_hash_mismatch"
+            in async_revalidate_source
+        ),
+        "asynchronous jobs are not immutable runtime-profile/snapshot-hash bound",
+    )
+
+    require_sandbox(
+        "sandbox_async_terminal_cleanup_guarded",
+        (
+            "windows_completion_not_drained"
+            in async_cleanup_readiness_source
+            and "windows_job_tree_not_confirmed_empty"
+            in async_cleanup_readiness_source
+            and "cleanup_sandbox_workspace("
+            in async_cleanup_source
+            and "sandbox_cleaned"
+            in async_cleanup_source
+            and "sandbox_cleanup_failed"
+            in async_cleanup_source
+        ),
+        "async sandbox cleanup is not guarded by terminal containment evidence",
+    )
+
+    require_sandbox(
+        "sandbox_legacy_workspace_removed",
+        (
+            "def _isolated_workspace("
+            not in proxy_source_full
+            and "_isolated_workspace"
+            not in jobs_source_full
+        ),
+        "legacy isolated workspace helper remains on active sync/async execution paths",
+    )
+
+    require_sandbox(
+        "sandbox_windows_containment_preserved",
+        process_tree_structural_ok,
+        "v0.29.1 Windows process-tree containment is not preserved",
+    )
+
+    require_sandbox(
+        "sandbox_broad_nonclaims_preserved",
+        (
+            sandbox_policy.get(
+                "caller_runtime_profile_override_allowed"
+            )
+            is False
+            and sandbox_policy.get(
+                "source_reparse_points_allowed"
+            )
+            is False
+            and sandbox_policy.get(
+                "credential_isolation_attested"
+            )
+            is False
+            and sandbox_policy.get(
+                "restricted_token_attested"
+            )
+            is False
+            and sandbox_policy.get(
+                "low_integrity_attested"
+            )
+            is False
+            and sandbox_policy.get(
+                "host_filesystem_isolation_attested"
+            )
+            is False
+            and sandbox_policy.get(
+                "os_write_confinement_attested"
+            )
+            is False
+            and sandbox_policy.get(
+                "same_user_host_bypass_resistance_claimed"
+            )
+            is False
+        ),
+        "v0.29.2 sandbox policy overclaims credential, token, integrity, host-filesystem, OS-write, or same-user isolation",
+    )
+
+    sandbox_structural_ok = all(
+        checks.get(name) is True
+        for name in sandbox_check_names
+    )
+    sandbox_policy_declared = bool(
+        sandbox_policy.get(
+            "runtime_profile_sandbox_attested",
+            False,
+        )
+    )
+
     ok = not findings
 
     return {
@@ -1300,6 +1554,38 @@ def attest_enforcement(
             "policy_scope": process_tree_policy.get("scope"),
             "windows_only": process_tree_policy.get("windows_only") is True,
         },
+        "sandbox_workspace_runtime_profiles": {
+            "structurally_attested": sandbox_structural_ok,
+            "sync_enforced": checks.get(
+                "sandbox_sync_profile_bound"
+            ) is True,
+            "async_enforced": checks.get(
+                "sandbox_async_profile_snapshot_bound"
+            ) is True,
+            "snapshot_hash_bound": checks.get(
+                "sandbox_workspace_external_snapshot"
+            ) is True,
+            "mutable_state_redirected": checks.get(
+                "sandbox_mutable_state_redirected"
+            ) is True,
+            "terminal_cleanup_guarded": checks.get(
+                "sandbox_async_terminal_cleanup_guarded"
+            ) is True,
+            "windows_process_tree_containment_preserved": checks.get(
+                "sandbox_windows_containment_preserved"
+            ) is True,
+            "broad_nonclaims_preserved": checks.get(
+                "sandbox_broad_nonclaims_preserved"
+            ) is True,
+            "policy_declared_attested": sandbox_policy_declared,
+            "policy_scope": sandbox_policy.get("scope"),
+            "runtime_profile_version": sandbox_policy.get(
+                "runtime_profile_version"
+            ),
+            "sandbox_version": sandbox_policy.get(
+                "sandbox_version"
+            ),
+        },
         "mcp": {
             "ok": bool(
                 mcp_health.get("ok")
@@ -1345,5 +1631,10 @@ def attest_enforcement(
             "model_provider_independence_attested": False,
             "human_review_replaced": False,
             "human_approval_replaced": False,
+            "credential_isolation_attested": False,
+            "restricted_token_attested": False,
+            "low_integrity_attested": False,
+            "host_filesystem_isolation_attested": False,
+            "os_write_confinement_attested": False,
         },
     }

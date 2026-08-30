@@ -137,8 +137,12 @@ def test_deferred_job_token_cannot_directly_launch() -> None:
 
 
 def test_async_launch_environment_is_guard_derived() -> None:
-    source = inspect.getsource(
+    """Preserve guarded env derivation across the v0.29.2 helper refactor."""
+    start_source = inspect.getsource(
         jobs_module.start_job
+    )
+    helper_source = inspect.getsource(
+        jobs_module._assert_async_runtime_spec_current
     )
     signature = inspect.signature(
         jobs_module.start_job
@@ -147,12 +151,21 @@ def test_async_launch_environment_is_guard_derived() -> None:
     assert "clean_env" not in signature.parameters
 
     assert (
-        'guarded_args.get("env") or {}'
-        in source
+        "_assert_async_runtime_spec_current("
+        in start_source
     )
-    assert "_filtered_env(" in source
-    assert "environment_hash" in source
-    assert "env=launch_env" in source
+    assert "guarded_args.get(" in start_source
+    assert '"env"' in start_source
+    assert "env=launch_env" in start_source
+
+    assert "_filtered_env(" in helper_source
+    assert "guarded_env" in helper_source
+    assert "build_runtime_environment(" in helper_source
+    assert "environment_hash" in helper_source
+    assert (
+        "queued job environment does not match guarded arguments"
+        in helper_source
+    )
 
 
 def test_run_tests_routes_through_canonical_proxy() -> None:

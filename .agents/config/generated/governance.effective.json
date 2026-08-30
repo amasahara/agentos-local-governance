@@ -1406,7 +1406,7 @@
       "governed_project"
     ],
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
-    "version": "0.29.1"
+    "version": "0.29.2"
   },
   "repository_policy": {
     "application_root_metadata_owned_by_agentos": false,
@@ -1471,6 +1471,49 @@
     "privileged_cli_entrypoint": "agentos.privileged_control_plane",
     "privileged_control_plane_launcher": "agentos-admin",
     "separated_control_plane_required": true
+  },
+  "sandbox_workspace_runtime_profile_policy": {
+    "async_job_enforced": true,
+    "async_prelaunch_revalidation_required": true,
+    "async_snapshot_hash_required": true,
+    "caller_runtime_profile_override_allowed": false,
+    "command_profile_binding_required": true,
+    "credential_isolation_attested": false,
+    "database_schema": 62,
+    "enabled": true,
+    "host_filesystem_isolation_attested": false,
+    "known_profiles": [
+      "inspect",
+      "test",
+      "build"
+    ],
+    "low_integrity_attested": false,
+    "network_policy_default": "none",
+    "os_write_confinement_attested": false,
+    "package_cache_sandbox_local": true,
+    "python_bytecode_cache_sandbox_local": true,
+    "release_focus": "windows_sandbox_workspace_and_tool_runtime_profiles",
+    "restricted_token_attested": false,
+    "runtime_profile_sandbox_attested": true,
+    "runtime_profile_version": 1,
+    "same_user_host_bypass_resistance_claimed": false,
+    "sandbox_cache_required": true,
+    "sandbox_home_required": true,
+    "sandbox_outside_primary_required": true,
+    "sandbox_temp_required": true,
+    "sandbox_version": 1,
+    "scope": "agentos_mediated_process_execution",
+    "snapshot_copy_required": true,
+    "source_reparse_points_allowed": false,
+    "sync_exec_enforced": true,
+    "terminal_cleanup_evidence_required": true,
+    "windows_ci_activation_suite_required": true,
+    "windows_ci_full_regression_required": true,
+    "windows_ci_required": true,
+    "windows_ci_runner": "windows-latest",
+    "windows_ci_runtime_profile_suite_required": true,
+    "windows_ci_v0291_containment_regression_required": true,
+    "windows_process_tree_containment_preserved": true
   },
   "schema_bootstrap_policy": {
     "baseline_rotation": "explicit_release_only",
@@ -1664,7 +1707,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.29.1",
+  "version": "0.29.2",
   "windows_process_tree_containment_policy": {
     "arbitrary_host_process_containment_attested": false,
     "assignment_before_resume_required": true,

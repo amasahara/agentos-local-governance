@@ -117,6 +117,11 @@ jobs:
           PYTHONPATH: .agents
         run: python -m pytest -q .agents/tests/test_windows_process_tree_v0291.py .agents/tests/test_windows_process_exec_containment_v0291.py .agents/tests/test_windows_job_broker_v0291.py .agents/tests/test_windows_async_job_containment_v0291.py .agents/tests/test_windows_async_timeout_v0291.py .agents/tests/test_windows_process_tree_attestation_v0291.py .agents/tests/test_windows_process_tree_activation_v0291.py -rs
 
+      - name: Windows sandbox workspace and runtime profiles
+        env:
+          PYTHONPATH: .agents
+        run: python -m pytest -q .agents/tests/test_tool_runtime_profiles_v0292.py .agents/tests/test_sync_tool_runtime_profiles_v0292.py .agents/tests/test_async_tool_runtime_profiles_v0292.py .agents/tests/test_async_sandbox_lifecycle_v0292.py .agents/tests/test_sandbox_runtime_attestation_v0292.py .agents/tests/test_windows_sandbox_activation_v0292.py -rs
+
       - name: Full regression suite
         env:
           PYTHONPATH: .agents

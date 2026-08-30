@@ -191,11 +191,182 @@ def _validate_windows_process_tree_policy_v0291(
         )
 
 
+def _validate_sandbox_workspace_runtime_profile_policy_v0292(
+    policy: dict[str, Any],
+    version: tuple[int, ...],
+) -> None:
+    """
+    Fail closed on the v0.29.2 sandbox workspace/runtime-profile contract.
+
+    Before activation the section may exist with
+    runtime_profile_sandbox_attested=false. Once policy VERSION is v0.29.2+,
+    the full declaration becomes mandatory.
+    """
+    if version < (0, 29, 2):
+        return
+
+    sandbox = policy.get(
+        "sandbox_workspace_runtime_profile_policy"
+    )
+
+    if not isinstance(
+        sandbox,
+        dict,
+    ):
+        raise RuntimeError(
+            "sandbox workspace runtime-profile policy is required"
+        )
+
+    required_true = (
+        "enabled",
+        "command_profile_binding_required",
+        "snapshot_copy_required",
+        "sandbox_outside_primary_required",
+        "sandbox_home_required",
+        "sandbox_temp_required",
+        "sandbox_cache_required",
+        "package_cache_sandbox_local",
+        "python_bytecode_cache_sandbox_local",
+        "sync_exec_enforced",
+        "async_job_enforced",
+        "async_snapshot_hash_required",
+        "async_prelaunch_revalidation_required",
+        "terminal_cleanup_evidence_required",
+        "windows_process_tree_containment_preserved",
+        "runtime_profile_sandbox_attested",
+    )
+
+    disabled = [
+        key
+        for key in required_true
+        if sandbox.get(key) is not True
+    ]
+
+    if disabled:
+        raise RuntimeError(
+            "sandbox workspace runtime-profile invariant disabled: "
+            + repr(disabled)
+        )
+
+    required_false = (
+        "caller_runtime_profile_override_allowed",
+        "source_reparse_points_allowed",
+        "credential_isolation_attested",
+        "restricted_token_attested",
+        "low_integrity_attested",
+        "host_filesystem_isolation_attested",
+        "os_write_confinement_attested",
+        "same_user_host_bypass_resistance_claimed",
+    )
+
+    overclaims = [
+        key
+        for key in required_false
+        if sandbox.get(key) is not False
+    ]
+
+    if overclaims:
+        raise RuntimeError(
+            "sandbox workspace runtime-profile overclaim: "
+            + repr(overclaims)
+        )
+
+    if int(
+        sandbox.get(
+            "sandbox_version",
+            0,
+        )
+    ) != 1:
+        raise RuntimeError(
+            "sandbox workspace version is invalid"
+        )
+
+    if int(
+        sandbox.get(
+            "runtime_profile_version",
+            0,
+        )
+    ) != 1:
+        raise RuntimeError(
+            "runtime profile version is invalid"
+        )
+
+    if int(
+        sandbox.get(
+            "database_schema",
+            0,
+        )
+    ) != 62:
+        raise RuntimeError(
+            "sandbox workspace runtime-profile schema is invalid"
+        )
+
+    if (
+        sandbox.get("scope")
+        != "agentos_mediated_process_execution"
+    ):
+        raise RuntimeError(
+            "sandbox workspace runtime-profile scope is invalid"
+        )
+
+    if set(
+        sandbox.get(
+            "known_profiles",
+            [],
+        )
+    ) != {
+        "inspect",
+        "test",
+        "build",
+    }:
+        raise RuntimeError(
+            "sandbox runtime-profile allowlist is invalid"
+        )
+
+    if (
+        sandbox.get(
+            "network_policy_default"
+        )
+        != "none"
+    ):
+        raise RuntimeError(
+            "sandbox runtime-profile network policy must default to none"
+        )
+
+    ci_required_true = (
+        "windows_ci_required",
+        "windows_ci_runtime_profile_suite_required",
+        "windows_ci_v0291_containment_regression_required",
+        "windows_ci_full_regression_required",
+        "windows_ci_activation_suite_required",
+    )
+
+    ci_disabled = [
+        key
+        for key in ci_required_true
+        if sandbox.get(key) is not True
+    ]
+
+    if ci_disabled:
+        raise RuntimeError(
+            "sandbox workspace runtime-profile CI invariant disabled: "
+            + repr(ci_disabled)
+        )
+
+    if sandbox.get("windows_ci_runner") != "windows-latest":
+        raise RuntimeError(
+            "sandbox workspace runtime-profile CI runner is invalid"
+        )
+
 def validate_policy(policy: dict[str, Any]) -> None:
     """Fail closed while preserving historical policy contracts by release version."""
     required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy"}
     version = _policy_version_tuple(policy)
     _validate_windows_process_tree_policy_v0291(
+        policy,
+        version,
+    )
+    _validate_sandbox_workspace_runtime_profile_policy_v0292(
         policy,
         version,
     )
@@ -210,6 +381,8 @@ def validate_policy(policy: dict[str, Any]) -> None:
         required.add("privileged_control_plane_policy")
     if version >= (0, 29, 0):
         required.add("completion_verification_policy")
+    if version >= (0, 29, 2):
+        required.add("sandbox_workspace_runtime_profile_policy")
     missing = sorted(required - policy.keys())
     if missing:
         raise RuntimeError(f"missing policy keys: {missing}")

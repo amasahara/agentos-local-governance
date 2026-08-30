@@ -1,6 +1,6 @@
 {
   "release_policy": {
-    "version": "0.29.1",
+    "version": "0.29.2",
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
     "identity_sources": [
       "VERSION",
@@ -108,5 +108,48 @@
     "same_user_host_bypass_resistance_claimed": false,
     "general_os_process_isolation_attested": false,
     "arbitrary_host_process_containment_attested": false
+  },
+  "sandbox_workspace_runtime_profile_policy": {
+    "enabled": true,
+    "sandbox_version": 1,
+    "runtime_profile_version": 1,
+    "database_schema": 62,
+    "scope": "agentos_mediated_process_execution",
+    "release_focus": "windows_sandbox_workspace_and_tool_runtime_profiles",
+    "known_profiles": [
+      "inspect",
+      "test",
+      "build"
+    ],
+    "command_profile_binding_required": true,
+    "caller_runtime_profile_override_allowed": false,
+    "snapshot_copy_required": true,
+    "source_reparse_points_allowed": false,
+    "sandbox_outside_primary_required": true,
+    "sandbox_home_required": true,
+    "sandbox_temp_required": true,
+    "sandbox_cache_required": true,
+    "package_cache_sandbox_local": true,
+    "python_bytecode_cache_sandbox_local": true,
+    "sync_exec_enforced": true,
+    "async_job_enforced": true,
+    "async_snapshot_hash_required": true,
+    "async_prelaunch_revalidation_required": true,
+    "terminal_cleanup_evidence_required": true,
+    "windows_process_tree_containment_preserved": true,
+    "network_policy_default": "none",
+    "runtime_profile_sandbox_attested": true,
+    "credential_isolation_attested": false,
+    "restricted_token_attested": false,
+    "low_integrity_attested": false,
+    "host_filesystem_isolation_attested": false,
+    "os_write_confinement_attested": false,
+    "same_user_host_bypass_resistance_claimed": false,
+    "windows_ci_required": true,
+    "windows_ci_runner": "windows-latest",
+    "windows_ci_runtime_profile_suite_required": true,
+    "windows_ci_v0291_containment_regression_required": true,
+    "windows_ci_full_regression_required": true,
+    "windows_ci_activation_suite_required": true
   }
 }

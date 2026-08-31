@@ -12,14 +12,13 @@ from agentos.policy import load_release_policy, validate_policy
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_v0292_sandbox_policy_is_activated():
+def test_v0292_sandbox_policy_is_preserved_in_current_release():
     policy = load_release_policy(ROOT)
     section = policy["sandbox_workspace_runtime_profile_policy"]
-
-    assert policy["version"] == "0.29.2"
+    current = tuple(int(part) for part in policy["version"].split("."))
+    assert current >= (0, 29, 2)
     assert section["runtime_profile_sandbox_attested"] is True
     assert section["scope"] == "agentos_mediated_process_execution"
-
 
 def test_v0292_structural_attestation_green_after_activation():
     report = attest_enforcement(ROOT)
@@ -57,17 +56,12 @@ def test_v0292_attestation_keeps_future_security_claims_false():
         assert section[key] is False
 
 
-def test_v0292_active_activation_policy_validates():
+def test_v0292_inherited_activation_policy_validates():
     policy = copy.deepcopy(load_release_policy(ROOT))
-    assert policy["version"] == "0.29.2"
-    assert (
-        policy["sandbox_workspace_runtime_profile_policy"][
-            "runtime_profile_sandbox_attested"
-        ]
-        is True
-    )
+    current = tuple(int(part) for part in policy["version"].split("."))
+    assert current >= (0, 29, 2)
+    assert policy["sandbox_workspace_runtime_profile_policy"]["runtime_profile_sandbox_attested"] is True
     validate_policy(policy)
-
 
 @pytest.mark.parametrize(
     "key",

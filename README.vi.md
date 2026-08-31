@@ -102,18 +102,23 @@ Xem hướng dẫn theo hành trình:
 - `tools/`: công cụ build/validation của distribution, không cài vào application project.
 
 Lịch sử phiên bản thuộc [CHANGELOG.md](CHANGELOG.md), Git history, tags và relea
-
 ## Bản phát hành hiện hành
-**v0.29.1 — Windows Process-Tree Containment** · schema **62**
+**v0.29.3 — Sandbox Configuration & Credential Boundary** · schema **62**
 
-v0.29.1 harden các process execution surface trên Windows bằng native Job Objects trong phạm vi `agentos_mediated_process_execution`.
+v0.29.3 đưa runtime profiles sang governed effective-policy configuration và
+bind deterministic configuration/reference hashes vào AgentOS-mediated process
+execution. Process credential chỉ được cấu hình bằng `secret://alias` và reuse
+trusted Secret Resolver với provider pin/capability approval.
 
-Synchronous `process.exec` tạo root process ở trạng thái suspended, gán process vào Job Object trước khi resume, và đóng/terminate toàn bộ Job tree khi timeout hoặc governed teardown. Async jobs dùng một AgentOS Job broker riêng để giữ durable `KILL_ON_JOB_CLOSE` handle; broker tạo worker suspended, assign-before-resume, duy trì named Job membership và phát completion receipt có root exit code.
+Sync credentials resolve ngay trước launch và exact projected values được redact
+khỏi captured output. Async jobs chỉ persist credential hashes/count, verify
+immutable `spec_hash` trước resolution và không persist stdout/stderr của
+credential-bearing jobs.
 
-Cancellation và timeout của async job terminate toàn bộ named Job thay vì chỉ root PID. Broker failure làm đóng durable Job handle và fail-closed toàn bộ worker tree. Normal completion chỉ được materialize từ broker drain receipt; non-zero root exit được ghi nhận là `failed`.
+Release kế thừa v0.29.1 Windows Job Object containment và v0.29.2 sandbox
+workspace/runtime profiles. Claim vẫn giới hạn ở
+`agentos_mediated_process_execution`.
 
-Release bổ sung Windows CI `windows-latest` với focused process-tree containment suite và full regression suite. Release integrity yêu cầu CI contract này cho v0.29.1+.
-
-Claim được giới hạn: **AgentOS-mediated Windows process trees are Job Object contained before root execution resumes, with whole-tree termination on governed timeout, cancellation, broker failure, and synchronous teardown.**
-
-Release này không claim same-user host bypass resistance, general OS process isolation hoặc arbitrary host-process containment.
+`sandbox_configuration_attested = true` và `credential_boundary_attested = true`.
+Credential isolation, Restricted Token, Low Integrity, host-filesystem isolation,
+OS write confinement và same-user host-bypass resistance vẫn **không được claim**.

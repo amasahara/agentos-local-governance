@@ -35,12 +35,16 @@ from .db import connect
 from .drift import drift_check
 from .external_audit import append_signed_event
 from .policy import load_policy, local_override_status
+from .secret_lineage import resolve_runtime_secret
 from .tooling import append_audit_event, complete_tool, guard_tool, redact_value
 from .tool_runtime_profiles import (
     build_runtime_environment,
+    PROCESS_CREDENTIAL_CAPABILITY,
+    credential_bindings_for_profile,
     cleanup_sandbox_workspace,
     create_sandbox_workspace,
     resolve_runtime_profile,
+    resolve_runtime_profile_from_policy,
 )
 from .workflow import workflow_status
 
@@ -264,8 +268,9 @@ def _preflight(root: Path, task_id: str, session_id: str, capability: str, args:
             args.get("command"),
             policy,
         )
-        runtime_profile = resolve_runtime_profile(
-            command_profile
+        runtime_profile = resolve_runtime_profile_from_policy(
+            command_profile,
+            policy,
         )
 
         metadata["command_profile"] = command_profile
@@ -279,6 +284,25 @@ def _preflight(root: Path, task_id: str, session_id: str, capability: str, args:
         metadata["runtime_profile_scope"] = (
             runtime_profile["scope"]
         )
+        if "configuration_hash" in runtime_profile:
+            metadata["runtime_profile_configuration_hash"] = (
+                runtime_profile["configuration_hash"]
+            )
+            metadata["runtime_profile_configuration_version"] = (
+                runtime_profile["configuration_version"]
+            )
+            metadata["runtime_profile_configuration_source"] = (
+                runtime_profile["configuration_source"]
+            )
+            metadata["credential_reference_hash"] = (
+                runtime_profile["credential_reference_hash"]
+            )
+            metadata["credential_binding_hash"] = (
+                runtime_profile["credential_binding_hash"]
+            )
+            metadata["credential_binding_count"] = (
+                runtime_profile["credential_binding_count"]
+            )
 
         resolved_cwd = _inside(
             execution_root,
@@ -308,8 +332,6 @@ def _preflight(root: Path, task_id: str, session_id: str, capability: str, args:
     if capability == "network.http":
         _validate_url(str(args.get("url", "")), policy)
     return metadata
-
-
 
 def _is_windows_host() -> bool:
     return os.name == 'nt'
@@ -355,6 +377,222 @@ def _run_process_command(
         'process_tree_containment_scope': None,
     }
 
+
+def _credential_safe_environment_hash(
+    env: dict[str, str],
+    credential_targets: set[str],
+) -> str:
+    """
+    Hash an execution-environment descriptor without deriving the persisted
+    fingerprint from credential values.
+    """
+    safe = {
+        key: (
+            "<agentos-credential-projected>"
+            if key in credential_targets
+            else value
+        )
+        for key, value in sorted(env.items())
+    }
+    return hashlib.sha256(
+        json.dumps(
+            safe,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def _redact_projected_secret_values(
+    value: str,
+    secret_values: list[str],
+) -> str:
+    """Redact exact projected secret values from captured process text."""
+    text = str(value)
+    unique = sorted(
+        {
+            item
+            for item in secret_values
+            if isinstance(item, str)
+            and item
+        },
+        key=len,
+        reverse=True,
+    )
+    for item in unique:
+        text = text.replace(
+            item,
+            "<redacted-secret>",
+        )
+    return text
+
+
+def _resolve_sync_credential_environment(
+    root: Path,
+    policy: dict[str, Any],
+    runtime_profile: dict[str, Any],
+    env: dict[str, str],
+) -> tuple[
+    dict[str, str],
+    dict[str, Any],
+    list[str],
+]:
+    """
+    Resolve policy-bound process credentials only at the sync launch boundary.
+
+    Returned evidence contains references/hashes/target names only. Secret
+    values live only in the returned launch environment and transient list.
+    """
+    section = policy.get(
+        "sandbox_workspace_runtime_profile_policy"
+    )
+    if not isinstance(section, dict):
+        raise RuntimeError(
+            "sync_credential_policy_section_missing"
+        )
+
+    if (
+        section.get(
+            "sync_credential_boundary_enabled"
+        )
+        is not True
+    ):
+        raise RuntimeError(
+            "sync_credential_boundary_disabled"
+        )
+
+    if (
+        section.get(
+            "sync_credential_environment_projection_enabled"
+        )
+        is not True
+    ):
+        raise RuntimeError(
+            "sync_credential_environment_projection_disabled"
+        )
+
+    # Phase 4 intentionally allows sync and async credential projection
+    # to coexist. Async policy is validated by the async boundary itself.
+
+    binding = credential_bindings_for_profile(
+        runtime_profile["name"],
+        policy,
+    )
+
+    for key, expected in (
+        (
+            "credential_reference_hash",
+            binding[
+                "credential_reference_hash"
+            ],
+        ),
+        (
+            "credential_binding_hash",
+            binding[
+                "binding_hash"
+            ],
+        ),
+        (
+            "credential_binding_count",
+            binding[
+                "binding_count"
+            ],
+        ),
+    ):
+        if runtime_profile.get(key) != expected:
+            raise RuntimeError(
+                "sync_credential_binding_drift:"
+                + key
+            )
+
+    launch_env = dict(env)
+    secret_values: list[str] = []
+    projected: list[
+        dict[str, Any]
+    ] = []
+
+    for item in binding["bindings"]:
+        target = item["target_env"]
+
+        if target in launch_env:
+            raise RuntimeError(
+                "credential_target_env_collision:"
+                + target
+            )
+
+        secret = resolve_runtime_secret(
+            root,
+            item["credential_ref"],
+            capability=PROCESS_CREDENTIAL_CAPABILITY,
+        )
+
+        field = item["secret_field"]
+        if field not in secret:
+            raise RuntimeError(
+                "credential_secret_field_missing:"
+                + item["binding_id"]
+            )
+
+        value = secret[field]
+        if (
+            not isinstance(value, str)
+            or not value
+        ):
+            raise RuntimeError(
+                "credential_secret_field_must_be_nonempty_string:"
+                + item["binding_id"]
+            )
+
+        launch_env[target] = value
+        secret_values.append(value)
+
+        projected.append(
+            {
+                "binding_id": item[
+                    "binding_id"
+                ],
+                "reference_hash": hashlib.sha256(
+                    item[
+                        "credential_ref"
+                    ].encode(
+                        "utf-8"
+                    )
+                ).hexdigest(),
+                "target_env": target,
+                "secret_field": field,
+                "secret_included": False,
+            }
+        )
+
+    evidence = {
+        "credential_reference_version": binding[
+            "credential_reference_version"
+        ],
+        "credential_reference_hash": binding[
+            "credential_reference_hash"
+        ],
+        "credential_binding_hash": binding[
+            "binding_hash"
+        ],
+        "credential_binding_count": binding[
+            "binding_count"
+        ],
+        "credential_resolver_contract": binding[
+            "credential_resolver_contract"
+        ],
+        "process_credential_capability": binding[
+            "process_credential_capability"
+        ],
+        "projected": projected,
+        "secret_values_included": False,
+    }
+
+    return (
+        launch_env,
+        evidence,
+        secret_values,
+    )
 
 def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str, args: dict[str, Any], metadata: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
     policy = load_policy(root)
@@ -426,16 +664,77 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
         )
         command = list(args["command"])
 
-        runtime_profile = resolve_runtime_profile(
-            metadata["command_profile"]
+        runtime_profile = resolve_runtime_profile_from_policy(
+            metadata["command_profile"],
+            policy,
         )
-
         if (
             runtime_profile["profile_hash"]
             != metadata.get("runtime_profile_hash")
         ):
             raise RuntimeError(
                 "runtime_profile_hash_drift"
+            )
+        runtime_configuration_bound = (
+            "configuration_hash" in runtime_profile
+        )
+        metadata_configuration_bound = (
+            metadata.get(
+                "runtime_profile_configuration_hash"
+            )
+            is not None
+        )
+        if (
+            runtime_configuration_bound
+            != metadata_configuration_bound
+        ):
+            raise RuntimeError(
+                "runtime_profile_configuration_drift"
+            )
+        if runtime_configuration_bound and (
+            runtime_profile["configuration_hash"]
+            != metadata.get(
+                "runtime_profile_configuration_hash"
+            )
+            or int(
+                metadata.get(
+                    "runtime_profile_configuration_version",
+                    0,
+                )
+            )
+            != int(runtime_profile["configuration_version"])
+            or metadata.get(
+                "runtime_profile_configuration_source"
+            )
+            != runtime_profile["configuration_source"]
+        ):
+            raise RuntimeError(
+                "runtime_profile_configuration_drift"
+            )
+        if runtime_configuration_bound and (
+            runtime_profile.get("credential_reference_hash")
+            != metadata.get("credential_reference_hash")
+            or runtime_profile.get(
+                "credential_binding_hash"
+            )
+            != metadata.get(
+                "credential_binding_hash"
+            )
+            or int(
+                runtime_profile.get(
+                    "credential_binding_count",
+                    0,
+                )
+            )
+            != int(
+                metadata.get(
+                    "credential_binding_count",
+                    0,
+                )
+            )
+        ):
+            raise RuntimeError(
+                "runtime_profile_credential_binding_drift"
             )
 
         sandbox = create_sandbox_workspace(
@@ -445,6 +744,7 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
             session_id,
             uuid.uuid4().hex,
             metadata["command_profile"],
+            resolved_runtime_profile=runtime_profile,
         )
 
         cwd = Path(
@@ -463,6 +763,37 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
             sandbox,
         )
 
+        credential_evidence = {
+            "credential_reference_version": None,
+            "credential_reference_hash": None,
+            "credential_binding_hash": None,
+            "credential_binding_count": 0,
+            "credential_resolver_contract": None,
+            "process_credential_capability": None,
+            "projected": [],
+            "secret_values_included": False,
+        }
+        projected_secret_values: list[str] = []
+        credential_targets: set[str] = set()
+
+        if runtime_configuration_bound:
+            (
+                env,
+                credential_evidence,
+                projected_secret_values,
+            ) = _resolve_sync_credential_environment(
+                root,
+                policy,
+                runtime_profile,
+                env,
+            )
+            credential_targets = {
+                item["target_env"]
+                for item in credential_evidence[
+                    "projected"
+                ]
+            }
+
         try:
             proc, containment = _run_process_command(
                 command,
@@ -478,12 +809,22 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
                 ).encode()
             ).hexdigest()
 
-            environment_hash = hashlib.sha256(
-                json.dumps(
-                    env,
-                    sort_keys=True,
-                ).encode()
-            ).hexdigest()
+            if credential_targets:
+                environment_hash = (
+                    _credential_safe_environment_hash(
+                        env,
+                        credential_targets,
+                    )
+                )
+            else:
+                # Preserve the exact v0.29.2 evidence algorithm when
+                # no credential target was projected.
+                environment_hash = hashlib.sha256(
+                    json.dumps(
+                        env,
+                        sort_keys=True,
+                    ).encode()
+                ).hexdigest()
 
             with connect(root) as c:
                 c.execute(
@@ -537,8 +878,33 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
                 "host_filesystem_isolation_attested": False,
                 "os_write_confinement_attested": False,
                 "cwd": metadata["cwd"],
-                "stdout": proc.stdout[:limit],
-                "stderr": proc.stderr[:limit],
+                "stdout": _redact_projected_secret_values(
+                    proc.stdout[:limit],
+                    projected_secret_values,
+                ),
+                "stderr": _redact_projected_secret_values(
+                    proc.stderr[:limit],
+                    projected_secret_values,
+                ),
+                **(
+                    {
+                        "credential_reference_hash": credential_evidence[
+                            "credential_reference_hash"
+                        ],
+                        "credential_binding_hash": credential_evidence[
+                            "credential_binding_hash"
+                        ],
+                        "credential_binding_count": credential_evidence[
+                            "credential_binding_count"
+                        ],
+                        "credential_projection": credential_evidence[
+                            "projected"
+                        ],
+                        "credential_values_included": False,
+                    }
+                    if runtime_configuration_bound
+                    else {}
+                ),
                 **containment,
             }
         finally:
@@ -569,8 +935,6 @@ def _execute_adapter(root: Path, task_id: str, session_id: str, capability: str,
     if capability == "coordination.task.status": return True, task_status(root,task_id)
     if capability == "coordination.task.reclaim": return True, force_reclaim_task(root,task_id,session_id,str(args["reason"]))
     raise RuntimeError(f"unsupported capability: {capability}")
-
-
 
 def proxy_submit_job(
     root: Path,
@@ -608,6 +972,26 @@ def proxy_submit_job(
         capability,
         guarded_args,
     )
+    if int(
+        metadata.get(
+            "credential_binding_count",
+            0,
+        )
+    ):
+        async_policy = load_policy(root).get(
+            "sandbox_workspace_runtime_profile_policy",
+            {},
+        )
+        if (
+            async_policy.get(
+                "async_credential_environment_projection_enabled"
+            )
+            is not True
+        ):
+            raise RuntimeError(
+                "async_credential_projection_not_enabled"
+            )
+
     metadata = {
         **metadata,
         "execution_mode": "async_job",

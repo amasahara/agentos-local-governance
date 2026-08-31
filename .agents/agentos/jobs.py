@@ -30,12 +30,16 @@ from .external_audit import append_signed_event
 from .proxy import _command_profile, _filtered_env, _inside, _scan_agentos_imports
 from .tool_runtime_profiles import (
     build_runtime_environment,
+    PROCESS_CREDENTIAL_CAPABILITY,
+    credential_bindings_for_profile,
     cleanup_sandbox_workspace,
     create_sandbox_workspace,
     resolve_runtime_profile,
+    resolve_runtime_profile_from_policy,
     sandbox_workspace_hash,
 )
 from .policy import load_policy
+from .secret_lineage import resolve_runtime_secret
 from .tooling import validate_execution_token
 from .workflow import workflow_status
 from .windows_process_tree import (
@@ -362,9 +366,124 @@ def _job_dir(root: Path, job_id: str) -> Path:
     return path
 
 
+def _resolve_async_credential_environment(
+    root: Path,
+    spec: dict[str, Any],
+    runtime_profile: dict[str, Any],
+    base_env: dict[str, str],
+) -> tuple[dict[str, str], dict[str, Any]]:
+    """Resolve async credentials after spec verification and just before launch."""
+    policy = load_policy(root)
+    section = policy.get(
+        "sandbox_workspace_runtime_profile_policy"
+    )
+    if not isinstance(section, dict):
+        raise RuntimeError(
+            "async_credential_policy_section_missing"
+        )
+
+    required_true = (
+        "async_credential_boundary_enabled",
+        "async_credential_environment_projection_enabled",
+        "async_credential_resolution_at_launch_only",
+        "async_credential_spec_reference_hash_only",
+        "async_credential_provider_approval_revalidated",
+        "async_credential_output_persistence_disabled",
+        "async_credential_environment_hash_secret_independent",
+    )
+    invalid = [
+        key
+        for key in required_true
+        if section.get(key) is not True
+    ]
+    if invalid:
+        raise RuntimeError(
+            "async_credential_boundary_disabled:"
+            + json.dumps(invalid, sort_keys=True)
+        )
+
+    binding = credential_bindings_for_profile(
+        runtime_profile["name"],
+        policy,
+    )
+    expected = {
+        "credential_reference_hash": binding[
+            "credential_reference_hash"
+        ],
+        "credential_binding_hash": binding[
+            "binding_hash"
+        ],
+        "credential_binding_count": binding[
+            "binding_count"
+        ],
+    }
+
+    for key, value in expected.items():
+        if runtime_profile.get(key) != value:
+            raise RuntimeError(
+                "async_credential_runtime_binding_drift:"
+                + key
+            )
+        if spec.get(key) != value:
+            raise RuntimeError(
+                "async_credential_spec_binding_drift:"
+                + key
+            )
+
+    launch_env = dict(base_env)
+
+    for item in binding["bindings"]:
+        target = item["target_env"]
+        if target in launch_env:
+            raise RuntimeError(
+                "async_credential_target_env_collision:"
+                + target
+            )
+
+        secret = resolve_runtime_secret(
+            root,
+            item["credential_ref"],
+            capability=PROCESS_CREDENTIAL_CAPABILITY,
+        )
+
+        field = item["secret_field"]
+        if field not in secret:
+            raise RuntimeError(
+                "async_credential_secret_field_missing:"
+                + item["binding_id"]
+            )
+
+        value = secret[field]
+        if not isinstance(value, str) or not value:
+            raise RuntimeError(
+                "async_credential_secret_field_must_be_nonempty_string:"
+                + item["binding_id"]
+            )
+
+        launch_env[target] = value
+
+    evidence = {
+        "credential_reference_hash": expected[
+            "credential_reference_hash"
+        ],
+        "credential_binding_hash": expected[
+            "credential_binding_hash"
+        ],
+        "credential_binding_count": expected[
+            "credential_binding_count"
+        ],
+        "credential_values_included": False,
+        "credential_references_included": False,
+        "credential_output_persisted": False,
+    }
+
+    return launch_env, evidence
+
 def _assert_async_runtime_spec_current(
     spec: dict[str, Any],
     guarded_env: dict[str, Any],
+    *,
+    root: Path | None = None,
 ) -> tuple[dict[str, str], dict[str, Any]]:
     """
     Revalidate the immutable async runtime-profile/sandbox contract immediately
@@ -374,9 +493,30 @@ def _assert_async_runtime_spec_current(
         spec.get("profile")
         or ""
     )
-    runtime_profile = resolve_runtime_profile(
-        profile_name
+    configuration_bound = (
+        spec.get(
+            "runtime_profile_configuration_hash"
+        )
+        is not None
     )
+
+    if configuration_bound:
+        if root is None:
+            raise RuntimeError(
+                "runtime_profile_configuration_root_required"
+            )
+        policy = load_policy(root)
+        runtime_profile = resolve_runtime_profile_from_policy(
+            profile_name,
+            policy,
+        )
+    else:
+        # Compatibility for immutable queued jobs created before the
+        # v0.29.3 configuration contract. The persisted full spec_hash
+        # is still verified before any process side effect.
+        runtime_profile = resolve_runtime_profile(
+            profile_name
+        )
 
     if (
         spec.get(
@@ -406,6 +546,56 @@ def _assert_async_runtime_spec_current(
         raise RuntimeError(
             "runtime_profile_hash_drift"
         )
+    if configuration_bound:
+        if (
+            spec.get("runtime_profile_configuration_hash")
+            != runtime_profile.get("configuration_hash")
+            or int(
+                spec.get(
+                    "runtime_profile_configuration_version",
+                    0,
+                )
+            )
+            != int(runtime_profile.get("configuration_version", 0))
+            or spec.get(
+                "runtime_profile_configuration_source"
+            )
+            != runtime_profile.get("configuration_source")
+        ):
+            raise RuntimeError(
+                "runtime_profile_configuration_drift"
+            )
+
+    if configuration_bound:
+        if (
+            spec.get("credential_reference_hash")
+            != runtime_profile.get(
+                "credential_reference_hash"
+            )
+            or spec.get("credential_binding_hash")
+            != runtime_profile.get(
+                "credential_binding_hash"
+            )
+            or int(
+                spec.get(
+                    "credential_binding_count",
+                    0,
+                )
+            )
+            != int(
+                runtime_profile.get(
+                    "credential_binding_count",
+                    0,
+                )
+            )
+            or spec.get(
+                "credential_values_included"
+            )
+            is not False
+        ):
+            raise RuntimeError(
+                "async_credential_spec_binding_drift"
+            )
 
     sandbox = spec.get(
         "sandbox"
@@ -443,6 +633,23 @@ def _assert_async_runtime_spec_current(
         raise RuntimeError(
             "async_job_sandbox_profile_drift"
         )
+    if configuration_bound:
+        if (
+            sandbox.get("configuration_hash")
+            != runtime_profile.get("configuration_hash")
+            or int(
+                sandbox.get(
+                    "configuration_version",
+                    0,
+                )
+            )
+            != int(runtime_profile.get("configuration_version", 0))
+            or sandbox.get("configuration_source")
+            != runtime_profile.get("configuration_source")
+        ):
+            raise RuntimeError(
+                "async_job_sandbox_configuration_drift"
+            )
 
     workspace = Path(
         str(
@@ -519,7 +726,6 @@ def _assert_async_runtime_spec_current(
         runtime_profile,
     )
 
-
 def submit_job(
     root: Path,
     task_id: str,
@@ -556,8 +762,9 @@ def submit_job(
         policy,
     )
     runtime_profile = (
-        resolve_runtime_profile(
-            profile
+        resolve_runtime_profile_from_policy(
+            profile,
+            policy,
         )
     )
 
@@ -580,6 +787,7 @@ def submit_job(
         session_id,
         job_id,
         profile,
+        resolved_runtime_profile=runtime_profile,
     )
 
     job_path = _job_dir(
@@ -640,6 +848,32 @@ def submit_job(
                 "scope"
             ]
         ),
+        "runtime_profile_configuration_hash": (
+            runtime_profile.get("configuration_hash")
+        ),
+        "runtime_profile_configuration_version": (
+            runtime_profile.get("configuration_version")
+        ),
+        "runtime_profile_configuration_source": (
+            runtime_profile.get("configuration_source")
+        ),
+        "credential_reference_hash": (
+            runtime_profile.get(
+                "credential_reference_hash"
+            )
+        ),
+        "credential_binding_hash": (
+            runtime_profile.get(
+                "credential_binding_hash"
+            )
+        ),
+        "credential_binding_count": int(
+            runtime_profile.get(
+                "credential_binding_count",
+                0,
+            )
+        ),
+        "credential_values_included": False,
         "sandbox": sandbox,
         "snapshot_hash": sandbox[
             "snapshot_hash"
@@ -734,6 +968,23 @@ def submit_job(
                                     "scope"
                                 ]
                             ),
+                            "credential_reference_hash": (
+                                runtime_profile.get(
+                                    "credential_reference_hash"
+                                )
+                            ),
+                            "credential_binding_hash": (
+                                runtime_profile.get(
+                                    "credential_binding_hash"
+                                )
+                            ),
+                            "credential_binding_count": int(
+                                runtime_profile.get(
+                                    "credential_binding_count",
+                                    0,
+                                )
+                            ),
+                            "credential_values_included": False,
                         },
                         sort_keys=True,
                     ),
@@ -758,6 +1009,23 @@ def submit_job(
                         "snapshot_hash"
                     ]
                 ),
+                "credential_reference_hash": (
+                    runtime_profile.get(
+                        "credential_reference_hash"
+                    )
+                ),
+                "credential_binding_hash": (
+                    runtime_profile.get(
+                        "credential_binding_hash"
+                    )
+                ),
+                "credential_binding_count": int(
+                    runtime_profile.get(
+                        "credential_binding_count",
+                        0,
+                    )
+                ),
+                "credential_values_included": False,
             },
             task_id,
             session_id,
@@ -803,7 +1071,6 @@ def submit_job(
             job_id,
         )
     )
-
 
 def start_job(
     root: Path,
@@ -881,6 +1148,7 @@ def start_job(
                     "env"
                 )
                 or {},
+                root=root,
             )
         )
 
@@ -898,6 +1166,53 @@ def start_job(
                 "queued job specification hash mismatch"
             )
 
+        credential_evidence = {
+            "credential_reference_hash": None,
+            "credential_binding_hash": None,
+            "credential_binding_count": 0,
+            "credential_values_included": False,
+            "credential_references_included": False,
+            "credential_output_persisted": False,
+        }
+
+        if (
+            spec.get(
+                "runtime_profile_configuration_hash"
+            )
+            is not None
+        ):
+            (
+                launch_env,
+                credential_evidence,
+            ) = _resolve_async_credential_environment(
+                root,
+                spec,
+                runtime_profile,
+                launch_env,
+            )
+
+        credential_output_suppressed = bool(
+            credential_evidence[
+                "credential_binding_count"
+            ]
+        )
+        launch_stdout_path = row["stdout_path"]
+        launch_stderr_path = row["stderr_path"]
+
+        if credential_output_suppressed:
+            Path(row["stdout_path"]).parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+            Path(row["stderr_path"]).parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+            Path(row["stdout_path"]).write_bytes(b"")
+            Path(row["stderr_path"]).write_bytes(b"")
+            launch_stdout_path = os.devnull
+            launch_stderr_path = os.devnull
+
         containment_details: dict[str, Any] = {}
 
         if _is_windows_host():
@@ -906,8 +1221,8 @@ def start_job(
                 job_id,
                 spec,
                 launch_env,
-                row["stdout_path"],
-                row["stderr_path"],
+                launch_stdout_path,
+                launch_stderr_path,
             )
 
             pid = int(
@@ -941,12 +1256,12 @@ def start_job(
             }
         else:
             stdout = open(
-                row["stdout_path"],
+                launch_stdout_path,
                 "ab",
                 buffering=0,
             )
             stderr = open(
-                row["stderr_path"],
+                launch_stderr_path,
                 "ab",
                 buffering=0,
             )
@@ -1016,6 +1331,27 @@ def start_job(
                             ][
                                 "scope"
                             ]
+                        ),
+                        **(
+                            {
+                                "credential_reference_hash": credential_evidence[
+                                    "credential_reference_hash"
+                                ],
+                                "credential_binding_hash": credential_evidence[
+                                    "credential_binding_hash"
+                                ],
+                                "credential_binding_count": credential_evidence[
+                                    "credential_binding_count"
+                                ],
+                                "credential_values_included": False,
+                                "credential_references_included": False,
+                                "credential_output_persisted": False,
+                            }
+                            if spec.get(
+                                "runtime_profile_configuration_hash"
+                            )
+                            is not None
+                            else {}
                         ),
                         **containment_details,
                     },

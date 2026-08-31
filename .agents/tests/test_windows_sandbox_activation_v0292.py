@@ -12,41 +12,26 @@ from agentos.schema_version import CURRENT_SCHEMA_VERSION
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_v0292_release_identity_and_schema():
-    assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == "0.29.2"
-    assert __version__ == "0.29.2"
+def test_v0292_schema_and_distribution_invariants_are_preserved():
+    current = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    assert current == __version__
+    assert tuple(int(part) for part in current.split(".")) >= (0, 29, 2)
     assert CURRENT_SCHEMA_VERSION == 62
-
-    metadata = json.loads(
-        (ROOT / ".agents/distribution/metadata.json").read_text(encoding="utf-8")
-    )
-    assert metadata["agentos_version"] == "0.29.2"
+    metadata = json.loads((ROOT / ".agents/distribution/metadata.json").read_text(encoding="utf-8"))
+    assert metadata["agentos_version"] == current
     assert metadata["schema_version"] == 62
 
-
-def test_v0292_release_policy_activation_is_bounded():
-    policy = json.loads(
-        (ROOT / ".agents/config/release_policy.json").read_text(encoding="utf-8")
-    )
-    assert policy["version"] == "0.29.2"
-
+def test_v0292_release_policy_guarantees_are_preserved():
+    policy = json.loads((ROOT / ".agents/config/release_policy.json").read_text(encoding="utf-8"))
+    assert tuple(int(part) for part in policy["version"].split(".")) >= (0, 29, 2)
     item = policy["sandbox_workspace_runtime_profile_policy"]
     assert item["runtime_profile_sandbox_attested"] is True
     assert item["scope"] == "agentos_mediated_process_execution"
     assert item["windows_ci_required"] is True
     assert item["windows_ci_runner"] == "windows-latest"
     assert item["windows_ci_activation_suite_required"] is True
-
-    for key in (
-        "credential_isolation_attested",
-        "restricted_token_attested",
-        "low_integrity_attested",
-        "host_filesystem_isolation_attested",
-        "os_write_confinement_attested",
-        "same_user_host_bypass_resistance_claimed",
-    ):
+    for key in ("credential_isolation_attested","restricted_token_attested","low_integrity_attested","host_filesystem_isolation_attested","os_write_confinement_attested","same_user_host_bypass_resistance_claimed"):
         assert item[key] is False
-
 
 def test_v0292_structural_attestation_is_release_ready():
     report = attest_enforcement(ROOT)
@@ -81,22 +66,17 @@ def test_v0292_windows_ci_activation_contract_is_complete():
     assert report["missing_markers"] == []
 
 
-def test_v0292_release_docs_identify_bounded_release():
-    for rel in ("README.md", "README.en.md", "RELEASE_NOTES.md"):
-        text = (ROOT / rel).read_text(encoding="utf-8")
-        assert "0.29.2" in text
-        assert "Windows Sandbox Workspace & Tool Runtime Profiles" in text
-
-    notes = (ROOT / "RELEASE_NOTES.md").read_text(encoding="utf-8")
-    for marker in (
-        "runtime_profile_sandbox_attested = true",
-        "restricted_token_attested = false",
-        "low_integrity_attested = false",
-        "same_user_host_bypass_resistance_claimed = false",
-        "schema remains **62**",
-    ):
-        assert marker in notes
-
+def test_v0292_release_docs_are_preserved_as_historical_contract():
+    historical = (ROOT / ".agents/docs/WINDOWS_SANDBOX_WORKSPACE_TOOL_RUNTIME_PROFILES_V0292.md").read_text(encoding="utf-8")
+    assert "v0.29.2" in historical
+    assert "Windows Sandbox Workspace & Tool Runtime Profiles" in historical
+    for marker in ("runtime_profile_sandbox_attested = true","restricted_token_attested = false","low_integrity_attested = false","same_user_host_bypass_resistance_claimed = false"):
+        assert marker in historical
+    history = (ROOT / ".agents/docs/RULES_WORKFLOW_CHANGELOG.md").read_text(encoding="utf-8")
+    assert "## v0.29.2 — Windows Sandbox Workspace & Tool Runtime Profiles" in history
+    current_notes = (ROOT / "RELEASE_NOTES.md").read_text(encoding="utf-8")
+    assert "v0.29.3" in current_notes
+    assert "Sandbox Configuration & Credential Boundary" in current_notes
 
 def test_v0292_generated_release_artifacts_are_deferred_to_finalization():
     # Phase 6 activates authoritative source identity only. MANIFEST,

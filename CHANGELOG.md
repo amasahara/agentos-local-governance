@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.29.3 — Sandbox Configuration & Credential Boundary
+- Moved runtime-profile authority to governed effective-policy configuration
+  with deterministic configuration hashes and fail-closed invariant validation.
+- Added `secret://alias` process credential bindings backed by the existing
+  trusted Secret Resolver and provider pin/capability approval.
+- Added sync launch-time credential resolution, secret-independent environment
+  evidence, and exact-value captured-output redaction.
+- Added async credential hash/count binding, immutable spec verification before
+  resolution, launch-time revalidation/resolution, and disabled persistence of
+  credential-bearing async stdout/stderr.
+- Added machine-verifiable credential-boundary structural attestation and
+  focused Ubuntu/Windows CI suites.
+- Preserved v0.29.1 Windows process-tree containment and v0.29.2 sandbox/runtime
+  profile regressions.
+- Activated only bounded sandbox-configuration and credential-boundary claims
+  under `agentos_mediated_process_execution`.
+- Kept credential isolation, Restricted Token, Low Integrity, host-filesystem
+  isolation, OS write confinement, and same-user host-bypass resistance false.
+- Schema remains 62.
 ## v0.29.2 — Windows Sandbox Workspace & Tool Runtime Profiles
 
 - Added deterministic runtime profiles and bounded sandbox workspaces for

@@ -61,6 +61,11 @@ jobs:
         run: |
           .agents/bin/agentos docs-check
           .agents/bin/agentos instruction-check
+      - name: Credential boundary focused validation (Ubuntu)
+        env:
+          PYTHONPATH: .agents
+        run: python -m pytest -q .agents/tests/test_secret_lineage_v0226.py .agents/tests/test_sandbox_configuration_v0293.py .agents/tests/test_credential_reference_contract_v0293.py .agents/tests/test_sync_credential_boundary_v0293.py .agents/tests/test_async_credential_boundary_v0293.py .agents/tests/test_credential_boundary_attestation_v0293.py .agents/tests/test_credential_boundary_ci_gate_v0293.py .agents/tests/test_credential_boundary_activation_v0293.py -rs
+
       - name: Full regression suite
         env:
           PYTHONPATH: .agents
@@ -121,6 +126,11 @@ jobs:
         env:
           PYTHONPATH: .agents
         run: python -m pytest -q .agents/tests/test_tool_runtime_profiles_v0292.py .agents/tests/test_sync_tool_runtime_profiles_v0292.py .agents/tests/test_async_tool_runtime_profiles_v0292.py .agents/tests/test_async_sandbox_lifecycle_v0292.py .agents/tests/test_sandbox_runtime_attestation_v0292.py .agents/tests/test_windows_sandbox_activation_v0292.py -rs
+
+      - name: Credential boundary focused validation (Windows)
+        env:
+          PYTHONPATH: .agents
+        run: python -m pytest -q .agents/tests/test_secret_lineage_v0226.py .agents/tests/test_sandbox_configuration_v0293.py .agents/tests/test_credential_reference_contract_v0293.py .agents/tests/test_sync_credential_boundary_v0293.py .agents/tests/test_async_credential_boundary_v0293.py .agents/tests/test_credential_boundary_attestation_v0293.py .agents/tests/test_credential_boundary_ci_gate_v0293.py .agents/tests/test_credential_boundary_activation_v0293.py -rs
 
       - name: Full regression suite
         env:

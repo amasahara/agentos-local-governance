@@ -1372,7 +1372,8 @@
     "allowed_capabilities": [
       "db.source.select",
       "db.target.controlled_insert",
-      "db.target.reconciliation_select"
+      "db.target.reconciliation_select",
+      "process.exec.credential"
     ],
     "allowed_schemes": [
       "env",

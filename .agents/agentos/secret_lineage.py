@@ -46,6 +46,7 @@ ALLOWED_SECRET_CAPABILITIES = {
     "db.source.select",
     "db.target.controlled_insert",
     "db.target.reconciliation_select",
+    "process.exec.credential",
 }
 
 
@@ -383,31 +384,92 @@ def _approved(root: Path, provider: Provider, capability: str) -> bool:
 
 
 def resolve_secret(root: Path | str, credential_ref: str, *, capability: str) -> dict[str, Any]:
-    """Resolve one trusted URI in memory; never persist or return resolver evidence containing values."""
+    """Resolve one trusted URI in memory; persist only redacted resolver evidence."""
     root_path = Path(root).resolve()
     ref = str(credential_ref).strip()
-    if not ref or "://" not in ref:
-        raise SecretLineageError("credential reference must use an approved URI scheme")
-    parsed = urlparse(ref)
-    if parsed.scheme == "secret":
-        alias = (parsed.netloc + parsed.path).strip("/")
-        if not alias:
-            raise SecretLineageError("secret alias is empty")
-        ref = _resolve_alias(root_path, alias)
-        parsed = urlparse(ref)
-    provider = PROVIDERS.get(parsed.scheme.lower())
-    if provider is None:
-        raise SecretLineageError("resolver is missing or is not in the trusted allowlist")
-    if not _approved(root_path, provider, capability):
-        raise SecretLineageError("resolver provider pin/capability is not human-approved")
-    target = (parsed.netloc + parsed.path).lstrip("/")
-    value = provider.resolver(root_path, target, {"fragment": parsed.fragment})
-    if not isinstance(value, dict):
-        raise SecretLineageError("trusted resolver returned an invalid credential object")
-    _event(root_path, "secret_resolved", provider=provider, ref=credential_ref, capability=capability,
-           payload={"resolved": True, "field_count": len(value), "secret_included": False})
-    return value
 
+    if not ref or "://" not in ref:
+        raise SecretLineageError(
+            "credential reference must use an approved URI scheme"
+        )
+
+    parsed = urlparse(ref)
+
+    if parsed.scheme == "secret":
+        alias = (
+            parsed.netloc
+            + parsed.path
+        ).strip("/")
+        if not alias:
+            raise SecretLineageError(
+                "secret alias is empty"
+            )
+        ref = _resolve_alias(
+            root_path,
+            alias,
+        )
+        parsed = urlparse(ref)
+
+    provider = PROVIDERS.get(
+        parsed.scheme.lower()
+    )
+    if provider is None:
+        raise SecretLineageError(
+            "resolver is missing or is not in the trusted allowlist"
+        )
+
+    if (
+        capability
+        == "process.exec.credential"
+        and os.name == "nt"
+        and provider.scheme == "file-secret"
+    ):
+        raise SecretLineageError(
+            "Windows file-secret process credential projection "
+            "requires a future ACL attestation"
+        )
+
+    if not _approved(
+        root_path,
+        provider,
+        capability,
+    ):
+        raise SecretLineageError(
+            "resolver provider pin/capability is not human-approved"
+        )
+
+    target = (
+        parsed.netloc
+        + parsed.path
+    ).lstrip("/")
+
+    value = provider.resolver(
+        root_path,
+        target,
+        {
+            "fragment": parsed.fragment,
+        },
+    )
+
+    if not isinstance(value, dict):
+        raise SecretLineageError(
+            "trusted resolver returned an invalid credential object"
+        )
+
+    _event(
+        root_path,
+        "secret_resolved",
+        provider=provider,
+        ref=credential_ref,
+        capability=capability,
+        payload={
+            "resolved": True,
+            "field_count": len(value),
+            "secret_included": False,
+        },
+    )
+
+    return value
 
 def _is_governed_root(root: Path) -> bool:
     """Return whether callback injection must be denied for a production AgentOS root."""

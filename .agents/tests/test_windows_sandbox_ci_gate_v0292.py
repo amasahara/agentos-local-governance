@@ -56,22 +56,17 @@ def test_v0292_windows_ci_runs_complete_runtime_profile_and_activation_suite():
     assert "python -m pytest -q .agents/tests -rs" in text
 
 
-def test_v0292_ci_policy_and_attestation_are_activated():
+def test_v0292_ci_policy_and_attestation_remain_inherited():
     policy = load_release_policy(ROOT)
     section = policy["sandbox_workspace_runtime_profile_policy"]
-
-    assert policy["version"] == "0.29.2"
+    assert tuple(int(part) for part in policy["version"].split(".")) >= (0, 29, 2)
     assert section["windows_ci_required"] is True
     assert section["windows_ci_runner"] == "windows-latest"
     assert section["windows_ci_runtime_profile_suite_required"] is True
-    assert (
-        section["windows_ci_v0291_containment_regression_required"]
-        is True
-    )
+    assert section["windows_ci_v0291_containment_regression_required"] is True
     assert section["windows_ci_full_regression_required"] is True
     assert section["windows_ci_activation_suite_required"] is True
     assert section["runtime_profile_sandbox_attested"] is True
-
 
 def test_v0292_active_policy_rejects_disabled_ci_contract():
     policy = copy.deepcopy(load_release_policy(ROOT))

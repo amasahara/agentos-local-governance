@@ -1,3 +1,13 @@
+## v0.29.3 — Sandbox Configuration & Credential Boundary
+- Governed sandbox/runtime-profile configuration with deterministic configuration/reference hash binding.
+- Reference-only `secret://alias` process credential bindings reuse the trusted Secret Resolver and provider capability approval.
+- Sync credentials resolve immediately before launch with exact-value captured-output redaction.
+- Async jobs persist credential hashes/count only, verify immutable spec before resolution, and do not persist stdout/stderr for credential-bearing jobs.
+- Added independent credential-boundary structural attestation and focused Ubuntu/Windows CI validation.
+- Preserved v0.29.1 Windows process-tree containment and v0.29.2 sandbox/runtime-profile enforcement.
+- Activated bounded claims only within `agentos_mediated_process_execution`.
+- Credential isolation, Restricted Token, Low Integrity, host-filesystem isolation, OS write confinement, same-user host-bypass resistance, and Windows file-secret projection remain unclaimed.
+- Database schema remains 62.
 ## v0.29.2 — Windows Sandbox Workspace & Tool Runtime Profiles
 
 - Added deterministic tool runtime profiles and bounded sandbox workspaces for

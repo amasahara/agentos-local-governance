@@ -147,6 +147,14 @@ RELEASE_FILES = (
     ".agents/tests/test_windows_sandbox_ci_gate_v0292.py",
     ".agents/tests/test_windows_sandbox_activation_v0292.py",
     ".agents/docs/WINDOWS_SANDBOX_WORKSPACE_TOOL_RUNTIME_PROFILES_V0292.md",
+    ".agents/tests/test_sandbox_configuration_v0293.py",
+    ".agents/tests/test_credential_reference_contract_v0293.py",
+    ".agents/tests/test_sync_credential_boundary_v0293.py",
+    ".agents/tests/test_async_credential_boundary_v0293.py",
+    ".agents/tests/test_credential_boundary_attestation_v0293.py",
+    ".agents/tests/test_credential_boundary_ci_gate_v0293.py",
+    ".agents/tests/test_credential_boundary_activation_v0293.py",
+    ".agents/docs/SANDBOX_CONFIGURATION_CREDENTIAL_BOUNDARY_V0293.md",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -456,6 +464,143 @@ def _windows_sandbox_ci_contract_v0292(root: Path) -> dict:
             "python -m pytest -q .agents/tests -rs"
             not in missing
         ),
+        "missing_markers": missing,
+    }
+
+def _credential_boundary_ci_contract_v0293(
+    root: Path,
+) -> dict[str, Any]:
+    """Verify focused v0.29.3 credential coverage on Ubuntu and Windows."""
+    workflow_path = (
+        root
+        / ".github/workflows/agentos-release-validation.yml"
+    )
+
+    focused_tests = (
+        "test_secret_lineage_v0226.py",
+        "test_sandbox_configuration_v0293.py",
+        "test_credential_reference_contract_v0293.py",
+        "test_sync_credential_boundary_v0293.py",
+        "test_async_credential_boundary_v0293.py",
+        "test_credential_boundary_attestation_v0293.py",
+        "test_credential_boundary_ci_gate_v0293.py",
+        "test_credential_boundary_activation_v0293.py",
+    )
+
+    if not workflow_path.is_file():
+        return {
+            "ok": False,
+            "workflow": str(
+                workflow_path.relative_to(root)
+            ),
+            "ubuntu_focused_suite": False,
+            "windows_focused_suite": False,
+            "v0291_containment_regression": False,
+            "v0292_sandbox_regression": False,
+            "full_regression_suite": False,
+            "missing_markers": [
+                "workflow_missing"
+            ],
+        }
+
+    text = workflow_path.read_text(
+        encoding="utf-8"
+    )
+
+    def step_chunk(label: str) -> str:
+        marker = "- name: " + label
+        start = text.find(marker)
+        if start < 0:
+            return ""
+        end = text.find(
+            "\n      - name:",
+            start + len(marker),
+        )
+        if end < 0:
+            end = len(text)
+        return text[start:end]
+
+    ubuntu = step_chunk(
+        "Credential boundary focused validation (Ubuntu)"
+    )
+    windows = step_chunk(
+        "Credential boundary focused validation (Windows)"
+    )
+
+    ubuntu_missing = [
+        test
+        for test in focused_tests
+        if test not in ubuntu
+    ]
+    windows_missing = [
+        test
+        for test in focused_tests
+        if test not in windows
+    ]
+
+    missing: list[str] = []
+
+    if not ubuntu:
+        missing.append(
+            "ubuntu_credential_step_missing"
+        )
+    missing.extend(
+        "ubuntu:" + item
+        for item in ubuntu_missing
+    )
+
+    if not windows:
+        missing.append(
+            "windows_credential_step_missing"
+        )
+    missing.extend(
+        "windows:" + item
+        for item in windows_missing
+    )
+
+    required_global = (
+        "runs-on: ubuntu-latest",
+        "runs-on: windows-latest",
+        "test_windows_process_tree_activation_v0291.py",
+        "test_windows_sandbox_activation_v0292.py",
+    )
+    missing.extend(
+        marker
+        for marker in required_global
+        if marker not in text
+    )
+
+    full_regression_ok = (
+        text.count(
+            "python -m pytest -q .agents/tests -rs"
+        )
+        >= 2
+    )
+    if not full_regression_ok:
+        missing.append(
+            "dual_platform_full_regression_missing"
+        )
+
+    return {
+        "ok": not missing,
+        "workflow": (
+            ".github/workflows/agentos-release-validation.yml"
+        ),
+        "ubuntu_focused_suite": bool(
+            ubuntu
+        ) and not ubuntu_missing,
+        "windows_focused_suite": bool(
+            windows
+        ) and not windows_missing,
+        "v0291_containment_regression": (
+            "test_windows_process_tree_activation_v0291.py"
+            in text
+        ),
+        "v0292_sandbox_regression": (
+            "test_windows_sandbox_activation_v0292.py"
+            in text
+        ),
+        "full_regression_suite": full_regression_ok,
         "missing_markers": missing,
     }
 
@@ -819,6 +964,145 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                         ".github/workflows/agentos-release-validation.yml",
                     )
                 )
+        credential_ci_validation = (
+            _credential_boundary_ci_contract_v0293(
+                root
+            )
+        )
+        credential_attestation = (
+            attestation_report.get(
+                "credential_boundary"
+            )
+            or {}
+        )
+
+        required_credential_assertions = (
+            "structurally_attested",
+            "sync_enforced",
+            "async_enforced",
+            "reference_hash_bound",
+            "launch_time_resolution",
+            "provider_approval_revalidated",
+            "secret_values_not_persisted",
+            "credentialed_output_safe",
+            "windows_file_secret_blocked",
+            "broad_nonclaims_preserved",
+        )
+
+        missing_credential_assertions = [
+            key
+            for key in required_credential_assertions
+            if credential_attestation.get(key)
+            is not True
+        ]
+
+        if missing_credential_assertions:
+            findings.append(
+                _finding(
+                    "credential_boundary_attestation_failed",
+                    "v0.29.3 credential structural attestation is not green: "
+                    + repr(
+                        missing_credential_assertions
+                    ),
+                    ".agents/agentos/enforcement_attestation.py",
+                )
+            )
+
+        if (
+            credential_ci_validation.get("ok")
+            is not True
+        ):
+            findings.append(
+                _finding(
+                    "credential_boundary_ci_validation_missing",
+                    "v0.29.3 requires focused credential validation on "
+                    "Ubuntu and Windows plus inherited regressions: "
+                    + repr(
+                        credential_ci_validation.get(
+                            "missing_markers",
+                            [],
+                        )
+                    ),
+                    ".github/workflows/agentos-release-validation.yml",
+                )
+            )
+
+        if attested_release_version >= (0, 29, 3):
+            if (
+                credential_attestation.get(
+                    "policy_declared_attested"
+                )
+                is not True
+            ):
+                findings.append(
+                    _finding(
+                        "credential_boundary_policy_not_activated",
+                        "v0.29.3+ requires credential_boundary_attested=true",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
+            from .policy import (
+                load_release_policy as _load_release_policy_v0293,
+            )
+            activation_policy = (
+                _load_release_policy_v0293(root).get(
+                    "sandbox_workspace_runtime_profile_policy"
+                )
+                or {}
+            )
+            required_activation_flags = (
+                "sandbox_configuration_attested",
+                "credential_environment_projection_enabled",
+                "credential_boundary_enabled",
+                "credential_boundary_attested",
+                "sync_credential_boundary_attested",
+                "async_credential_boundary_attested",
+            )
+            invalid_activation_flags = [
+                key
+                for key in required_activation_flags
+                if activation_policy.get(key) is not True
+            ]
+            if invalid_activation_flags:
+                findings.append(
+                    _finding(
+                        "credential_boundary_activation_flags_invalid",
+                        "v0.29.3 activation flags are incomplete: "
+                        + repr(invalid_activation_flags),
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
+            if (
+                credential_attestation.get(
+                    "policy_scope"
+                )
+                != "agentos_mediated_process_execution"
+            ):
+                findings.append(
+                    _finding(
+                        "credential_boundary_scope_invalid",
+                        "v0.29.3 credential boundary scope must remain "
+                        "agentos_mediated_process_execution",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
+            if (
+                credential_attestation.get(
+                    "credential_isolation_attested"
+                )
+                is not False
+            ):
+                findings.append(
+                    _finding(
+                        "credential_boundary_overclaim",
+                        "v0.29.3 must not claim OS-level credential isolation",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
         completion_attestation = (
             attestation_report.get("completion_verification")
             or {}
@@ -1182,6 +1466,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 ),
                 "windows_ci_validation": windows_ci_validation,
                 "windows_sandbox_ci_validation": windows_sandbox_ci_validation,
+                "credential_boundary": attestation_report.get("credential_boundary"),
+                "credential_boundary_ci_validation": credential_ci_validation,
                 "finding_count": len(
                     attestation_report.get("findings", [])
                 ),
@@ -1248,6 +1534,7 @@ DOC_FILES = (
     ".agents/docs/UPGRADE_FROM_0.25.5.md",
     ".agents/docs/UPGRADE_FROM_0.26.0.md",
     ".agents/docs/WINDOWS_SANDBOX_WORKSPACE_TOOL_RUNTIME_PROFILES_V0292.md",
+    ".agents/docs/SANDBOX_CONFIGURATION_CREDENTIAL_BOUNDARY_V0293.md",
 )
 
 

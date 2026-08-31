@@ -1335,8 +1335,12 @@ def attest_enforcement(
     require_sandbox(
         "sandbox_sync_profile_bound",
         (
-            "resolve_runtime_profile("
-            in sync_preflight_source
+            (
+                "resolve_runtime_profile("
+                in sync_preflight_source
+                or "resolve_runtime_profile_from_policy("
+                in sync_preflight_source
+            )
             and "runtime_profile_hash"
             in sync_preflight_source
             and "create_sandbox_workspace("
@@ -1354,8 +1358,12 @@ def attest_enforcement(
     require_sandbox(
         "sandbox_async_profile_snapshot_bound",
         (
-            "resolve_runtime_profile("
-            in async_submit_source
+            (
+                "resolve_runtime_profile("
+                in async_submit_source
+                or "resolve_runtime_profile_from_policy("
+                in async_submit_source
+            )
             and "create_sandbox_workspace("
             in async_submit_source
             and '"runtime_profile_hash"'
@@ -1454,6 +1462,332 @@ def attest_enforcement(
     sandbox_policy_declared = bool(
         sandbox_policy.get(
             "runtime_profile_sandbox_attested",
+            False,
+        )
+    )
+
+    # --------------------------------------------------------
+    # v0.29.3 credential boundary structural attestation
+    # --------------------------------------------------------
+    credential_check_names: list[str] = []
+
+    def require_credential(
+        name: str,
+        condition: bool,
+        message: str,
+    ) -> None:
+        credential_check_names.append(name)
+        require(name, condition, message)
+
+    credential_reference_source = _function_source(
+        root,
+        ".agents/agentos/tool_runtime_profiles.py",
+        "credential_reference_contract_from_policy",
+    )
+    credential_profile_source = _function_source(
+        root,
+        ".agents/agentos/tool_runtime_profiles.py",
+        "resolve_runtime_profile_from_policy",
+    )
+    secret_resolve_source = _function_source(
+        root,
+        ".agents/agentos/secret_lineage.py",
+        "resolve_secret",
+    )
+    secret_runtime_source = _function_source(
+        root,
+        ".agents/agentos/secret_lineage.py",
+        "resolve_runtime_secret",
+    )
+    secret_source_full = _source(
+        root,
+        ".agents/agentos/secret_lineage.py",
+    )
+    sync_credential_source = _function_source(
+        root,
+        ".agents/agentos/proxy.py",
+        "_resolve_sync_credential_environment",
+    )
+    sync_redaction_source = _function_source(
+        root,
+        ".agents/agentos/proxy.py",
+        "_redact_projected_secret_values",
+    )
+    async_credential_source = _function_source(
+        root,
+        ".agents/agentos/jobs.py",
+        "_resolve_async_credential_environment",
+    )
+    async_start_credential_source = _function_source(
+        root,
+        ".agents/agentos/jobs.py",
+        "start_job",
+    )
+
+    require_credential(
+        "credential_policy_contract_enabled",
+        (
+            sandbox_policy.get(
+                "credential_reference_contract_enabled"
+            ) is True
+            and sandbox_policy.get(
+                "sync_credential_boundary_enabled"
+            ) is True
+            and sandbox_policy.get(
+                "sync_credential_environment_projection_enabled"
+            ) is True
+            and sandbox_policy.get(
+                "async_credential_boundary_enabled"
+            ) is True
+            and sandbox_policy.get(
+                "async_credential_environment_projection_enabled"
+            ) is True
+            and sandbox_policy.get(
+                "credential_structural_attestation_required"
+            ) is True
+            and sandbox_policy.get(
+                "credential_ci_validation_required"
+            ) is True
+            and sandbox_policy.get("scope")
+            == "agentos_mediated_process_execution"
+        ),
+        "v0.29.3 credential policy contract is incomplete",
+    )
+
+    require_credential(
+        "credential_reference_hash_bound",
+        (
+            "credential_reference_hash"
+            in credential_reference_source
+            and "credential_binding_hash"
+            in credential_profile_source
+            and "credential_binding_count"
+            in credential_profile_source
+            and "credential_reference_hash"
+            in sync_preflight_source
+            and "credential_binding_hash"
+            in sync_preflight_source
+            and '"credential_reference_hash"'
+            in async_submit_source
+            and '"credential_binding_hash"'
+            in async_submit_source
+            and '"credential_binding_count"'
+            in async_submit_source
+        ),
+        "credential references are not hash-bound across sync/async execution",
+    )
+
+    require_credential(
+        "credential_secret_resolver_reused",
+        (
+            'PROCESS_CREDENTIAL_CAPABILITY = "process.exec.credential"'
+            in profiles_source
+            and '"process.exec.credential"'
+            in secret_source_full
+            and "resolve_runtime_secret("
+            in sync_credential_source
+            and "resolve_runtime_secret("
+            in async_credential_source
+        ),
+        "process credentials do not reuse the trusted Secret Resolver",
+    )
+
+    sync_resolve_position = sync_execute_source.find(
+        "_resolve_sync_credential_environment("
+    )
+    sync_launch_position = sync_execute_source.find(
+        "_run_process_command("
+    )
+    require_credential(
+        "credential_sync_launch_time_resolution",
+        (
+            sync_resolve_position >= 0
+            and sync_launch_position >= 0
+            and sync_resolve_position < sync_launch_position
+            and "runtime_profile_credential_binding_drift"
+            in sync_execute_source
+            and "credential_target_env_collision"
+            in sync_credential_source
+        ),
+        "sync credential resolution is not bound before process launch",
+    )
+
+    require_credential(
+        "credential_sync_output_redacted",
+        (
+            "_redact_projected_secret_values("
+            in sync_execute_source
+            and "<redacted-secret>"
+            in sync_redaction_source
+            and '"credential_values_included": False'
+            in sync_execute_source
+        ),
+        "sync credential output is not structurally redacted",
+    )
+
+    require_credential(
+        "credential_async_spec_hash_only",
+        (
+            "async_credential_spec_binding_drift"
+            in async_revalidate_source
+            and '"credential_reference_hash"'
+            in async_submit_source
+            and '"credential_binding_hash"'
+            in async_submit_source
+            and '"credential_binding_count"'
+            in async_submit_source
+            and '"credential_values_included"'
+            in async_submit_source
+            and "secret://"
+            not in async_submit_source
+            and '"credential_bindings"'
+            not in async_submit_source
+            and "resolve_runtime_secret"
+            not in async_submit_source
+        ),
+        "async spec is not credential hash/count only",
+    )
+
+    async_spec_hash_position = async_start_credential_source.find(
+        "queued job specification hash mismatch"
+    )
+    async_resolve_position = async_start_credential_source.find(
+        "_resolve_async_credential_environment("
+    )
+    async_broker_position = async_start_credential_source.find(
+        "_launch_windows_job_broker("
+    )
+    async_popen_position = async_start_credential_source.find(
+        "subprocess.Popen("
+    )
+    async_launch_positions = [
+        pos
+        for pos in (
+            async_broker_position,
+            async_popen_position,
+        )
+        if pos >= 0
+    ]
+
+    require_credential(
+        "credential_async_launch_time_resolution",
+        (
+            async_spec_hash_position >= 0
+            and async_resolve_position >= 0
+            and bool(async_launch_positions)
+            and async_spec_hash_position < async_resolve_position
+            and async_resolve_position
+            < min(async_launch_positions)
+        ),
+        "async credential resolution is not after spec hash verification and before launch",
+    )
+
+    require_credential(
+        "credential_async_output_not_persisted",
+        (
+            "credential_output_suppressed"
+            in async_start_credential_source
+            and "os.devnull"
+            in async_start_credential_source
+            and "credential_output_persisted"
+            in async_start_credential_source
+        ),
+        "credentialed async stdout/stderr persistence is not disabled",
+    )
+
+    require_credential(
+        "credential_provider_approval_revalidated",
+        (
+            "_approved("
+            in secret_resolve_source
+            and "capability"
+            in secret_resolve_source
+            and "resolve_secret("
+            in secret_runtime_source
+            and "PROCESS_CREDENTIAL_CAPABILITY"
+            in sync_credential_source
+            and "PROCESS_CREDENTIAL_CAPABILITY"
+            in async_credential_source
+        ),
+        "provider/capability approval is not revalidated",
+    )
+
+    require_credential(
+        "credential_values_not_persisted",
+        (
+            sandbox_policy.get(
+                "credential_values_persisted_forbidden"
+            ) is True
+            and sandbox_policy.get(
+                "credential_projection_metadata_only_persisted"
+            ) is True
+            and sandbox_policy.get(
+                "credential_environment_hash_secret_independent"
+            ) is True
+            and sandbox_policy.get(
+                "async_credential_spec_reference_hash_only"
+            ) is True
+            and sandbox_policy.get(
+                "async_credential_environment_hash_secret_independent"
+            ) is True
+            and '"secret_included": False'
+            in secret_resolve_source
+            and '"secret_values_included": False'
+            in sync_execute_source
+            and '"credential_values_included": False'
+            in async_start_credential_source
+        ),
+        "credential values are not explicitly excluded from persisted evidence",
+    )
+
+    require_credential(
+        "credential_windows_file_secret_blocked",
+        (
+            'os.name == "nt"'
+            in secret_resolve_source
+            and 'provider.scheme == "file-secret"'
+            in secret_resolve_source
+            and "future ACL attestation"
+            in secret_resolve_source
+            and sandbox_policy.get(
+                "windows_file_secret_process_projection_attested"
+            ) is False
+        ),
+        "Windows file-secret process projection is not blocked pending ACL attestation",
+    )
+
+    require_credential(
+        "credential_broad_nonclaims_preserved",
+        (
+            sandbox_policy.get(
+                "credential_isolation_attested"
+            ) is False
+            and sandbox_policy.get(
+                "restricted_token_attested"
+            ) is False
+            and sandbox_policy.get(
+                "low_integrity_attested"
+            ) is False
+            and sandbox_policy.get(
+                "host_filesystem_isolation_attested"
+            ) is False
+            and sandbox_policy.get(
+                "os_write_confinement_attested"
+            ) is False
+            and sandbox_policy.get(
+                "same_user_host_bypass_resistance_claimed"
+            ) is False
+        ),
+        "credential boundary overclaims credential/OS/host isolation",
+    )
+
+    credential_structural_ok = all(
+        checks.get(name) is True
+        for name in credential_check_names
+    )
+    credential_policy_declared = bool(
+        sandbox_policy.get(
+            "credential_boundary_attested",
             False,
         )
     )
@@ -1584,6 +1918,67 @@ def attest_enforcement(
             ),
             "sandbox_version": sandbox_policy.get(
                 "sandbox_version"
+            ),
+        },
+        "credential_boundary": {
+            "structurally_attested": credential_structural_ok,
+            "sync_enforced": bool(
+                checks.get(
+                    "credential_sync_launch_time_resolution"
+                )
+                and checks.get(
+                    "credential_sync_output_redacted"
+                )
+            ),
+            "async_enforced": bool(
+                checks.get(
+                    "credential_async_spec_hash_only"
+                )
+                and checks.get(
+                    "credential_async_launch_time_resolution"
+                )
+                and checks.get(
+                    "credential_async_output_not_persisted"
+                )
+            ),
+            "reference_hash_bound": checks.get(
+                "credential_reference_hash_bound"
+            ) is True,
+            "launch_time_resolution": bool(
+                checks.get(
+                    "credential_sync_launch_time_resolution"
+                )
+                and checks.get(
+                    "credential_async_launch_time_resolution"
+                )
+            ),
+            "provider_approval_revalidated": checks.get(
+                "credential_provider_approval_revalidated"
+            ) is True,
+            "secret_values_not_persisted": checks.get(
+                "credential_values_not_persisted"
+            ) is True,
+            "credentialed_output_safe": bool(
+                checks.get(
+                    "credential_sync_output_redacted"
+                )
+                and checks.get(
+                    "credential_async_output_not_persisted"
+                )
+            ),
+            "windows_file_secret_blocked": checks.get(
+                "credential_windows_file_secret_blocked"
+            ) is True,
+            "broad_nonclaims_preserved": checks.get(
+                "credential_broad_nonclaims_preserved"
+            ) is True,
+            "policy_declared_attested": credential_policy_declared,
+            "policy_scope": sandbox_policy.get("scope"),
+            "credential_isolation_attested": (
+                sandbox_policy.get(
+                    "credential_isolation_attested"
+                )
+                is True
             ),
         },
         "mcp": {

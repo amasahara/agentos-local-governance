@@ -1,30 +1,38 @@
-# AgentOS Local Governance v0.29.2 — Windows Sandbox Workspace & Tool Runtime Profiles
+# AgentOS Local Governance v0.29.3 — Sandbox Configuration & Credential Boundary
 
-v0.29.2 bổ sung lớp **sandbox workspace + tool runtime profile** cho phạm vi
-**AgentOS-mediated process execution** trên Windows, kế thừa trực tiếp
-process-tree containment của v0.29.1.
+v0.29.3 activates governed **sandbox configuration + process credential
+boundary** for **AgentOS-mediated process execution**, inheriting v0.29.1
+Windows process-tree containment and v0.29.2 sandbox/runtime profiles.
 
-## Enforcement được activate
+## Enforcement activated
 
-- deterministic tool runtime profiles;
-- bounded sandbox workspace cho execution;
-- sync runtime-profile enforcement;
-- async profile snapshot/hash binding;
-- async pre-launch revalidation;
-- redirect mutable runtime state theo profile;
-- terminal cleanup evidence;
-- giữ nguyên v0.29.1 Windows process-tree containment;
-- Windows CI có focused suite, v0.29.1 containment activation regression,
-  v0.29.2 activation suite và full regression.
+- effective-policy sandbox configuration with deterministic configuration hash;
+- fail-closed runtime-profile security floor;
+- `secret://alias`-only process credential references;
+- existing trusted Secret Resolver with provider identity/hash/capability approval;
+- synchronous launch-time credential resolution;
+- asynchronous credential hash/count binding and launch-time resolution;
+- immutable async `spec_hash` verification before Secret Resolver invocation;
+- no raw credential values in configuration/spec/audit evidence;
+- secret-independent sync environment evidence;
+- exact-value sync stdout/stderr redaction;
+- credential-bearing async stdout/stderr persistence disabled;
+- Windows `file-secret` process projection blocked pending ACL attestation;
+- focused credential-boundary CI on Ubuntu and Windows;
+- inherited v0.29.1 containment and v0.29.2 sandbox activation regressions.
 
 ## Release attestation
 
 ```text
-runtime_profile_sandbox_attested = true
+sandbox_configuration_attested = true
+credential_boundary_enabled = true
+credential_boundary_attested = true
+sync_credential_boundary_attested = true
+async_credential_boundary_attested = true
 scope = agentos_mediated_process_execution
 ```
 
-Các claim sau **vẫn false**:
+These claims remain false:
 
 ```text
 credential_isolation_attested = false
@@ -35,15 +43,16 @@ os_write_confinement_attested = false
 same_user_host_bypass_resistance_claimed = false
 ```
 
-Do đó v0.29.2 không được mô tả như general Windows sandbox, Restricted Token
-sandbox, Low Integrity sandbox hoặc same-user host-bypass resistant isolation.
+The release therefore does not claim OS-level credential isolation, Restricted
+Token, Low Integrity, host-filesystem confinement, OS write confinement, or
+same-user host-bypass resistance.
 
 ## Schema
 
-Database schema remains **62**. Không có schema migration trong v0.29.2.
+Database schema remains **62**. There is no v0.29.3 schema migration.
 
 ## Finalization
 
-Sau activation phải regenerate deterministic generated governance,
-`MANIFEST.json`, `CHECKSUMS.sha256` và `PACKAGE_COMPLETENESS.json`, rồi mới chạy
-docs/release-integrity/manifest/full release gates và stage/commit.
+After activation, regenerate deterministic effective governance,
+`PACKAGE_COMPLETENESS.json`, `MANIFEST.json`, and `CHECKSUMS.sha256`; then run
+full regression and release gates before staging/commit/tagging.

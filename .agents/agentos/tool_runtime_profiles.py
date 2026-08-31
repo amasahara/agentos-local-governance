@@ -24,6 +24,7 @@ from typing import Any
 
 RUNTIME_PROFILE_VERSION = 1
 SANDBOX_WORKSPACE_VERSION = 1
+SANDBOX_CONFIGURATION_VERSION = 1
 SANDBOX_SCOPE = "agentos_mediated_process_execution"
 
 _SAFE_KEY = re.compile(r"^[A-Za-z0-9._-]{1,96}$")
@@ -216,6 +217,20 @@ def _validate_profile(
         "python_bytecode_cache": "sandbox_local",
     }
 
+    unknown = sorted(set(profile) - set(expected))
+    if unknown:
+        raise RuntimeError(
+            "tool_runtime_profile_unknown_fields:"
+            + _canonical(unknown)
+        )
+
+    missing = sorted(set(expected) - set(profile))
+    if missing:
+        raise RuntimeError(
+            "tool_runtime_profile_missing_fields:"
+            + _canonical(missing)
+        )
+
     mismatches = {
         key: {
             "expected": value,
@@ -233,6 +248,778 @@ def _validate_profile(
 
     return dict(profile)
 
+CREDENTIAL_REFERENCE_VERSION = 1
+CREDENTIAL_REFERENCE_SCHEME = "secret"
+CREDENTIAL_RESOLVER_CONTRACT = "secret-resolver-v1"
+PROCESS_CREDENTIAL_CAPABILITY = "process.exec.credential"
+
+_CREDENTIAL_BINDING_FIELDS = {
+    "binding_id",
+    "credential_ref",
+    "target_env",
+    "secret_field",
+}
+
+_CREDENTIAL_ENV_MARKERS = (
+    "TOKEN",
+    "SECRET",
+    "PASSWORD",
+    "API_KEY",
+    "AUTH",
+    "COOKIE",
+    "CREDENTIAL",
+)
+
+_CREDENTIAL_RESERVED_ENV = {
+    "PATH",
+    "PYTHONPATH",
+    "HOME",
+    "USERPROFILE",
+    "TMP",
+    "TEMP",
+    "TMPDIR",
+    "SYSTEMROOT",
+    "WINDIR",
+    "XDG_CACHE_HOME",
+    "PIP_CACHE_DIR",
+    "PYTHONPYCACHEPREFIX",
+    "NPM_CONFIG_CACHE",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "NO_PROXY",
+    "SSH_AUTH_SOCK",
+}
+
+
+def _validate_credential_alias_reference(value: Any) -> str:
+    ref = str(value or "").strip()
+
+    if not ref.startswith("secret://"):
+        raise RuntimeError(
+            "credential_reference_must_use_secret_alias"
+        )
+
+    alias = ref[len("secret://"):]
+    if (
+        not alias
+        or "/" in alias
+        or "\\" in alias
+        or "?" in alias
+        or "#" in alias
+        or not re.fullmatch(
+            r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}",
+            alias,
+        )
+    ):
+        raise RuntimeError(
+            "credential_reference_alias_invalid"
+        )
+
+    return "secret://" + alias
+
+
+def _validate_credential_target_env(value: Any) -> str:
+    target = str(value or "").strip()
+
+    if not re.fullmatch(
+        r"[A-Z_][A-Z0-9_]{0,127}",
+        target,
+    ):
+        raise RuntimeError(
+            "credential_target_env_invalid"
+        )
+
+    if target.upper() in _CREDENTIAL_RESERVED_ENV:
+        raise RuntimeError(
+            "credential_target_env_reserved"
+        )
+
+    if not any(
+        marker in target.upper()
+        for marker in _CREDENTIAL_ENV_MARKERS
+    ):
+        raise RuntimeError(
+            "credential_target_env_must_be_secret_classified"
+        )
+
+    return target
+
+
+def _validate_credential_secret_field(value: Any) -> str:
+    field = str(value or "").strip()
+
+    if not re.fullmatch(
+        r"[A-Za-z_][A-Za-z0-9_.-]{0,127}",
+        field,
+    ):
+        raise RuntimeError(
+            "credential_secret_field_invalid"
+        )
+
+    return field
+
+
+def _normalize_credential_binding(
+    value: Any,
+) -> dict[str, str]:
+    if not isinstance(value, dict):
+        raise RuntimeError(
+            "credential_binding_must_be_object"
+        )
+
+    unknown = sorted(
+        set(value)
+        - _CREDENTIAL_BINDING_FIELDS
+    )
+    missing = sorted(
+        _CREDENTIAL_BINDING_FIELDS
+        - set(value)
+    )
+
+    if unknown:
+        raise RuntimeError(
+            "credential_binding_unknown_fields:"
+            + _canonical(unknown)
+        )
+
+    if missing:
+        raise RuntimeError(
+            "credential_binding_missing_fields:"
+            + _canonical(missing)
+        )
+
+    binding_id = str(
+        value.get("binding_id")
+        or ""
+    ).strip()
+
+    if not re.fullmatch(
+        r"[a-z][a-z0-9._-]{0,63}",
+        binding_id,
+    ):
+        raise RuntimeError(
+            "credential_binding_id_invalid"
+        )
+
+    return {
+        "binding_id": binding_id,
+        "credential_ref": _validate_credential_alias_reference(
+            value.get("credential_ref")
+        ),
+        "target_env": _validate_credential_target_env(
+            value.get("target_env")
+        ),
+        "secret_field": _validate_credential_secret_field(
+            value.get("secret_field")
+        ),
+    }
+
+
+def credential_reference_contract_from_policy(
+    policy: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Validate and canonicalize the v0.29.3 credential reference contract.
+
+    Phase 2 is reference-only: it does not resolve secret material and does not
+    project credential values into a child process.
+    """
+    if not isinstance(policy, dict):
+        raise RuntimeError(
+            "credential_reference_policy_must_be_object"
+        )
+
+    section = policy.get(
+        "sandbox_workspace_runtime_profile_policy"
+    )
+    if not isinstance(section, dict):
+        raise RuntimeError(
+            "credential_reference_policy_section_missing"
+        )
+
+    required_true = [
+        'credential_reference_contract_enabled',
+        'credential_reference_secret_alias_only',
+        'credential_reference_hash_required',
+        'credential_raw_values_forbidden',
+        'credential_values_persisted_forbidden',
+    ]
+    required_false = [
+        'caller_credential_reference_override_allowed',
+        'caller_raw_credential_override_allowed',
+        'windows_file_secret_process_projection_attested',
+    ]
+
+    activated = (
+        str(policy.get("version") or "").strip()
+        == "0.29.3"
+    )
+
+    if activated:
+        required_true.extend(
+            (
+                'credential_environment_projection_enabled',
+                'credential_boundary_attested',
+                'credential_boundary_enabled',
+            )
+        )
+    else:
+        required_false.extend(
+            (
+                'credential_environment_projection_enabled',
+                'credential_boundary_attested',
+                'credential_boundary_enabled',
+            )
+        )
+
+
+    bad_true = [
+        key
+        for key in required_true
+        if section.get(key) is not True
+    ]
+    bad_false = [
+        key
+        for key in required_false
+        if section.get(key) is not False
+    ]
+
+    if bad_true or bad_false:
+        raise RuntimeError(
+            "credential_reference_contract_invalid:"
+            + _canonical(
+                {
+                    "required_true": bad_true,
+                    "required_false": bad_false,
+                }
+            )
+        )
+
+    if int(
+        section.get(
+            "credential_reference_version",
+            0,
+        )
+    ) != CREDENTIAL_REFERENCE_VERSION:
+        raise RuntimeError(
+            "credential_reference_version_invalid"
+        )
+
+    if (
+        section.get(
+            "credential_reference_scheme"
+        )
+        != CREDENTIAL_REFERENCE_SCHEME
+    ):
+        raise RuntimeError(
+            "credential_reference_scheme_invalid"
+        )
+
+    if (
+        section.get(
+            "credential_resolver_contract"
+        )
+        != CREDENTIAL_RESOLVER_CONTRACT
+    ):
+        raise RuntimeError(
+            "credential_resolver_contract_invalid"
+        )
+
+    if (
+        section.get(
+            "process_credential_capability"
+        )
+        != PROCESS_CREDENTIAL_CAPABILITY
+    ):
+        raise RuntimeError(
+            "process_credential_capability_invalid"
+        )
+
+    configured = section.get(
+        "credential_bindings"
+    )
+    if not isinstance(configured, dict):
+        raise RuntimeError(
+            "credential_bindings_must_be_object"
+        )
+
+    known = set(
+        section.get(
+            "known_profiles",
+            [],
+        )
+    )
+
+    if set(configured) != known:
+        raise RuntimeError(
+            "credential_binding_profile_set_mismatch"
+        )
+
+    normalized: dict[str, list[dict[str, str]]] = {}
+
+    for profile in sorted(known):
+        bindings = configured.get(profile)
+
+        if not isinstance(bindings, list):
+            raise RuntimeError(
+                "credential_profile_bindings_must_be_list"
+            )
+
+        items = [
+            _normalize_credential_binding(
+                item
+            )
+            for item in bindings
+        ]
+
+        ids = [
+            item["binding_id"]
+            for item in items
+        ]
+        targets = [
+            item["target_env"]
+            for item in items
+        ]
+
+        if len(ids) != len(set(ids)):
+            raise RuntimeError(
+                "credential_binding_id_duplicate"
+            )
+
+        if len(targets) != len(set(targets)):
+            raise RuntimeError(
+                "credential_target_env_duplicate"
+            )
+
+        normalized[profile] = sorted(
+            items,
+            key=lambda item: (
+                item["binding_id"],
+                item["target_env"],
+            ),
+        )
+
+    payload = {
+        "credential_reference_version": (
+            CREDENTIAL_REFERENCE_VERSION
+        ),
+        "credential_reference_scheme": (
+            CREDENTIAL_REFERENCE_SCHEME
+        ),
+        "credential_resolver_contract": (
+            CREDENTIAL_RESOLVER_CONTRACT
+        ),
+        "process_credential_capability": (
+            PROCESS_CREDENTIAL_CAPABILITY
+        ),
+        "credential_bindings": normalized,
+    }
+
+    return {
+        **payload,
+        "credential_reference_hash": _sha(
+            payload
+        ),
+    }
+
+
+def credential_bindings_for_profile(
+    command_profile: str,
+    policy: dict[str, Any],
+) -> dict[str, Any]:
+    contract = (
+        credential_reference_contract_from_policy(
+            policy
+        )
+    )
+    name = str(
+        command_profile
+        or ""
+    ).strip().lower()
+
+    if name not in contract[
+        "credential_bindings"
+    ]:
+        raise RuntimeError(
+            "credential_binding_profile_unknown"
+        )
+
+    bindings = contract[
+        "credential_bindings"
+    ][name]
+
+    binding_payload = {
+        "profile": name,
+        "bindings": bindings,
+        "credential_reference_hash": contract[
+            "credential_reference_hash"
+        ],
+    }
+
+    return {
+        "profile": name,
+        "bindings": bindings,
+        "binding_count": len(bindings),
+        "binding_hash": _sha(
+            binding_payload
+        ),
+        "credential_reference_hash": contract[
+            "credential_reference_hash"
+        ],
+        "credential_reference_version": contract[
+            "credential_reference_version"
+        ],
+        "credential_resolver_contract": contract[
+            "credential_resolver_contract"
+        ],
+        "process_credential_capability": contract[
+            "process_credential_capability"
+        ],
+        "secret_values_included": False,
+    }
+
+def sandbox_configuration_from_policy(
+    policy: dict[str, Any],
+) -> dict[str, Any]:
+    """Resolve the governed v0.29.3 sandbox configuration contract."""
+    if not isinstance(policy, dict):
+        raise RuntimeError(
+            "sandbox_configuration_policy_must_be_object"
+        )
+
+    section = policy.get(
+        "sandbox_workspace_runtime_profile_policy"
+    )
+    if not isinstance(section, dict):
+        raise RuntimeError(
+            "sandbox_configuration_policy_section_missing"
+        )
+
+    required_true = [
+        'sandbox_configuration_contract_enabled',
+        'sandbox_configuration_hash_required',
+        'configured_profiles_must_match_known_profiles',
+        'security_invariants_runtime_enforced',
+    ]
+    required_false = [
+        'unknown_profile_fields_allowed',
+        'caller_configuration_override_allowed',
+    ]
+
+    activated = (
+        str(policy.get("version") or "").strip()
+        == "0.29.3"
+    )
+
+    if activated:
+        required_true.extend(
+            (
+                'sandbox_configuration_attested',
+                'credential_boundary_enabled',
+            )
+        )
+    else:
+        required_false.extend(
+            (
+                'sandbox_configuration_attested',
+                'credential_boundary_enabled',
+            )
+        )
+
+
+    bad_true = [
+        key
+        for key in required_true
+        if section.get(key) is not True
+    ]
+    bad_false = [
+        key
+        for key in required_false
+        if section.get(key) is not False
+    ]
+
+    if bad_true or bad_false:
+        raise RuntimeError(
+            "sandbox_configuration_contract_invalid:"
+            + _canonical(
+                {
+                    "required_true": bad_true,
+                    "required_false": bad_false,
+                }
+            )
+        )
+
+    if int(
+        section.get(
+            "sandbox_configuration_version",
+            0,
+        )
+    ) != SANDBOX_CONFIGURATION_VERSION:
+        raise RuntimeError(
+            "sandbox_configuration_version_invalid"
+        )
+
+    if (
+        section.get("sandbox_configuration_source")
+        != "effective_policy"
+    ):
+        raise RuntimeError(
+            "sandbox_configuration_source_invalid"
+        )
+
+    configured = section.get(
+        "configured_profiles"
+    )
+    if not isinstance(configured, dict):
+        raise RuntimeError(
+            "sandbox_configuration_profiles_must_be_object"
+        )
+
+    known = set(
+        section.get(
+            "known_profiles",
+            [],
+        )
+    )
+    if known != set(_DEFAULT_RUNTIME_PROFILES):
+        raise RuntimeError(
+            "sandbox_configuration_known_profiles_invalid"
+        )
+
+    if set(configured) != known:
+        raise RuntimeError(
+            "sandbox_configuration_profile_set_mismatch"
+        )
+
+    validated = {
+        name: _validate_profile(
+            name,
+            configured[name],
+        )
+        for name in sorted(known)
+    }
+
+    credential_contract = (
+        credential_reference_contract_from_policy(
+            policy
+        )
+    )
+
+    payload = {
+        "configuration_version": (
+            SANDBOX_CONFIGURATION_VERSION
+        ),
+        "configuration_source": (
+            "effective_policy"
+        ),
+        "profiles": validated,
+        "credential_reference_version": (
+            credential_contract[
+                "credential_reference_version"
+            ]
+        ),
+        "credential_reference_hash": (
+            credential_contract[
+                "credential_reference_hash"
+            ]
+        ),
+        "credential_bindings": (
+            credential_contract[
+                "credential_bindings"
+            ]
+        ),
+    }
+
+    return {
+        **payload,
+        "configuration_hash": _sha(
+            payload
+        ),
+    }
+
+def resolve_runtime_profile_from_policy(
+    command_profile: str,
+    policy: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Resolve a policy-bound profile.
+
+    Historical internal tests may provide a minimal synthetic policy without
+    the v0.29.3 configuration section. That compatibility path returns the
+    v0.29.2 built-in profile. Real AgentOS execution uses load_policy(root),
+    which contains and validates the governed configuration contract.
+    """
+    section = (
+        policy.get(
+            "sandbox_workspace_runtime_profile_policy"
+        )
+        if isinstance(policy, dict)
+        else None
+    )
+
+    if (
+        not isinstance(section, dict)
+        or "sandbox_configuration_contract_enabled"
+        not in section
+    ):
+        return resolve_runtime_profile(
+            command_profile
+        )
+
+    configuration = (
+        sandbox_configuration_from_policy(
+            policy
+        )
+    )
+
+    resolved = resolve_runtime_profile(
+        command_profile,
+        configuration["profiles"],
+    )
+
+    credential_binding = (
+        credential_bindings_for_profile(
+            command_profile,
+            policy,
+        )
+    )
+
+    return {
+        **resolved,
+        "configuration_version": (
+            configuration[
+                "configuration_version"
+            ]
+        ),
+        "configuration_source": (
+            configuration[
+                "configuration_source"
+            ]
+        ),
+        "configuration_hash": (
+            configuration[
+                "configuration_hash"
+            ]
+        ),
+        "credential_reference_version": (
+            credential_binding[
+                "credential_reference_version"
+            ]
+        ),
+        "credential_reference_hash": (
+            credential_binding[
+                "credential_reference_hash"
+            ]
+        ),
+        "credential_binding_hash": (
+            credential_binding[
+                "binding_hash"
+            ]
+        ),
+        "credential_binding_count": (
+            credential_binding[
+                "binding_count"
+            ]
+        ),
+        "credential_resolver_contract": (
+            credential_binding[
+                "credential_resolver_contract"
+            ]
+        ),
+        "process_credential_capability": (
+            credential_binding[
+                "process_credential_capability"
+            ]
+        ),
+        "credential_values_included": False,
+    }
+
+def _validate_resolved_runtime_profile(
+    command_profile: str,
+    resolved: dict[str, Any],
+) -> dict[str, Any]:
+    """Reject forged internal resolved-profile objects."""
+    if not isinstance(resolved, dict):
+        raise RuntimeError(
+            "resolved_runtime_profile_must_be_object"
+        )
+
+    name = str(command_profile or "").strip().lower()
+    profile = resolved.get("profile")
+    if not isinstance(profile, dict):
+        raise RuntimeError(
+            "resolved_runtime_profile_data_missing"
+        )
+
+    expected = resolve_runtime_profile(
+        name,
+        {
+            name: profile,
+        },
+    )
+
+    for key in (
+        "name",
+        "profile_version",
+        "profile_hash",
+        "scope",
+    ):
+        if resolved.get(key) != expected.get(key):
+            raise RuntimeError(
+                "resolved_runtime_profile_contract_mismatch:"
+                + key
+            )
+
+    result = dict(resolved)
+    config_fields = (
+        "configuration_version",
+        "configuration_source",
+        "configuration_hash",
+    )
+    present = [
+        key
+        for key in config_fields
+        if key in result
+    ]
+
+    if present and len(present) != len(config_fields):
+        raise RuntimeError(
+            "resolved_runtime_profile_configuration_incomplete"
+        )
+
+    if present:
+        if int(
+            result.get(
+                "configuration_version",
+                0,
+            )
+        ) != SANDBOX_CONFIGURATION_VERSION:
+            raise RuntimeError(
+                "resolved_runtime_profile_configuration_version_invalid"
+            )
+        if (
+            result.get("configuration_source")
+            != "effective_policy"
+        ):
+            raise RuntimeError(
+                "resolved_runtime_profile_configuration_source_invalid"
+            )
+        config_hash = str(
+            result.get(
+                "configuration_hash",
+                "",
+            )
+        )
+        if not re.fullmatch(
+            r"[0-9a-f]{64}",
+            config_hash,
+        ):
+            raise RuntimeError(
+                "resolved_runtime_profile_configuration_hash_invalid"
+            )
+
+    return result
 
 def resolve_runtime_profile(
     command_profile: str,
@@ -393,15 +1180,11 @@ def create_sandbox_workspace(
     session_id: str,
     execution_id: str,
     command_profile: str,
+    *,
+    resolved_runtime_profile: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """
-    Materialize a deterministic sandbox layout and source snapshot.
-
-    source_root is expected to have already been resolved by AgentOS against
-    the governed primary root or an exact bound worker worktree.
-    """
+    """Materialize a sandbox bound to a validated runtime profile."""
     primary = primary_root.resolve()
-
     _assert_not_reparse(
         source_root,
         label="sandbox_source_root",
@@ -418,7 +1201,6 @@ def create_sandbox_workspace(
         primary
         / ".agents"
     ).resolve()
-
     try:
         source.relative_to(
             primary_agents
@@ -430,9 +1212,17 @@ def create_sandbox_workspace(
             "sandbox_source_must_not_be_agentos_managed_root"
         )
 
-    resolved = resolve_runtime_profile(
-        command_profile
+    resolved = (
+        _validate_resolved_runtime_profile(
+            command_profile,
+            resolved_runtime_profile,
+        )
+        if resolved_runtime_profile is not None
+        else resolve_runtime_profile(
+            command_profile
+        )
     )
+
     layout = sandbox_layout(
         primary,
         task_id,
@@ -442,7 +1232,6 @@ def create_sandbox_workspace(
     )
 
     root = Path(layout["root"])
-
     if root.exists():
         raise FileExistsError(
             "sandbox_workspace_already_exists"
@@ -464,7 +1253,6 @@ def create_sandbox_workspace(
                 parents=True,
                 exist_ok=False,
             )
-
         _copy_snapshot_tree(
             source,
             Path(layout["workspace"]),
@@ -480,7 +1268,7 @@ def create_sandbox_workspace(
         Path(layout["workspace"])
     )
 
-    return {
+    result = {
         "sandbox_version": SANDBOX_WORKSPACE_VERSION,
         "scope": SANDBOX_SCOPE,
         "profile_name": resolved["name"],
@@ -501,6 +1289,22 @@ def create_sandbox_workspace(
         ),
     }
 
+    if "configuration_hash" in resolved:
+        result.update(
+            {
+                "configuration_version": resolved[
+                    "configuration_version"
+                ],
+                "configuration_source": resolved[
+                    "configuration_source"
+                ],
+                "configuration_hash": resolved[
+                    "configuration_hash"
+                ],
+            }
+        )
+
+    return result
 
 def _snapshot_hash_tree(
     root: Path,

@@ -20,7 +20,7 @@ from .db import connect
 
 CLAIM_TYPES = {"business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"}
 RISK_LEVELS = {"low", "medium", "high"}
-SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy", "governed_skill_contract_policy", "architecture_aware_skill_selection_policy", "privileged_control_plane_policy"}
+SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy", "governed_skill_contract_policy", "architecture_aware_skill_selection_policy", "privileged_control_plane_policy", "sandbox_workspace_runtime_profile_policy"}
 SAFE_OVERRIDE_KEYS = {"source_root", "test_path", "encoding", "runtime_paths"}
 
 
@@ -358,6 +358,507 @@ def _validate_sandbox_workspace_runtime_profile_policy_v0292(
             "sandbox workspace runtime-profile CI runner is invalid"
         )
 
+def _validate_sandbox_configuration_contract_v0293_preactivation(
+    policy: dict[str, Any],
+) -> None:
+    """Validate the v0.29.3 Phase 1 contract when present."""
+    section = policy.get(
+        "sandbox_workspace_runtime_profile_policy"
+    )
+    if not isinstance(section, dict):
+        return
+
+    if "sandbox_configuration_contract_enabled" not in section:
+        return
+
+    required_true = [
+        'sandbox_configuration_contract_enabled',
+        'sandbox_configuration_hash_required',
+        'configured_profiles_must_match_known_profiles',
+        'security_invariants_runtime_enforced',
+    ]
+    required_false = [
+        'unknown_profile_fields_allowed',
+        'caller_configuration_override_allowed',
+    ]
+
+    version = _policy_version_tuple(policy)
+    if version < (0, 29, 3):
+        return
+
+    activated = True
+
+    if activated:
+        required_true.extend(
+            (
+                'sandbox_configuration_attested',
+                'credential_boundary_enabled',
+            )
+        )
+    else:
+        required_false.extend(
+            (
+                'sandbox_configuration_attested',
+                'credential_boundary_enabled',
+            )
+        )
+
+
+    disabled = [
+        key
+        for key in required_true
+        if section.get(key) is not True
+    ]
+    invalid_false = [
+        key
+        for key in required_false
+        if section.get(key) is not False
+    ]
+
+    if disabled or invalid_false:
+        raise RuntimeError(
+            "sandbox configuration contract invalid: "
+            + repr(
+                {
+                    "disabled": disabled,
+                    "invalid_false": invalid_false,
+                }
+            )
+        )
+
+    if int(
+        section.get(
+            "sandbox_configuration_version",
+            0,
+        )
+    ) != 1:
+        raise RuntimeError(
+            "sandbox configuration version is invalid"
+        )
+
+    if (
+        section.get("sandbox_configuration_source")
+        != "effective_policy"
+    ):
+        raise RuntimeError(
+            "sandbox configuration source is invalid"
+        )
+
+    configured = section.get("configured_profiles")
+    known = set(section.get("known_profiles", []))
+
+    if not isinstance(configured, dict):
+        raise RuntimeError(
+            "sandbox configured profiles must be an object"
+        )
+
+    if set(configured) != known:
+        raise RuntimeError(
+            "sandbox configured profile set mismatch"
+        )
+
+    expected_keys = {
+        "profile_version",
+        "command_profile",
+        "source_mode",
+        "writable_scope",
+        "persistent_workspace_writes",
+        "network_policy",
+        "sandbox_temp",
+        "sandbox_cache",
+        "sandbox_home",
+        "package_cache_mode",
+        "python_bytecode_cache",
+    }
+
+    for name in sorted(known):
+        profile = configured.get(name)
+        if not isinstance(profile, dict):
+            raise RuntimeError(
+                "sandbox configured profile must be an object"
+            )
+        if set(profile) != expected_keys:
+            raise RuntimeError(
+                "sandbox configured profile schema is invalid"
+            )
+
+        expected = {
+            "profile_version": 1,
+            "command_profile": name,
+            "source_mode": "snapshot_copy",
+            "writable_scope": "sandbox_only",
+            "persistent_workspace_writes": False,
+            "network_policy": "none",
+            "sandbox_temp": True,
+            "sandbox_cache": True,
+            "sandbox_home": True,
+            "package_cache_mode": "sandbox_local",
+            "python_bytecode_cache": "sandbox_local",
+        }
+
+        if profile != expected:
+            raise RuntimeError(
+                "sandbox configured profile weakens runtime invariants"
+            )
+
+def _validate_credential_reference_contract_v0293_preactivation(
+    policy: dict[str, Any],
+) -> None:
+    """
+    Validate Phase 2 reference-only credential configuration.
+
+    Secret values are not resolved or projected in this phase.
+    """
+    section = policy.get(
+        "sandbox_workspace_runtime_profile_policy"
+    )
+    if not isinstance(section, dict):
+        return
+
+    if (
+        "credential_reference_contract_enabled"
+        not in section
+    ):
+        return
+
+    required_true = [
+        'credential_reference_contract_enabled',
+        'credential_reference_secret_alias_only',
+        'credential_reference_hash_required',
+        'credential_raw_values_forbidden',
+        'credential_values_persisted_forbidden',
+    ]
+    required_false = [
+        'caller_credential_reference_override_allowed',
+        'caller_raw_credential_override_allowed',
+        'windows_file_secret_process_projection_attested',
+    ]
+
+    version = _policy_version_tuple(policy)
+    if version < (0, 29, 3):
+        return
+
+    activated = True
+
+    if activated:
+        required_true.extend(
+            (
+                'credential_environment_projection_enabled',
+                'credential_boundary_attested',
+                'credential_boundary_enabled',
+            )
+        )
+    else:
+        required_false.extend(
+            (
+                'credential_environment_projection_enabled',
+                'credential_boundary_attested',
+                'credential_boundary_enabled',
+            )
+        )
+
+
+    bad_true = [
+        key
+        for key in required_true
+        if section.get(key) is not True
+    ]
+    bad_false = [
+        key
+        for key in required_false
+        if section.get(key) is not False
+    ]
+
+    if bad_true or bad_false:
+        raise RuntimeError(
+            "credential reference policy contract invalid: "
+            + repr(
+                {
+                    "required_true": bad_true,
+                    "required_false": bad_false,
+                }
+            )
+        )
+
+    if int(
+        section.get(
+            "credential_reference_version",
+            0,
+        )
+    ) != 1:
+        raise RuntimeError(
+            "credential reference version is invalid"
+        )
+
+    if (
+        section.get(
+            "credential_reference_scheme"
+        )
+        != "secret"
+    ):
+        raise RuntimeError(
+            "credential reference scheme is invalid"
+        )
+
+    if (
+        section.get(
+            "credential_resolver_contract"
+        )
+        != "secret-resolver-v1"
+    ):
+        raise RuntimeError(
+            "credential resolver contract is invalid"
+        )
+
+    if (
+        section.get(
+            "process_credential_capability"
+        )
+        != "process.exec.credential"
+    ):
+        raise RuntimeError(
+            "process credential capability is invalid"
+        )
+
+    known = set(
+        section.get(
+            "known_profiles",
+            [],
+        )
+    )
+    bindings = section.get(
+        "credential_bindings"
+    )
+
+    if not isinstance(bindings, dict):
+        raise RuntimeError(
+            "credential bindings must be an object"
+        )
+
+    if set(bindings) != known:
+        raise RuntimeError(
+            "credential binding profile set mismatch"
+        )
+
+    allowed_fields = {
+        "binding_id",
+        "credential_ref",
+        "target_env",
+        "secret_field",
+    }
+
+    reserved = {
+        "PATH",
+        "PYTHONPATH",
+        "HOME",
+        "USERPROFILE",
+        "TMP",
+        "TEMP",
+        "TMPDIR",
+        "SYSTEMROOT",
+        "WINDIR",
+        "XDG_CACHE_HOME",
+        "PIP_CACHE_DIR",
+        "PYTHONPYCACHEPREFIX",
+        "NPM_CONFIG_CACHE",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "ALL_PROXY",
+        "NO_PROXY",
+        "SSH_AUTH_SOCK",
+    }
+
+    secret_markers = (
+        "TOKEN",
+        "SECRET",
+        "PASSWORD",
+        "API_KEY",
+        "AUTH",
+        "COOKIE",
+        "CREDENTIAL",
+    )
+
+    for profile in sorted(known):
+        items = bindings.get(profile)
+
+        if not isinstance(items, list):
+            raise RuntimeError(
+                "credential profile bindings must be a list"
+            )
+
+        seen_ids: set[str] = set()
+        seen_targets: set[str] = set()
+
+        for item in items:
+            if not isinstance(item, dict):
+                raise RuntimeError(
+                    "credential binding must be an object"
+                )
+
+            if set(item) != allowed_fields:
+                raise RuntimeError(
+                    "credential binding schema is invalid"
+                )
+
+            binding_id = str(
+                item.get("binding_id")
+                or ""
+            ).strip()
+            if not binding_id:
+                raise RuntimeError(
+                    "credential binding id is invalid"
+                )
+
+            ref = str(
+                item.get("credential_ref")
+                or ""
+            ).strip()
+            if (
+                not ref.startswith("secret://")
+                or ref == "secret://"
+                or any(
+                    token in ref
+                    for token in (
+                        "/",
+                        "?",
+                        "#",
+                    )
+                    if token != "/"
+                )
+            ):
+                raise RuntimeError(
+                    "credential reference must be secret alias only"
+                )
+
+            target = str(
+                item.get("target_env")
+                or ""
+            ).strip().upper()
+
+            if (
+                not target
+                or target in reserved
+                or not any(
+                    marker in target
+                    for marker in secret_markers
+                )
+            ):
+                raise RuntimeError(
+                    "credential target environment is invalid"
+                )
+
+            secret_field = str(
+                item.get("secret_field")
+                or ""
+            ).strip()
+            if not secret_field:
+                raise RuntimeError(
+                    "credential secret field is invalid"
+                )
+
+            if binding_id in seen_ids:
+                raise RuntimeError(
+                    "credential binding id duplicate"
+                )
+            if target in seen_targets:
+                raise RuntimeError(
+                    "credential target environment duplicate"
+                )
+
+            seen_ids.add(binding_id)
+            seen_targets.add(target)
+
+def _validate_sync_credential_boundary_v0293_preactivation(
+    policy: dict[str, Any],
+) -> None:
+    """Validate Phase 3+4 sync/async credential controls."""
+    section = policy.get(
+        "sandbox_workspace_runtime_profile_policy"
+    )
+    if not isinstance(section, dict):
+        return
+
+    if "sync_credential_boundary_enabled" not in section:
+        return
+
+    required_true = [
+        'sync_credential_boundary_enabled',
+        'sync_credential_environment_projection_enabled',
+        'credential_resolution_at_launch_only',
+        'credential_field_projection_only',
+        'credential_projection_metadata_only_persisted',
+        'credential_environment_hash_secret_independent',
+        'credential_output_exact_value_redaction_required',
+        'async_credential_boundary_enabled',
+        'async_credential_environment_projection_enabled',
+        'async_credential_resolution_at_launch_only',
+        'async_credential_spec_reference_hash_only',
+        'async_credential_provider_approval_revalidated',
+        'async_credential_output_persistence_disabled',
+        'async_credential_environment_hash_secret_independent',
+        'credential_structural_attestation_required',
+        'credential_ci_validation_required',
+    ]
+    required_false = [
+        'windows_file_secret_process_projection_attested',
+    ]
+
+    version = _policy_version_tuple(policy)
+    if version < (0, 29, 3):
+        return
+
+    activated = True
+
+    if activated:
+        required_true.extend(
+            (
+                'credential_environment_projection_enabled',
+                'credential_boundary_enabled',
+                'credential_boundary_attested',
+                'sync_credential_boundary_attested',
+                'async_credential_boundary_attested',
+            )
+        )
+    else:
+        required_false.extend(
+            (
+                'credential_environment_projection_enabled',
+                'credential_boundary_enabled',
+                'credential_boundary_attested',
+                'sync_credential_boundary_attested',
+                'async_credential_boundary_attested',
+            )
+        )
+
+
+    bad_true = [
+        key for key in required_true
+        if section.get(key) is not True
+    ]
+    bad_false = [
+        key for key in required_false
+        if section.get(key) is not False
+    ]
+
+    if bad_true or bad_false:
+        raise RuntimeError(
+            "sync/async credential boundary policy invalid: "
+            + repr(
+                {
+                    "required_true": bad_true,
+                    "required_false": bad_false,
+                }
+            )
+        )
+
+    if (
+        section.get("process_credential_capability")
+        != "process.exec.credential"
+    ):
+        raise RuntimeError(
+            "process credential capability is invalid"
+        )
+
 def validate_policy(policy: dict[str, Any]) -> None:
     """Fail closed while preserving historical policy contracts by release version."""
     required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy"}
@@ -369,6 +870,15 @@ def validate_policy(policy: dict[str, Any]) -> None:
     _validate_sandbox_workspace_runtime_profile_policy_v0292(
         policy,
         version,
+    )
+    _validate_sandbox_configuration_contract_v0293_preactivation(
+        policy,
+    )
+    _validate_credential_reference_contract_v0293_preactivation(
+        policy,
+    )
+    _validate_sync_credential_boundary_v0293_preactivation(
+        policy,
     )
     if version >= (0, 27, 0):
         required.add("governed_skill_contract_policy")

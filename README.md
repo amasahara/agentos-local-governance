@@ -115,20 +115,23 @@ Trước khi gửi thay đổi:
 - không biến assumption về business hoặc architecture thành authority.
 
 Các thay đổi governance phải giữ `AGENTS.md`, structured policy, runtime, tests, documentation, changelog và release identity nhất quán.
-
 ## Bản phát hành hiện hành
-**v0.29.2 — Windows Sandbox Workspace & Tool Runtime Profiles** · schema **62**
+**v0.29.3 — Sandbox Configuration & Credential Boundary** · schema **62**
 
-v0.29.2 bổ sung deterministic tool runtime profiles và bounded sandbox workspace
-cho process execution đi qua AgentOS. Sync và async execution đều được bind vào
-runtime-profile contract; async job còn pin snapshot/hash và revalidate ngay
-trước launch.
+v0.29.3 đưa runtime profiles sang governed effective-policy configuration và
+bind deterministic configuration/reference hashes vào AgentOS-mediated process
+execution. Process credential chỉ được cấu hình bằng `secret://alias` và reuse
+trusted Secret Resolver với provider pin/capability approval.
 
-Release kế thừa process-tree containment của v0.29.1 và giữ Windows CI regression
-cho containment, focused runtime-profile/sandbox tests, activation tests và full
-suite.
+Sync credentials resolve ngay trước launch và exact projected values được redact
+khỏi captured output. Async jobs chỉ persist credential hashes/count, verify
+immutable `spec_hash` trước resolution và không persist stdout/stderr của
+credential-bearing jobs.
 
-Claim được giới hạn ở `agentos_mediated_process_execution`.
-`runtime_profile_sandbox_attested = true`, nhưng credential isolation,
-Restricted Token, Low Integrity, host-filesystem isolation, OS write confinement
-và same-user host-bypass resistance vẫn **không được claim**.
+Release kế thừa v0.29.1 Windows Job Object containment và v0.29.2 sandbox
+workspace/runtime profiles. Claim vẫn giới hạn ở
+`agentos_mediated_process_execution`.
+
+`sandbox_configuration_attested = true` và `credential_boundary_attested = true`.
+Credential isolation, Restricted Token, Low Integrity, host-filesystem isolation,
+OS write confinement và same-user host-bypass resistance vẫn **không được claim**.

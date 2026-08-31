@@ -494,7 +494,6 @@ def test_v0291_windows_cancel_terminates_named_job(
     )
 
     calls = []
-
     monkeypatch.setattr(
         jobs,
         "terminate_named_job",
@@ -505,6 +504,26 @@ def test_v0291_windows_cancel_terminates_named_job(
             or True
         ),
     )
+
+    # This historical test intentionally simulates the Windows branch even
+    # when pytest is running on Linux. v0.29.2 terminal sandbox cleanup now
+    # also queries named Job membership after cancellation, so that Windows
+    # primitive must be simulated alongside terminate_named_job. Returning
+    # None models a Job Object that is no longer openable after a confirmed
+    # tree termination; cleanup readiness still requires the persisted
+    # process_tree_terminated evidence before treating that state as safe.
+    active_queries = []
+
+    def fake_active_process_count(name):
+        active_queries.append(name)
+        return None
+
+    monkeypatch.setattr(
+        jobs,
+        "named_job_active_process_count",
+        fake_active_process_count,
+    )
+
     monkeypatch.setattr(
         jobs,
         "append_signed_event",
@@ -539,14 +558,21 @@ def test_v0291_windows_cancel_terminates_named_job(
         original_kill,
     )
 
+    expected_job_name = (
+        jobs.async_job_object_name(
+            "canceljob"
+        )
+    )
+
     assert result["state"] == "cancelled"
     assert calls == [
         (
-            jobs.async_job_object_name(
-                "canceljob"
-            ),
+            expected_job_name,
             130,
         )
+    ]
+    assert active_queries == [
+        expected_job_name
     ]
 
 

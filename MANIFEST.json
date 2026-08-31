@@ -1540,8 +1540,8 @@
     },
     {
       "path": ".agents/tests/test_windows_async_job_containment_v0291.py",
-      "size": 12814,
-      "sha256": "69789072208a3ba8ef9ecc8c6a7a16249d247b17d76a583cb09755e019b59b39"
+      "size": 13698,
+      "sha256": "d00984ee676bbc66f82ca6843b553ca8bae3e87d91f04ef9f50f7fedde4dcdcb"
     },
     {
       "path": ".agents/tests/test_windows_async_timeout_v0291.py",

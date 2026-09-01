@@ -7,31 +7,69 @@ from types import SimpleNamespace
 from agentos import proxy
 
 
-def test_v0291_windows_sync_route_uses_contained_runner(monkeypatch, tmp_path):
-    calls = []
-    monkeypatch.setattr(proxy, '_is_windows_host', lambda: True)
 
-    from agentos import windows_process_tree
+def test_v0291_windows_sync_route_uses_contained_runner(monkeypatch, tmp_path):
+    """
+    v0.29.4 strengthens the production Windows runner from the v0.29.1
+    Job-only adapter to the Restricted-Token + Job adapter. The inherited
+    contract remains: Windows process.exec must use the contained runner.
+    """
+    calls = []
+    monkeypatch.setattr(
+        proxy,
+        "_is_windows_host",
+        lambda: True,
+    )
+
+    from agentos import (
+        windows_process_tree,
+        windows_restricted_execution,
+    )
 
     def fake_run(command, *, cwd, env, timeout):
-        calls.append((list(command), Path(cwd), dict(env), timeout))
-        return SimpleNamespace(returncode=0, stdout='ok', stderr='')
+        calls.append(
+            (
+                list(command),
+                Path(cwd),
+                dict(env),
+                timeout,
+            )
+        )
+        return SimpleNamespace(
+            returncode=0,
+            stdout="ok",
+            stderr="",
+        )
 
-    monkeypatch.setattr(windows_process_tree, 'run_contained_capture', fake_run)
+    monkeypatch.setattr(
+        windows_restricted_execution,
+        "run_restricted_contained_capture",
+        fake_run,
+    )
 
     result, metadata = proxy._run_process_command(
-        ['python', '-m', 'pytest'],
+        ["python", "-m", "pytest"],
         cwd=tmp_path,
-        env={'PATH': 'x'},
+        env={"PATH": "x"},
         timeout=7,
     )
 
     assert result.returncode == 0
     assert len(calls) == 1
-    assert metadata['process_tree_contained'] is True
-    assert metadata['process_tree_containment_profile'] == windows_process_tree.CONTAINMENT_PROFILE
-    assert metadata['process_tree_containment_scope'] == 'agentos_mediated_process_execution'
-
+    assert metadata["process_tree_contained"] is True
+    assert (
+        metadata[
+            "process_tree_containment_profile"
+        ]
+        == windows_process_tree.CONTAINMENT_PROFILE
+    )
+    assert (
+        metadata[
+            "process_tree_containment_scope"
+        ]
+        == "agentos_mediated_process_execution"
+    )
+    assert metadata["restricted_execution"] is True
 
 def test_v0291_posix_sync_route_preserves_subprocess_run(monkeypatch, tmp_path):
     calls = []
@@ -64,12 +102,25 @@ def test_v0291_posix_sync_route_preserves_subprocess_run(monkeypatch, tmp_path):
     }
 
 
+
 def test_v0291_proxy_source_has_no_windows_root_only_fallback():
-    source = Path(proxy.__file__).read_text(encoding='utf-8')
-    start = source.index('def _run_process_command(')
-    end = source.index('\ndef _execute_adapter(', start)
+    source = Path(
+        proxy.__file__
+    ).read_text(
+        encoding="utf-8"
+    )
+    start = source.index(
+        "def _run_process_command("
+    )
+    end = source.index(
+        "\ndef _execute_adapter(",
+        start,
+    )
     helper = source[start:end]
 
-    assert 'run_contained_capture' in helper
-    assert 'os.kill(' not in helper
-    assert 'taskkill' not in helper.lower()
+    assert (
+        "run_restricted_contained_capture"
+        in helper
+    )
+    assert "os.kill(" not in helper
+    assert "taskkill" not in helper.lower()

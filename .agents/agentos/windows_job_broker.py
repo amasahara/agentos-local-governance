@@ -32,6 +32,10 @@ from .windows_process_tree import (
     named_job_active_process_count,
     spawn_suspended_in_job,
 )
+from .windows_restricted_execution import (
+    RESTRICTED_TOKEN_PROFILE,
+    spawn_restricted_suspended_in_job,
+)
 
 
 BROKER_PROTOCOL_VERSION = 1
@@ -47,6 +51,7 @@ def _fail(message: str) -> int:
     return 2
 
 
+
 def _load_payload() -> dict[str, Any]:
     line = sys.stdin.readline()
 
@@ -56,14 +61,12 @@ def _load_payload() -> dict[str, Any]:
         )
 
     value = json.loads(line)
-
     if not isinstance(value, dict):
         raise RuntimeError(
             "windows_job_broker_payload_must_be_object"
         )
 
     command = value.get("command")
-
     if (
         not isinstance(command, list)
         or not command
@@ -84,11 +87,9 @@ def _load_payload() -> dict[str, Any]:
     expected_name = async_job_object_name(
         job_id
     )
-
     job_name = str(
         value.get("job_name") or ""
     )
-
     if job_name != expected_name:
         raise RuntimeError(
             "windows_job_broker_job_name_mismatch"
@@ -97,17 +98,27 @@ def _load_payload() -> dict[str, Any]:
     cwd = str(
         value.get("cwd") or ""
     ).strip()
-
     if not cwd:
         raise RuntimeError(
             "windows_job_broker_missing_cwd"
         )
 
     env = value.get("env")
-
     if not isinstance(env, dict):
         raise RuntimeError(
             "windows_job_broker_env_must_be_object"
+        )
+
+    restricted_execution = value.get(
+        "restricted_execution",
+        False,
+    )
+    if not isinstance(
+        restricted_execution,
+        bool,
+    ):
+        raise RuntimeError(
+            "windows_job_broker_restricted_execution_must_be_bool"
         )
 
     stdout_path = str(
@@ -133,6 +144,7 @@ def _load_payload() -> dict[str, Any]:
         },
         "stdout_path": stdout_path,
         "stderr_path": stderr_path,
+        "restricted_execution": restricted_execution,
         "ready_path": str(
             value.get("ready_path") or ""
         ).strip(),
@@ -147,6 +159,7 @@ def _ready_record(
     job_id: str,
     job_name: str,
     worker_pid: int,
+    restricted_execution: bool,
 ) -> dict[str, Any]:
     return {
         "ok": True,
@@ -162,8 +175,20 @@ def _ready_record(
         "worker_pid": int(worker_pid),
         "assigned_before_resume": True,
         "kill_on_broker_exit": True,
+        "restricted_execution": bool(
+            restricted_execution
+        ),
+        "restricted_execution_profile": (
+            RESTRICTED_TOKEN_PROFILE
+            if restricted_execution
+            else None
+        ),
+        "restricted_token_verified": bool(
+            restricted_execution
+        ),
+        "restricted_token_attested": False,
+        "low_integrity_attested": False,
     }
-
 
 def _os_handle(file_object) -> int:
     handle = int(
@@ -216,6 +241,7 @@ def _utc_now() -> str:
     ).isoformat()
 
 
+
 def run_broker() -> int:
     if os.name != "nt":
         return _fail(
@@ -224,7 +250,6 @@ def run_broker() -> int:
 
     job = None
     proc = None
-
     try:
         payload = _load_payload()
 
@@ -269,26 +294,41 @@ def run_broker() -> int:
                 worker_stderr
             )
 
-            proc = spawn_suspended_in_job(
-                payload["command"],
-                cwd=payload["cwd"],
-                env=payload["env"],
-                job=job,
-                stdin_handle=stdin_handle,
-                stdout_handle=stdout_handle,
-                stderr_handle=stderr_handle,
-            )
+            if payload["restricted_execution"]:
+                proc = (
+                    spawn_restricted_suspended_in_job(
+                        payload["command"],
+                        cwd=payload["cwd"],
+                        env=payload["env"],
+                        job=job,
+                        stdin_handle=stdin_handle,
+                        stdout_handle=stdout_handle,
+                        stderr_handle=stderr_handle,
+                    )
+                )
+            else:
+                proc = spawn_suspended_in_job(
+                    payload["command"],
+                    cwd=payload["cwd"],
+                    env=payload["env"],
+                    job=job,
+                    stdin_handle=stdin_handle,
+                    stdout_handle=stdout_handle,
+                    stderr_handle=stderr_handle,
+                )
 
         record = _ready_record(
             job_id=payload["job_id"],
             job_name=payload["job_name"],
             worker_pid=proc.pid,
+            restricted_execution=payload[
+                "restricted_execution"
+            ],
         )
 
         ready_path = payload.get(
             "ready_path"
         )
-
         if ready_path:
             _write_json_atomic(
                 Path(ready_path),
@@ -318,7 +358,6 @@ def run_broker() -> int:
 
             if active == 0:
                 worker_exit_code = proc.poll()
-
                 if worker_exit_code is None:
                     worker_exit_code = proc.wait(
                         timeout=1.0
@@ -327,15 +366,18 @@ def run_broker() -> int:
                 completion_path = payload.get(
                     "completion_path"
                 )
-
                 if completion_path:
                     _write_json_atomic(
                         Path(completion_path),
                         {
                             "ok": True,
                             "state": "drained",
-                            "job_id": payload["job_id"],
-                            "job_name": payload["job_name"],
+                            "job_id": payload[
+                                "job_id"
+                            ],
+                            "job_name": payload[
+                                "job_name"
+                            ],
                             "broker_pid": os.getpid(),
                             "worker_pid": proc.pid,
                             "worker_exit_code": int(
@@ -348,10 +390,24 @@ def run_broker() -> int:
                             "broker_profile": (
                                 BROKER_PROFILE
                             ),
+                            "restricted_execution": payload[
+                                "restricted_execution"
+                            ],
+                            "restricted_execution_profile": (
+                                RESTRICTED_TOKEN_PROFILE
+                                if payload[
+                                    "restricted_execution"
+                                ]
+                                else None
+                            ),
+                            "restricted_token_verified": payload[
+                                "restricted_execution"
+                            ],
+                            "restricted_token_attested": False,
+                            "low_integrity_attested": False,
                             "drained_at": _utc_now(),
                         },
                     )
-
                 break
 
             time.sleep(0.1)
@@ -377,7 +433,6 @@ def run_broker() -> int:
                 job.close()
             except Exception:
                 pass
-
 
 def main() -> None:
     raise SystemExit(

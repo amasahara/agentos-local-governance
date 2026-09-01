@@ -474,21 +474,33 @@ def test_v0293_phase3_windows_file_secret_process_projection_is_not_attested():
     assert 'os.name == "nt"' in source
 
 
-def test_v0293_phase3_sync_boundary_remains_bounded_after_activation():
+
+def test_v0293_phase3_sync_boundary_is_preserved_under_successor():
     policy = load_policy(ROOT)
     section = policy["sandbox_workspace_runtime_profile_policy"]
 
-    assert section["sync_credential_boundary_enabled"] is True
-    assert section["sync_credential_environment_projection_enabled"] is True
-    assert section["async_credential_boundary_enabled"] is True
-    assert section["async_credential_environment_projection_enabled"] is True
-    assert section["credential_environment_projection_enabled"] is True
-    assert section["credential_boundary_enabled"] is True
-    assert section["credential_boundary_attested"] is True
-    assert section["sync_credential_boundary_attested"] is True
-    assert section["async_credential_boundary_attested"] is True
-    assert section["credential_isolation_attested"] is False
-    assert section["restricted_token_attested"] is False
-    assert section["low_integrity_attested"] is False
-    assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == "0.29.3"
+    for key in (
+        "sync_credential_boundary_enabled",
+        "sync_credential_environment_projection_enabled",
+        "async_credential_boundary_enabled",
+        "async_credential_environment_projection_enabled",
+        "credential_environment_projection_enabled",
+        "credential_boundary_enabled",
+        "credential_boundary_attested",
+        "sync_credential_boundary_attested",
+        "async_credential_boundary_attested",
+    ):
+        assert section[key] is True
+
+    for key in (
+        "credential_isolation_attested",
+        "restricted_token_attested",
+        "low_integrity_attested",
+    ):
+        assert section[key] is False
+
+    current = (ROOT / "VERSION").read_text(
+        encoding="utf-8"
+    ).strip()
+    assert tuple(int(part) for part in current.split(".")) >= (0, 29, 3)
     assert CURRENT_SCHEMA_VERSION == 62

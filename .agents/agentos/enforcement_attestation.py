@@ -26,6 +26,7 @@ from .mcp_runtime import _health as mcp_runtime_health
 from .policy import load_policy
 from .proxy import CAPABILITIES
 from .schema_version import CURRENT_SCHEMA_VERSION
+from .windows_restricted_attestation import attest_windows_restricted_execution
 
 
 ATTESTATION_VERSION = 1
@@ -305,6 +306,10 @@ def attest_enforcement(
         "sandbox_workspace_runtime_profile_policy",
         {},
     )
+    restricted_execution_policy = policy.get(
+        "windows_restricted_execution_policy",
+        {},
+    )
 
     checks: dict[str, bool] = {}
     findings: list[dict[str, str]] = []
@@ -323,6 +328,23 @@ def attest_enforcement(
                     "message": message,
                 }
             )
+    restricted_execution_attestation = (
+        attest_windows_restricted_execution(
+            root
+        )
+    )
+    for _restricted_name, _restricted_ok in (
+        restricted_execution_attestation[
+            "checks"
+        ].items()
+    ):
+        require(
+            "windows_restricted_"
+            + _restricted_name,
+            _restricted_ok is True,
+            "v0.29.4 restricted execution structural check failed: "
+            + _restricted_name,
+        )
 
     # --------------------------------------------------------
     # Policy boundary
@@ -1055,6 +1077,16 @@ def attest_enforcement(
     sync_capture_source = _function_source(
         root, '.agents/agentos/windows_process_tree.py', 'run_contained_capture'
     )
+    restricted_sync_capture_source = _function_source(
+        root,
+        '.agents/agentos/windows_restricted_execution.py',
+        'run_restricted_contained_capture',
+    )
+    restricted_spawn_source = _function_source(
+        root,
+        '.agents/agentos/windows_restricted_execution.py',
+        'spawn_restricted_suspended_in_job',
+    )
     named_kill_job_source = _function_source(
         root, '.agents/agentos/windows_process_tree.py', 'create_named_kill_on_close_job'
     )
@@ -1105,28 +1137,69 @@ def attest_enforcement(
         ),
         'Windows containment policy does not declare fail-closed Job Object ownership',
     )
+    restricted_sync_required = (
+        restricted_execution_policy.get(
+            'sync_execution_enforced'
+        )
+        is True
+    )
+    active_sync_spawn_source = (
+        restricted_spawn_source
+        if restricted_sync_required
+        else spawn_source
+    )
+    active_sync_route_marker = (
+        'run_restricted_contained_capture('
+        if restricted_sync_required
+        else 'run_contained_capture('
+    )
+
     require_process_tree(
         'windows_sync_process_exec_contained',
         (
             '_is_windows_host()' in sync_route_source
-            and 'run_contained_capture(' in sync_route_source
+            and active_sync_route_marker in sync_route_source
             and 'process_tree_contained' in sync_route_source
-            and 'CREATE_SUSPENDED' in spawn_source
-            and 'assign_process_handle(' in spawn_source
-            and 'ResumeThread(' in spawn_source
-            and spawn_source.find('assign_process_handle(')
-            < spawn_source.find('ResumeThread(')
+            and 'CREATE_SUSPENDED' in active_sync_spawn_source
+            and 'assign_process_handle(' in active_sync_spawn_source
+            and 'ResumeThread(' in active_sync_spawn_source
+            and active_sync_spawn_source.find(
+                'assign_process_handle('
+            )
+            < active_sync_spawn_source.find(
+                'ResumeThread('
+            )
+            and (
+                not restricted_sync_required
+                or (
+                    '_verify_child_process_token('
+                    in active_sync_spawn_source
+                    and active_sync_spawn_source.find(
+                        '_verify_child_process_token('
+                    )
+                    < active_sync_spawn_source.find(
+                        'assign_process_handle('
+                    )
+                )
+            )
         ),
-        'Windows synchronous process.exec is not structurally bound to assign-before-resume Job Object containment',
+        'Windows synchronous process.exec is not structurally bound to the active assign-before-resume Job Object route',
+    )
+    active_sync_capture_source = (
+        restricted_sync_capture_source
+        if restricted_sync_required
+        else sync_capture_source
     )
     require_process_tree(
         'windows_sync_tree_teardown_enforced',
         (
-            'terminate_tree(' in sync_capture_source
-            and 'subprocess.TimeoutExpired(' in sync_capture_source
-            and 'proc.close()' in sync_capture_source
+            'terminate_tree(' in active_sync_capture_source
+            and 'subprocess.TimeoutExpired('
+            in active_sync_capture_source
+            and 'proc.close()'
+            in active_sync_capture_source
         ),
-        'Windows synchronous timeout/teardown does not terminate or close the contained Job tree',
+        'Windows synchronous timeout/teardown does not terminate or close the active contained Job tree',
     )
     require_process_tree(
         'windows_async_broker_job_kill_on_close',
@@ -2018,6 +2091,7 @@ def attest_enforcement(
                 len(canonical)
             ),
         },
+        "windows_restricted_execution": restricted_execution_attestation,
         "non_claims": {
             "same_user_host_bypass_resistance": False,
             "os_level_process_isolation_attested": False,

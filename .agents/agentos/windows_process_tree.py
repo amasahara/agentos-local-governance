@@ -718,32 +718,48 @@ def _read_capture(file_object, *, encoding: str, errors: str) -> str:
     return file_object.read().decode(encoding, errors=errors)
 
 
+
+
+
 def run_contained_capture(
     command: Sequence[str],
     *,
     cwd: Path | str | None = None,
     env: Mapping[str, str] | None = None,
     timeout: float | None = None,
-    encoding: str = 'utf-8',
-    errors: str = 'replace',
+    encoding: str = "utf-8",
+    errors: str = "replace",
 ) -> ContainedCompletedProcess:
-    """Run one synchronous command inside a kill-on-close Job Object."""
+    """
+    Run one synchronous command inside the v0.29.1 Job Object boundary.
+
+    This remains the generic process-tree primitive. v0.29.4 production
+    process.exec uses run_restricted_contained_capture() instead.
+    """
     _require_windows()
 
     argv = tuple(str(item) for item in command)
     if not argv or not all(argv):
-        raise ValueError('command_must_be_non_empty_strings')
+        raise ValueError(
+            "command_must_be_non_empty_strings"
+        )
 
-    with open(os.devnull, 'rb', buffering=0) as stdin_file, \
-         tempfile.TemporaryFile(mode='w+b') as stdout_file, \
-         tempfile.TemporaryFile(mode='w+b') as stderr_file:
+    with open(
+        os.devnull,
+        "rb",
+        buffering=0,
+    ) as stdin_file, tempfile.TemporaryFile(
+        mode="w+b"
+    ) as stdout_file, tempfile.TemporaryFile(
+        mode="w+b"
+    ) as stderr_file:
         handles = (
             _os_handle(stdin_file),
             _os_handle(stdout_file),
             _os_handle(stderr_file),
         )
-
         proc = None
+
         try:
             proc = spawn_suspended_in_job(
                 argv,
@@ -755,7 +771,9 @@ def run_contained_capture(
             )
 
             try:
-                returncode = proc.wait(timeout=timeout)
+                returncode = proc.wait(
+                    timeout=timeout
+                )
             except TimeoutError as exc:
                 proc.terminate_tree(124)
                 try:
@@ -773,6 +791,7 @@ def run_contained_capture(
                     encoding=encoding,
                     errors=errors,
                 )
+
                 raise subprocess.TimeoutExpired(
                     list(argv),
                     timeout,
@@ -798,16 +817,19 @@ def run_contained_capture(
                 stderr=stderr,
                 pid=proc.pid,
             )
+
         finally:
             if proc is not None:
                 proc.close()
+
             for handle in handles:
                 try:
-                    os.set_handle_inheritable(handle, False)
+                    os.set_handle_inheritable(
+                        handle,
+                        False,
+                    )
                 except OSError:
                     pass
-
-
 
 def async_job_object_name(job_id: str) -> str:
     value = str(job_id).strip()

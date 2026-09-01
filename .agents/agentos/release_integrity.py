@@ -67,6 +67,8 @@ CORE_FILES = (
     ".agents/agentos/windows_process_tree.py",
     ".agents/agentos/windows_job_broker.py",
     ".agents/agentos/tool_runtime_profiles.py",
+    '.agents/agentos/windows_restricted_execution.py',
+    '.agents/agentos/windows_restricted_attestation.py',
 )
 RELEASE_FILES = (
     ".agents/tests/test_release_line_endings_v0242.py",
@@ -155,6 +157,16 @@ RELEASE_FILES = (
     ".agents/tests/test_credential_boundary_ci_gate_v0293.py",
     ".agents/tests/test_credential_boundary_activation_v0293.py",
     ".agents/docs/SANDBOX_CONFIGURATION_CREDENTIAL_BOUNDARY_V0293.md",
+    '.agents/tests/test_windows_restricted_execution_v0294.py',
+    '.agents/tests/test_windows_restricted_sync_v0294.py',
+    '.agents/tests/test_windows_restricted_async_v0294.py',
+    '.agents/tests/test_windows_restricted_fail_closed_v0294.py',
+    '.agents/tests/test_windows_restricted_attestation_v0294.py',
+    '.agents/tests/test_windows_restricted_ci_gate_v0294.py',
+    '.agents/tests/test_windows_restricted_activation_v0294.py',
+    '.agents/tests/test_successor_policy_activation_v0294.py',
+    '.agents/tests/test_windows_restricted_release_integrity_v0294.py',
+    '.agents/docs/WINDOWS_RESTRICTED_EXECUTION_V0294.md',
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -701,6 +713,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 required_policy_sections.add("privileged_control_plane_policy")
                 if release_version >= (0, 29, 1):
                     required_policy_sections.add("windows_process_tree_containment_policy")
+            if release_version >= (0, 29, 4):
+                required_policy_sections.add("windows_restricted_execution_policy")
             missing = sorted(required_policy_sections - set(policy))
             if missing:
                 findings.append(_finding("missing_policy_sections", f"missing policy sections: {missing}", ".agents/config/governance.json"))
@@ -1103,6 +1117,154 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                     )
                 )
 
+        restricted_execution_attestation = (
+            attestation_report.get(
+                "windows_restricted_execution"
+            )
+            or {}
+        )
+
+        if attested_release_version >= (0, 29, 4):
+            required_restricted_assertions = (
+                "structurally_attested",
+                "sync_enforced",
+                "async_enforced",
+                "source_token_verified",
+                "child_token_verified",
+                "assignment_before_resume",
+                "fail_closed",
+                "unrestricted_fallback_forbidden",
+                "sandbox_inert_forbidden",
+                "privilege_allowlist_enforced",
+                "windows_ci_covered",
+                "broad_nonclaims_preserved",
+                "policy_declared_attested",
+                "restricted_token_attested",
+            )
+
+            missing_restricted_assertions = [
+                key
+                for key in required_restricted_assertions
+                if (
+                    restricted_execution_attestation.get(
+                        key
+                    )
+                    is not True
+                )
+            ]
+
+            if missing_restricted_assertions:
+                findings.append(
+                    _finding(
+                        "windows_restricted_execution_attestation_failed",
+                        "v0.29.4 Restricted Execution attestation is not green: "
+                        + repr(
+                            missing_restricted_assertions
+                        ),
+                        ".agents/agentos/windows_restricted_attestation.py",
+                    )
+                )
+
+            if (
+                restricted_execution_attestation.get(
+                    "scope"
+                )
+                != "agentos_mediated_process_execution"
+            ):
+                findings.append(
+                    _finding(
+                        "windows_restricted_execution_scope_invalid",
+                        "v0.29.4 Restricted Execution scope must remain bounded to agentos_mediated_process_execution",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
+            if (
+                restricted_execution_attestation.get(
+                    "low_integrity_attested"
+                )
+                is not False
+            ):
+                findings.append(
+                    _finding(
+                        "windows_restricted_execution_low_integrity_overclaim",
+                        "v0.29.4 must not claim Low Integrity",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
+            restricted_global_nonclaims = (
+                attestation_report.get(
+                    "non_claims"
+                )
+                or {}
+            )
+
+            for nonclaim_key in (
+                "restricted_token_attested",
+                "low_integrity_attested",
+                "host_filesystem_isolation_attested",
+                "os_write_confinement_attested",
+                "same_user_host_bypass_resistance",
+            ):
+                if (
+                    restricted_global_nonclaims.get(
+                        nonclaim_key
+                    )
+                    is not False
+                ):
+                    findings.append(
+                        _finding(
+                            "windows_restricted_execution_global_overclaim",
+                            "v0.29.4 scoped Restricted Token activation must not broaden global nonclaims: "
+                            + nonclaim_key,
+                            ".agents/agentos/enforcement_attestation.py",
+                        )
+                    )
+
+            from .policy import (
+                load_release_policy as _load_release_policy_v0294,
+            )
+
+            restricted_policy = (
+                _load_release_policy_v0294(
+                    root
+                ).get(
+                    "windows_restricted_execution_policy"
+                )
+                or {}
+            )
+
+            if (
+                restricted_policy.get(
+                    "release_focus"
+                )
+                != "windows_restricted_execution"
+                or restricted_policy.get(
+                    "restricted_token_attested"
+                )
+                is not True
+                or restricted_policy.get(
+                    "activation_complete"
+                )
+                is not True
+                or restricted_policy.get(
+                    "activation_version"
+                )
+                != "0.29.4"
+                or restricted_policy.get(
+                    "release_activation_deferred_until_phase6"
+                )
+                is not False
+            ):
+                findings.append(
+                    _finding(
+                        "windows_restricted_execution_activation_flags_invalid",
+                        "v0.29.4 Restricted Execution activation flags are incomplete",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
         completion_attestation = (
             attestation_report.get("completion_verification")
             or {}
@@ -1468,6 +1630,9 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 "windows_sandbox_ci_validation": windows_sandbox_ci_validation,
                 "credential_boundary": attestation_report.get("credential_boundary"),
                 "credential_boundary_ci_validation": credential_ci_validation,
+                "windows_restricted_execution": attestation_report.get(
+                    "windows_restricted_execution"
+                ),
                 "finding_count": len(
                     attestation_report.get("findings", [])
                 ),
@@ -1535,6 +1700,7 @@ DOC_FILES = (
     ".agents/docs/UPGRADE_FROM_0.26.0.md",
     ".agents/docs/WINDOWS_SANDBOX_WORKSPACE_TOOL_RUNTIME_PROFILES_V0292.md",
     ".agents/docs/SANDBOX_CONFIGURATION_CREDENTIAL_BOUNDARY_V0293.md",
+    '.agents/docs/WINDOWS_RESTRICTED_EXECUTION_V0294.md',
 )
 
 

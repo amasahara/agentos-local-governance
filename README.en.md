@@ -91,22 +91,19 @@ State the problem and acceptance criteria, place changes by responsibility and l
 
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
 ## Current release
-**v0.29.3 — Sandbox Configuration & Credential Boundary** · schema **62**
+**v0.29.4 — Windows Restricted Execution** · schema **62**
 
-v0.29.3 moves runtime profiles to governed effective-policy configuration and
-binds deterministic configuration/reference hashes to AgentOS-mediated process
-execution. Process credentials use `secret://alias` only and reuse the trusted
-Secret Resolver with provider pin/capability approval.
+v0.29.4 adds native Windows Restricted Token execution within the bounded
+`agentos_mediated_process_execution` scope. Governed workers launch through
+`CreateProcessAsUserW` in `CREATE_SUSPENDED` state, have the actual child token
+re-verified, are assigned to the Job Object, and only then resume.
 
-Synchronous credentials resolve immediately before launch and exact projected
-values are redacted from captured output. Async jobs persist only credential
-hashes/count, verify the immutable `spec_hash` before resolution, and do not
-persist stdout/stderr for credential-bearing jobs.
+Synchronous production execution uses a dedicated restricted runner. The async
+broker remains the trusted named-Job lifecycle owner while the governed worker
+root runs under Restricted Token. The restricted production path has no
+unrestricted `CreateProcessW` fallback.
 
-The release preserves v0.29.1 Windows Job Object containment and the v0.29.2
-sandbox workspace/runtime-profile boundary. The claim remains limited to
-`agentos_mediated_process_execution`.
-
-`sandbox_configuration_attested = true` and `credential_boundary_attested = true`.
-Credential isolation, Restricted Token, Low Integrity, host-filesystem isolation,
-OS write confinement, and same-user host-bypass resistance remain unclaimed.
+`restricted_token_attested = true` is limited to this AgentOS-mediated scope.
+Low Integrity, desktop isolation, host-filesystem isolation, OS write
+confinement, credential isolation, and same-user host-bypass resistance remain
+unclaimed.

@@ -131,20 +131,28 @@ def test_v0293_phase1_async_job_binds_and_revalidates_policy_configuration():
     assert "runtime_profile_configuration_drift" in source
 
 
-def test_v0293_phase1_contract_is_release_activated_without_os_overclaim():
+
+def test_v0293_phase1_contract_is_preserved_under_successor_release():
     policy = load_policy(ROOT)
     section = policy["sandbox_workspace_runtime_profile_policy"]
+    current = (ROOT / "VERSION").read_text(
+        encoding="utf-8"
+    ).strip()
 
-    assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == "0.29.3"
+    assert tuple(int(part) for part in current.split(".")) >= (0, 29, 3)
     assert CURRENT_SCHEMA_VERSION == 62
     assert section["sandbox_configuration_attested"] is True
     assert section["credential_boundary_enabled"] is True
-    assert section["credential_isolation_attested"] is False
-    assert section["restricted_token_attested"] is False
-    assert section["low_integrity_attested"] is False
-    assert section["host_filesystem_isolation_attested"] is False
-    assert section["os_write_confinement_attested"] is False
-    assert section["same_user_host_bypass_resistance_claimed"] is False
+
+    for key in (
+        "credential_isolation_attested",
+        "restricted_token_attested",
+        "low_integrity_attested",
+        "host_filesystem_isolation_attested",
+        "os_write_confinement_attested",
+        "same_user_host_bypass_resistance_claimed",
+    ):
+        assert section[key] is False
 
 def test_v0293_phase1_legacy_policy_resolution_remains_compatible():
     minimal_policy = {

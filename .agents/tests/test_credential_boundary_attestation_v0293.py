@@ -53,7 +53,8 @@ def test_v0293_credential_structural_checks_are_all_true():
         assert report["checks"][key] is True, key
 
 
-def test_v0293_phase5_release_attestation_is_activated_without_overclaim():
+
+def test_v0293_phase5_attestation_is_preserved_under_successor_without_overclaim():
     policy = load_policy(ROOT)
     section = policy["sandbox_workspace_runtime_profile_policy"]
     report = attest_enforcement(ROOT)
@@ -64,11 +65,19 @@ def test_v0293_phase5_release_attestation_is_activated_without_overclaim():
     assert section["credential_boundary_attested"] is True
     assert credential["policy_declared_attested"] is True
     assert credential["credential_isolation_attested"] is False
-    assert section["credential_isolation_attested"] is False
-    assert section["restricted_token_attested"] is False
-    assert section["low_integrity_attested"] is False
-    assert section["host_filesystem_isolation_attested"] is False
-    assert section["os_write_confinement_attested"] is False
-    assert section["same_user_host_bypass_resistance_claimed"] is False
-    assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == "0.29.3"
+
+    for key in (
+        "credential_isolation_attested",
+        "restricted_token_attested",
+        "low_integrity_attested",
+        "host_filesystem_isolation_attested",
+        "os_write_confinement_attested",
+        "same_user_host_bypass_resistance_claimed",
+    ):
+        assert section[key] is False
+
+    current = (ROOT / "VERSION").read_text(
+        encoding="utf-8"
+    ).strip()
+    assert tuple(int(part) for part in current.split(".")) >= (0, 29, 3)
     assert CURRENT_SCHEMA_VERSION == 62

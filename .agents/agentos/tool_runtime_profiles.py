@@ -87,6 +87,42 @@ def _sha(value: Any) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _policy_version_at_least(
+    policy: dict[str, Any],
+    minimum: tuple[int, int, int],
+) -> bool:
+    """
+    Return True when the policy release is at or beyond ``minimum``.
+
+    Successor releases must preserve already-activated governance contracts.
+    Invalid/non-semver policy versions deliberately evaluate False so the
+    caller's fail-closed preactivation branch remains authoritative.
+    """
+    raw = str(
+        policy.get("version")
+        or ""
+    ).strip()
+
+    parts = raw.split(
+        "."
+    )
+
+    if (
+        len(parts) != 3
+        or any(
+            not part.isdigit()
+            for part in parts
+        )
+    ):
+        return False
+
+    current = tuple(
+        int(part)
+        for part in parts
+    )
+
+    return current >= minimum
+
 def _safe_key(value: str, *, label: str) -> str:
     key = str(value or "").strip()
     if not _SAFE_KEY.fullmatch(key) or key in {".", ".."}:
@@ -451,9 +487,9 @@ def credential_reference_contract_from_policy(
         'windows_file_secret_process_projection_attested',
     ]
 
-    activated = (
-        str(policy.get("version") or "").strip()
-        == "0.29.3"
+    activated = _policy_version_at_least(
+        policy,
+        (0, 29, 3),
     )
 
     if activated:
@@ -707,9 +743,9 @@ def sandbox_configuration_from_policy(
         'caller_configuration_override_allowed',
     ]
 
-    activated = (
-        str(policy.get("version") or "").strip()
-        == "0.29.3"
+    activated = _policy_version_at_least(
+        policy,
+        (0, 29, 3),
     )
 
     if activated:

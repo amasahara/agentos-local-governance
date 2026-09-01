@@ -132,6 +132,10 @@ jobs:
           PYTHONPATH: .agents
         run: python -m pytest -q .agents/tests/test_secret_lineage_v0226.py .agents/tests/test_sandbox_configuration_v0293.py .agents/tests/test_credential_reference_contract_v0293.py .agents/tests/test_sync_credential_boundary_v0293.py .agents/tests/test_async_credential_boundary_v0293.py .agents/tests/test_credential_boundary_attestation_v0293.py .agents/tests/test_credential_boundary_ci_gate_v0293.py .agents/tests/test_credential_boundary_activation_v0293.py -rs
 
+      - name: Windows restricted execution v0.29.4
+        env:
+          PYTHONPATH: .agents
+        run: python -m pytest -q .agents/tests/test_windows_restricted_execution_v0294.py .agents/tests/test_windows_restricted_sync_v0294.py .agents/tests/test_windows_restricted_async_v0294.py .agents/tests/test_windows_restricted_fail_closed_v0294.py .agents/tests/test_windows_restricted_attestation_v0294.py .agents/tests/test_windows_restricted_ci_gate_v0294.py .agents/tests/test_windows_restricted_activation_v0294.py .agents/tests/test_successor_policy_activation_v0294.py .agents/tests/test_windows_restricted_release_integrity_v0294.py -rs
       - name: Full regression suite
         env:
           PYTHONPATH: .agents

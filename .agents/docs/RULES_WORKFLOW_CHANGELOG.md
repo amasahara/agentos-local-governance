@@ -1,3 +1,17 @@
+## v0.29.4 — Windows Restricted Execution
+- AgentOS-mediated Windows production process execution requires a verified
+  Restricted Token on sync and async worker-root paths.
+- Profile is `DISABLE_MAX_PRIVILEGE | LUA_TOKEN`; `SANDBOX_INERT` is forbidden.
+- Child-token verification and Job Object assignment must complete before
+  resume.
+- Restricted production paths have no unrestricted fallback or caller
+  downgrade.
+- Async broker remains the trusted named Job Object lifecycle owner.
+- Fail-closed negative tests and structural attestation are mandatory.
+- `restricted_token_attested = true` is bounded to
+  `agentos_mediated_process_execution`.
+- Low Integrity and broader host/OS isolation claims remain false.
+- Database schema remains 62.
 ## v0.29.3 — Sandbox Configuration & Credential Boundary
 - Governed sandbox/runtime-profile configuration with deterministic configuration/reference hash binding.
 - Reference-only `secret://alias` process credential bindings reuse the trusted Secret Resolver and provider capability approval.

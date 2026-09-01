@@ -1,7 +1,7 @@
 # AgentOS — Cài đặt / làm mới từ Latest Full Release
 
-Current release: **v0.28.1 — Optional Local Web Control Plane**
-Database schema: **61**
+Current release: **v0.29.4 — Windows Restricted Execution**
+Database schema: **62**
 
 > Release model invariant: **no updater script**.
 
@@ -78,6 +78,18 @@ python -m pytest -q .agents\tests -rs
 python tools\validate_release.py .
 git diff --check
 ```
+
+## v0.29.4 runtime note
+
+Windows production process execution mediated by AgentOS uses a verified
+Restricted Token plus the inherited Job Object boundary. Sync uses the
+dedicated restricted runner; async keeps the broker as trusted Job Object owner
+and restricts the governed worker root.
+
+The claim is limited to `agentos_mediated_process_execution`. Low Integrity and
+broader host/OS isolation claims remain disabled.
+
+See [Windows Restricted Execution](WINDOWS_RESTRICTED_EXECUTION_V0294.md).
 
 ## v0.28.1 runtime note
 

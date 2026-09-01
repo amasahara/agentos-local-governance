@@ -66,17 +66,43 @@ def test_v0292_windows_ci_activation_contract_is_complete():
     assert report["missing_markers"] == []
 
 
+
 def test_v0292_release_docs_are_preserved_as_historical_contract():
-    historical = (ROOT / ".agents/docs/WINDOWS_SANDBOX_WORKSPACE_TOOL_RUNTIME_PROFILES_V0292.md").read_text(encoding="utf-8")
+    historical = (
+        ROOT
+        / ".agents/docs/WINDOWS_SANDBOX_WORKSPACE_TOOL_RUNTIME_PROFILES_V0292.md"
+    ).read_text(encoding="utf-8")
+
     assert "v0.29.2" in historical
-    assert "Windows Sandbox Workspace & Tool Runtime Profiles" in historical
-    for marker in ("runtime_profile_sandbox_attested = true","restricted_token_attested = false","low_integrity_attested = false","same_user_host_bypass_resistance_claimed = false"):
+    assert (
+        "Windows Sandbox Workspace & Tool Runtime Profiles"
+        in historical
+    )
+
+    for marker in (
+        "runtime_profile_sandbox_attested = true",
+        "restricted_token_attested = false",
+        "low_integrity_attested = false",
+        "same_user_host_bypass_resistance_claimed = false",
+    ):
         assert marker in historical
-    history = (ROOT / ".agents/docs/RULES_WORKFLOW_CHANGELOG.md").read_text(encoding="utf-8")
-    assert "## v0.29.2 — Windows Sandbox Workspace & Tool Runtime Profiles" in history
-    current_notes = (ROOT / "RELEASE_NOTES.md").read_text(encoding="utf-8")
-    assert "v0.29.3" in current_notes
-    assert "Sandbox Configuration & Credential Boundary" in current_notes
+
+    history = (
+        ROOT
+        / ".agents/docs/RULES_WORKFLOW_CHANGELOG.md"
+    ).read_text(encoding="utf-8")
+    assert (
+        "## v0.29.2 — Windows Sandbox Workspace & Tool Runtime Profiles"
+        in history
+    )
+
+    current = (ROOT / "VERSION").read_text(
+        encoding="utf-8"
+    ).strip()
+    current_notes = (
+        ROOT / "RELEASE_NOTES.md"
+    ).read_text(encoding="utf-8")
+    assert "v" + current in current_notes
 
 def test_v0292_generated_release_artifacts_are_deferred_to_finalization():
     # Phase 6 activates authoritative source identity only. MANIFEST,

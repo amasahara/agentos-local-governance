@@ -1,4 +1,21 @@
 # Changelog
+## v0.29.4 — Windows Restricted Execution
+- Added Windows Restricted Token execution using
+  `DISABLE_MAX_PRIVILEGE | LUA_TOKEN`; `SANDBOX_INERT` is forbidden.
+- Governed workers launch with `CreateProcessAsUserW(CREATE_SUSPENDED)`.
+- Re-verify the actual child token before Job Object assignment and resume.
+- Bound sync production execution to the restricted runner without an
+  unrestricted fallback.
+- Bound production async worker roots to Restricted Token while preserving the
+  trusted named-Job broker lifecycle.
+- Added fail-closed negative tests, structural attestation and focused Windows
+  CI coverage.
+- Activated only `restricted_token_attested = true` under
+  `agentos_mediated_process_execution`.
+- Low Integrity, desktop isolation, host-filesystem isolation, OS write
+  confinement, credential isolation and same-user host-bypass resistance
+  remain unclaimed.
+- Database schema remains 62.
 
 ## v0.29.3 — Sandbox Configuration & Credential Boundary
 - Moved runtime-profile authority to governed effective-policy configuration

@@ -337,6 +337,9 @@ def _is_windows_host() -> bool:
     return os.name == 'nt'
 
 
+
+
+
 def _run_process_command(
     command: list[str],
     *,
@@ -348,18 +351,30 @@ def _run_process_command(
     if _is_windows_host():
         from .windows_process_tree import (
             CONTAINMENT_PROFILE,
-            run_contained_capture,
         )
-        result = run_contained_capture(
+        from .windows_restricted_execution import (
+            RESTRICTED_EXECUTION_SCOPE,
+            RESTRICTED_TOKEN_PROFILE,
+            run_restricted_contained_capture,
+        )
+
+        result = run_restricted_contained_capture(
             command,
             cwd=cwd,
             env=env,
             timeout=timeout,
         )
+
         return result, {
-            'process_tree_contained': True,
-            'process_tree_containment_profile': CONTAINMENT_PROFILE,
-            'process_tree_containment_scope': 'agentos_mediated_process_execution',
+            "process_tree_contained": True,
+            "process_tree_containment_profile": CONTAINMENT_PROFILE,
+            "process_tree_containment_scope": "agentos_mediated_process_execution",
+            "restricted_execution": True,
+            "restricted_execution_profile": RESTRICTED_TOKEN_PROFILE,
+            "restricted_execution_scope": RESTRICTED_EXECUTION_SCOPE,
+            "restricted_token_verified": True,
+            "restricted_token_attested": False,
+            "low_integrity_attested": False,
         }
 
     result = subprocess.run(
@@ -371,12 +386,12 @@ def _run_process_command(
         shell=False,
         env=env,
     )
-    return result, {
-        'process_tree_contained': False,
-        'process_tree_containment_profile': None,
-        'process_tree_containment_scope': None,
-    }
 
+    return result, {
+        "process_tree_contained": False,
+        "process_tree_containment_profile": None,
+        "process_tree_containment_scope": None,
+    }
 
 def _credential_safe_environment_hash(
     env: dict[str, str],

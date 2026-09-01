@@ -116,22 +116,18 @@ Trước khi gửi thay đổi:
 
 Các thay đổi governance phải giữ `AGENTS.md`, structured policy, runtime, tests, documentation, changelog và release identity nhất quán.
 ## Bản phát hành hiện hành
-**v0.29.3 — Sandbox Configuration & Credential Boundary** · schema **62**
+**v0.29.4 — Windows Restricted Execution** · schema **62**
 
-v0.29.3 đưa runtime profiles sang governed effective-policy configuration và
-bind deterministic configuration/reference hashes vào AgentOS-mediated process
-execution. Process credential chỉ được cấu hình bằng `secret://alias` và reuse
-trusted Secret Resolver với provider pin/capability approval.
+v0.29.4 bổ sung Restricted Token native trên Windows cho phạm vi
+`agentos_mediated_process_execution`. Process do AgentOS quản trị được launch
+qua `CreateProcessAsUserW` ở trạng thái `CREATE_SUSPENDED`, xác minh lại token
+của child, gán vào Job Object rồi mới `ResumeThread`.
 
-Sync credentials resolve ngay trước launch và exact projected values được redact
-khỏi captured output. Async jobs chỉ persist credential hashes/count, verify
-immutable `spec_hash` trước resolution và không persist stdout/stderr của
-credential-bearing jobs.
+Sync production đi qua restricted runner riêng. Async broker vẫn là trusted
+lifecycle owner của named Job Object, còn worker root chạy bằng Restricted
+Token. Đường production không có unrestricted `CreateProcessW` fallback.
 
-Release kế thừa v0.29.1 Windows Job Object containment và v0.29.2 sandbox
-workspace/runtime profiles. Claim vẫn giới hạn ở
-`agentos_mediated_process_execution`.
-
-`sandbox_configuration_attested = true` và `credential_boundary_attested = true`.
-Credential isolation, Restricted Token, Low Integrity, host-filesystem isolation,
-OS write confinement và same-user host-bypass resistance vẫn **không được claim**.
+`restricted_token_attested = true` chỉ áp dụng cho phạm vi AgentOS-mediated nói
+trên. Low Integrity, desktop isolation, host-filesystem isolation, OS write
+confinement, credential isolation và same-user host-bypass resistance vẫn
+**không được claim**.

@@ -225,14 +225,22 @@ def test_v0293_phase4_windows_file_secret_remains_blocked_and_unattested():
     assert 'os.name == "nt"' in secret_source
 
 
-def test_v0293_phase4_nonclaims_and_identity_remain_bounded_after_activation():
+
+def test_v0293_phase4_nonclaims_are_preserved_under_successor():
     section = load_policy(ROOT)["sandbox_workspace_runtime_profile_policy"]
 
-    assert section["credential_isolation_attested"] is False
-    assert section["restricted_token_attested"] is False
-    assert section["low_integrity_attested"] is False
-    assert section["host_filesystem_isolation_attested"] is False
-    assert section["os_write_confinement_attested"] is False
-    assert section["same_user_host_bypass_resistance_claimed"] is False
-    assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == "0.29.3"
+    for key in (
+        "credential_isolation_attested",
+        "restricted_token_attested",
+        "low_integrity_attested",
+        "host_filesystem_isolation_attested",
+        "os_write_confinement_attested",
+        "same_user_host_bypass_resistance_claimed",
+    ):
+        assert section[key] is False
+
+    current = (ROOT / "VERSION").read_text(
+        encoding="utf-8"
+    ).strip()
+    assert tuple(int(part) for part in current.split(".")) >= (0, 29, 3)
     assert CURRENT_SCHEMA_VERSION == 62

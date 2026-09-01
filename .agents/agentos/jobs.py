@@ -163,6 +163,7 @@ def _windows_broker_environment(
     return env
 
 
+
 def _launch_windows_job_broker(
     root: Path,
     job_id: str,
@@ -176,7 +177,6 @@ def _launch_windows_job_broker(
     job_name = async_job_object_name(
         job_id
     )
-
     ready_path = (
         _windows_broker_ready_path(
             root,
@@ -229,6 +229,7 @@ def _launch_windows_job_broker(
         "completion_path": str(
             completion_path
         ),
+        "restricted_execution": True,
     }
 
     broker_stderr = error_path.open(
@@ -237,7 +238,6 @@ def _launch_windows_job_broker(
     )
 
     broker = None
-
     try:
         broker = subprocess.Popen(
             [
@@ -300,6 +300,18 @@ def _launch_windows_job_broker(
                         )
                     )
                     != int(broker.pid)
+                    or ready.get(
+                        "restricted_execution"
+                    )
+                    is not True
+                    or ready.get(
+                        "restricted_token_verified"
+                    )
+                    is not True
+                    or ready.get(
+                        "assigned_before_resume"
+                    )
+                    is not True
                 ):
                     raise RuntimeError(
                         "windows_job_broker_invalid_ready_record"
@@ -358,7 +370,6 @@ def _launch_windows_job_broker(
 
     finally:
         broker_stderr.close()
-
 
 def _job_dir(root: Path, job_id: str) -> Path:
     path = root / ".agents" / "runtime" / "jobs" / job_id

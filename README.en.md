@@ -91,19 +91,30 @@ State the problem and acceptance criteria, place changes by responsibility and l
 
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
 ## Current release
-**v0.29.4 — Windows Restricted Execution** · schema **62**
+**v0.29.5 — Native Physical Isolation Extensions** · schema **62**
 
-v0.29.4 adds native Windows Restricted Token execution within the bounded
-`agentos_mediated_process_execution` scope. Governed workers launch through
-`CreateProcessAsUserW` in `CREATE_SUSPENDED` state, have the actual child token
-re-verified, are assigned to the Job Object, and only then resume.
+v0.29.5 extends the v0.29.4 Windows boundary from Restricted Token execution
+to **Restricted Token + Low Integrity** within the bounded
+`agentos_mediated_process_execution` scope.
 
-Synchronous production execution uses a dedicated restricted runner. The async
-broker remains the trusted named-Job lifecycle owner while the governed worker
-root runs under Restricted Token. The restricted production path has no
-unrestricted `CreateProcessW` fallback.
+AgentOS-created sandboxes receive a Low mandatory integrity label with
+`NO_WRITE_UP`. Their DACL is narrowly normalized for the current user SID so
+the Restricted/LUA worker can read, write, and execute inside the sandbox.
+Both synchronous production execution and governed asynchronous worker roots
+are created suspended, have the actual child token verified as Restricted +
+Low, are assigned to the Job Object, and only then resume. The async broker
+remains the trusted lifecycle process.
 
-`restricted_token_attested = true` is limited to this AgentOS-mediated scope.
-Low Integrity, desktop isolation, host-filesystem isolation, OS write
-confinement, credential isolation, and same-user host-bypass resistance remain
-unclaimed.
+Release attestation is activated only for this bounded scope:
+
+```text
+restricted_token_attested = true
+low_integrity_attested = true
+sandbox_low_integrity_label_attested = true
+scope = agentos_mediated_process_execution
+```
+
+Broader claims remain **disabled**: general host-filesystem isolation, general
+OS write confinement, desktop isolation, credential isolation, and same-user
+host-bypass resistance. Low Integrity is not a filesystem namespace or
+container and does not imply complete host isolation.

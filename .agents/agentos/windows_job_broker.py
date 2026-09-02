@@ -36,6 +36,10 @@ from .windows_restricted_execution import (
     RESTRICTED_TOKEN_PROFILE,
     spawn_restricted_suspended_in_job,
 )
+from .windows_physical_isolation import (
+    LOW_INTEGRITY_PROFILE,
+    spawn_low_integrity_restricted_suspended_in_job,
+)
 
 
 BROKER_PROTOCOL_VERSION = 1
@@ -120,6 +124,21 @@ def _load_payload() -> dict[str, Any]:
         raise RuntimeError(
             "windows_job_broker_restricted_execution_must_be_bool"
         )
+    low_integrity_execution = value.get(
+        "low_integrity_execution",
+        False,
+    )
+    if not isinstance(
+        low_integrity_execution,
+        bool,
+    ):
+        raise RuntimeError(
+            "windows_job_broker_low_integrity_execution_must_be_bool"
+        )
+    if low_integrity_execution and not restricted_execution:
+        raise RuntimeError(
+            "windows_job_broker_low_integrity_requires_restricted_execution"
+        )
 
     stdout_path = str(
         value.get("stdout_path") or ""
@@ -145,6 +164,7 @@ def _load_payload() -> dict[str, Any]:
         "stdout_path": stdout_path,
         "stderr_path": stderr_path,
         "restricted_execution": restricted_execution,
+        "low_integrity_execution": low_integrity_execution,
         "ready_path": str(
             value.get("ready_path") or ""
         ).strip(),
@@ -153,13 +173,13 @@ def _load_payload() -> dict[str, Any]:
         ).strip(),
     }
 
-
 def _ready_record(
     *,
     job_id: str,
     job_name: str,
     worker_pid: int,
     restricted_execution: bool,
+    low_integrity_execution: bool,
 ) -> dict[str, Any]:
     return {
         "ok": True,
@@ -187,6 +207,20 @@ def _ready_record(
             restricted_execution
         ),
         "restricted_token_attested": False,
+        "low_integrity_execution": bool(
+            low_integrity_execution
+        ),
+        "low_integrity_profile": (
+            LOW_INTEGRITY_PROFILE
+            if low_integrity_execution
+            else None
+        ),
+        "low_integrity_token_verified": bool(
+            low_integrity_execution
+        ),
+        "sandbox_low_integrity_boundary_required": bool(
+            low_integrity_execution
+        ),
         "low_integrity_attested": False,
     }
 
@@ -294,7 +328,23 @@ def run_broker() -> int:
                 worker_stderr
             )
 
-            if payload["restricted_execution"]:
+            if payload["low_integrity_execution"]:
+                if not payload["restricted_execution"]:
+                    raise RuntimeError(
+                        "windows_job_broker_low_integrity_requires_restricted_execution"
+                    )
+                proc = (
+                    spawn_low_integrity_restricted_suspended_in_job(
+                        payload["command"],
+                        cwd=payload["cwd"],
+                        env=payload["env"],
+                        job=job,
+                        stdin_handle=stdin_handle,
+                        stdout_handle=stdout_handle,
+                        stderr_handle=stderr_handle,
+                    )
+                )
+            elif payload["restricted_execution"]:
                 proc = (
                     spawn_restricted_suspended_in_job(
                         payload["command"],
@@ -323,6 +373,9 @@ def run_broker() -> int:
             worker_pid=proc.pid,
             restricted_execution=payload[
                 "restricted_execution"
+            ],
+            low_integrity_execution=payload[
+                "low_integrity_execution"
             ],
         )
 
@@ -404,6 +457,22 @@ def run_broker() -> int:
                                 "restricted_execution"
                             ],
                             "restricted_token_attested": False,
+                            "low_integrity_execution": payload[
+                                "low_integrity_execution"
+                            ],
+                            "low_integrity_profile": (
+                                LOW_INTEGRITY_PROFILE
+                                if payload[
+                                    "low_integrity_execution"
+                                ]
+                                else None
+                            ),
+                            "low_integrity_token_verified": payload[
+                                "low_integrity_execution"
+                            ],
+                            "sandbox_low_integrity_boundary_required": payload[
+                                "low_integrity_execution"
+                            ],
                             "low_integrity_attested": False,
                             "drained_at": _utc_now(),
                         },

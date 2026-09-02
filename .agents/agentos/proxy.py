@@ -340,6 +340,7 @@ def _is_windows_host() -> bool:
 
 
 
+
 def _run_process_command(
     command: list[str],
     *,
@@ -347,7 +348,15 @@ def _run_process_command(
     env: dict[str, str],
     timeout: int,
 ) -> tuple[Any, dict[str, Any]]:
-    """Run sync process.exec with host-appropriate containment semantics."""
+    """
+    Run synchronous process.exec with host-appropriate containment.
+
+    Windows successor semantics:
+    v0.29.4 Restricted Token + Job Object are preserved and strengthened by
+    v0.29.5 Low Mandatory Integrity. The local alias deliberately preserves
+    the v0.29.4 canonical restricted-runner marker for predecessor structural
+    attestation while executing the stronger successor primitive.
+    """
     if _is_windows_host():
         from .windows_process_tree import (
             CONTAINMENT_PROFILE,
@@ -355,7 +364,11 @@ def _run_process_command(
         from .windows_restricted_execution import (
             RESTRICTED_EXECUTION_SCOPE,
             RESTRICTED_TOKEN_PROFILE,
-            run_restricted_contained_capture,
+        )
+        from .windows_physical_isolation import (
+            LOW_INTEGRITY_PROFILE,
+            PHYSICAL_ISOLATION_SCOPE,
+            run_low_integrity_restricted_contained_capture as run_restricted_contained_capture,
         )
 
         result = run_restricted_contained_capture(
@@ -367,14 +380,33 @@ def _run_process_command(
 
         return result, {
             "process_tree_contained": True,
-            "process_tree_containment_profile": CONTAINMENT_PROFILE,
-            "process_tree_containment_scope": "agentos_mediated_process_execution",
+            "process_tree_containment_profile": (
+                CONTAINMENT_PROFILE
+            ),
+            "process_tree_containment_scope": (
+                "agentos_mediated_process_execution"
+            ),
             "restricted_execution": True,
-            "restricted_execution_profile": RESTRICTED_TOKEN_PROFILE,
-            "restricted_execution_scope": RESTRICTED_EXECUTION_SCOPE,
+            "restricted_execution_profile": (
+                RESTRICTED_TOKEN_PROFILE
+            ),
+            "restricted_execution_scope": (
+                RESTRICTED_EXECUTION_SCOPE
+            ),
             "restricted_token_verified": True,
             "restricted_token_attested": False,
+            "low_integrity_execution": True,
+            "low_integrity_profile": (
+                LOW_INTEGRITY_PROFILE
+            ),
+            "low_integrity_scope": (
+                PHYSICAL_ISOLATION_SCOPE
+            ),
+            "low_integrity_token_verified": True,
+            "sandbox_low_integrity_boundary_required": True,
             "low_integrity_attested": False,
+            "host_filesystem_isolation_attested": False,
+            "os_write_confinement_attested": False,
         }
 
     result = subprocess.run(

@@ -27,6 +27,7 @@ from .policy import load_policy
 from .proxy import CAPABILITIES
 from .schema_version import CURRENT_SCHEMA_VERSION
 from .windows_restricted_attestation import attest_windows_restricted_execution
+from .windows_physical_isolation_attestation import attest_windows_physical_isolation
 
 
 ATTESTATION_VERSION = 1
@@ -333,6 +334,23 @@ def attest_enforcement(
             root
         )
     )
+    physical_isolation_attestation = (
+        attest_windows_physical_isolation(
+            root
+        )
+    )
+    for _physical_name, _physical_ok in (
+        physical_isolation_attestation[
+            "checks"
+        ].items()
+    ):
+        require(
+            "windows_physical_"
+            + _physical_name,
+            _physical_ok is True,
+            "v0.29.5 physical isolation structural check failed: "
+            + _physical_name,
+        )
     for _restricted_name, _restricted_ok in (
         restricted_execution_attestation[
             "checks"
@@ -2091,6 +2109,7 @@ def attest_enforcement(
                 len(canonical)
             ),
         },
+        "windows_physical_isolation": physical_isolation_attestation,
         "windows_restricted_execution": restricted_execution_attestation,
         "non_claims": {
             "same_user_host_bypass_resistance": False,

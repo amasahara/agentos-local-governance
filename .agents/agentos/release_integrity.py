@@ -69,6 +69,8 @@ CORE_FILES = (
     ".agents/agentos/tool_runtime_profiles.py",
     '.agents/agentos/windows_restricted_execution.py',
     '.agents/agentos/windows_restricted_attestation.py',
+    '.agents/agentos/windows_physical_isolation.py',
+    '.agents/agentos/windows_physical_isolation_attestation.py',
 )
 RELEASE_FILES = (
     ".agents/tests/test_release_line_endings_v0242.py",
@@ -167,6 +169,16 @@ RELEASE_FILES = (
     '.agents/tests/test_successor_policy_activation_v0294.py',
     '.agents/tests/test_windows_restricted_release_integrity_v0294.py',
     '.agents/docs/WINDOWS_RESTRICTED_EXECUTION_V0294.md',
+    '.agents/tests/test_windows_low_integrity_primitives_v0295.py',
+    '.agents/tests/test_windows_sandbox_mandatory_label_v0295.py',
+    '.agents/tests/test_windows_sandbox_dacl_access_v0295.py',
+    '.agents/tests/test_windows_low_integrity_sync_v0295.py',
+    '.agents/tests/test_windows_low_integrity_async_v0295.py',
+    '.agents/tests/test_windows_physical_isolation_attestation_v0295.py',
+    '.agents/tests/test_windows_physical_isolation_ci_gate_v0295.py',
+    '.agents/tests/test_windows_physical_isolation_activation_v0295.py',
+    '.agents/tests/test_windows_physical_isolation_release_integrity_v0295.py',
+    '.agents/docs/WINDOWS_NATIVE_PHYSICAL_ISOLATION_V0295.md',
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -715,6 +727,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                     required_policy_sections.add("windows_process_tree_containment_policy")
             if release_version >= (0, 29, 4):
                 required_policy_sections.add("windows_restricted_execution_policy")
+            if release_version >= (0, 29, 5):
+                required_policy_sections.add("windows_physical_isolation_policy")
             missing = sorted(required_policy_sections - set(policy))
             if missing:
                 findings.append(_finding("missing_policy_sections", f"missing policy sections: {missing}", ".agents/config/governance.json"))
@@ -1265,6 +1279,207 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                     )
                 )
 
+        physical_isolation_attestation = (
+            attestation_report.get(
+                "windows_physical_isolation"
+            )
+            or {}
+        )
+
+        if attested_release_version >= (0, 29, 5):
+            required_physical_assertions = (
+                "structurally_attested",
+                "sync_enforced",
+                "async_enforced",
+                "restricted_token_preserved",
+                "low_integrity_token_verified",
+                "sandbox_low_integrity_boundary_verified",
+                "production_controlled_ancestry_verified",
+                "assignment_before_resume",
+                "windows_ci_covered",
+                "broad_nonclaims_preserved",
+                "policy_declared_attested",
+                "low_integrity_attested",
+                "sandbox_low_integrity_label_attested",
+            )
+
+            missing_physical_assertions = [
+                key
+                for key in required_physical_assertions
+                if (
+                    physical_isolation_attestation.get(
+                        key
+                    )
+                    is not True
+                )
+            ]
+
+            if missing_physical_assertions:
+                findings.append(
+                    _finding(
+                        "windows_physical_isolation_attestation_failed",
+                        "v0.29.5 Native Physical Isolation attestation is not green: "
+                        + repr(
+                            missing_physical_assertions
+                        ),
+                        ".agents/agentos/windows_physical_isolation_attestation.py",
+                    )
+                )
+
+            if (
+                physical_isolation_attestation.get(
+                    "scope"
+                )
+                != "agentos_mediated_process_execution"
+            ):
+                findings.append(
+                    _finding(
+                        "windows_physical_isolation_scope_invalid",
+                        "v0.29.5 Native Physical Isolation scope must remain bounded to agentos_mediated_process_execution",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
+            if (
+                physical_isolation_attestation.get(
+                    "release_activation_deferred"
+                )
+                is not False
+            ):
+                findings.append(
+                    _finding(
+                        "windows_physical_isolation_activation_deferred",
+                        "v0.29.5 physical-isolation release activation must be complete",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
+            physical_global_nonclaims = (
+                attestation_report.get(
+                    "non_claims"
+                )
+                or {}
+            )
+
+            for nonclaim_key in (
+                "restricted_token_attested",
+                "low_integrity_attested",
+                "host_filesystem_isolation_attested",
+                "os_write_confinement_attested",
+                "same_user_host_bypass_resistance",
+                "credential_isolation_attested",
+            ):
+                if (
+                    physical_global_nonclaims.get(
+                        nonclaim_key
+                    )
+                    is not False
+                ):
+                    findings.append(
+                        _finding(
+                            "windows_physical_isolation_global_overclaim",
+                            "v0.29.5 scoped physical-isolation activation must not broaden global nonclaims: "
+                            + nonclaim_key,
+                            ".agents/agentos/enforcement_attestation.py",
+                        )
+                    )
+
+            from .policy import (
+                load_release_policy as _load_release_policy_v0295,
+            )
+
+            physical_policy = (
+                _load_release_policy_v0295(
+                    root
+                ).get(
+                    "windows_physical_isolation_policy"
+                )
+                or {}
+            )
+
+            if (
+                physical_policy.get(
+                    "release_focus"
+                )
+                != "native_physical_isolation_extensions"
+                or physical_policy.get(
+                    "low_integrity_attested"
+                )
+                is not True
+                or physical_policy.get(
+                    "sandbox_low_integrity_label_attested"
+                )
+                is not True
+                or physical_policy.get(
+                    "activation_complete"
+                )
+                is not True
+                or physical_policy.get(
+                    "activation_version"
+                )
+                != "0.29.5"
+                or physical_policy.get(
+                    "release_activation_deferred_until_phase6"
+                )
+                is not False
+                or physical_policy.get(
+                    "production_activation_deferred"
+                )
+                is not False
+                or physical_policy.get(
+                    "primary_root_write_up_prevention_attested"
+                )
+                is not False
+                or physical_policy.get(
+                    "host_filesystem_isolation_attested"
+                )
+                is not False
+                or physical_policy.get(
+                    "os_write_confinement_attested"
+                )
+                is not False
+                or physical_policy.get(
+                    "same_user_host_bypass_resistance_claimed"
+                )
+                is not False
+                or physical_policy.get(
+                    "desktop_isolation_attested"
+                )
+                is not False
+            ):
+                findings.append(
+                    _finding(
+                        "windows_physical_isolation_activation_flags_invalid",
+                        "v0.29.5 Native Physical Isolation activation flags are incomplete or overbroad",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+
+            predecessor_restricted = (
+                attestation_report.get(
+                    "windows_restricted_execution"
+                )
+                or {}
+            )
+
+            if (
+                predecessor_restricted.get(
+                    "restricted_token_attested"
+                )
+                is not True
+                or predecessor_restricted.get(
+                    "low_integrity_attested"
+                )
+                is not False
+            ):
+                findings.append(
+                    _finding(
+                        "windows_physical_isolation_predecessor_contract_invalid",
+                        "v0.29.5 must preserve the v0.29.4 Restricted Token scoped contract without moving Low Integrity into the predecessor attester",
+                        ".agents/agentos/windows_restricted_attestation.py",
+                    )
+                )
+
         completion_attestation = (
             attestation_report.get("completion_verification")
             or {}
@@ -1633,6 +1848,9 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 "windows_restricted_execution": attestation_report.get(
                     "windows_restricted_execution"
                 ),
+                "windows_physical_isolation": attestation_report.get(
+                    "windows_physical_isolation"
+                ),
                 "finding_count": len(
                     attestation_report.get("findings", [])
                 ),
@@ -1701,6 +1919,7 @@ DOC_FILES = (
     ".agents/docs/WINDOWS_SANDBOX_WORKSPACE_TOOL_RUNTIME_PROFILES_V0292.md",
     ".agents/docs/SANDBOX_CONFIGURATION_CREDENTIAL_BOUNDARY_V0293.md",
     '.agents/docs/WINDOWS_RESTRICTED_EXECUTION_V0294.md',
+    '.agents/docs/WINDOWS_NATIVE_PHYSICAL_ISOLATION_V0295.md',
 )
 
 

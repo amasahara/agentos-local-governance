@@ -21,6 +21,7 @@ import stat
 import tempfile
 from pathlib import Path
 from typing import Any
+from .windows_physical_isolation import apply_low_integrity_sandbox_boundary
 
 RUNTIME_PROFILE_VERSION = 1
 SANDBOX_WORKSPACE_VERSION = 1
@@ -1117,8 +1118,10 @@ def sandbox_base(primary_root: Path) -> Path:
     """
     Return the project-specific sandbox base outside the governed repository.
 
-    The physical separation is a workspace boundary only. It is not an OS ACL
-    or token isolation claim.
+    The sandbox remains outside the governed repository. On Windows,
+    v0.29.5 Phase 2 also applies a Low mandatory integrity label to
+    each materialized execution sandbox. This remains a bounded MIC
+    boundary, not general host-filesystem isolation.
     """
     root = primary_root.resolve()
     digest = _sha(str(root))[:12]
@@ -1209,6 +1212,7 @@ def _copy_snapshot_tree(
             )
 
 
+
 def create_sandbox_workspace(
     primary_root: Path,
     source_root: Path,
@@ -1219,8 +1223,15 @@ def create_sandbox_workspace(
     *,
     resolved_runtime_profile: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Materialize a sandbox bound to a validated runtime profile."""
+    """
+    Materialize a sandbox bound to a validated runtime profile.
+
+    On Windows, v0.29.5 Phase 2 applies and verifies the Low mandatory
+    integrity label only after the complete sandbox tree and snapshot have
+    been materialized. Production worker tokens are not lowered here.
+    """
     primary = primary_root.resolve()
+
     _assert_not_reparse(
         source_root,
         label="sandbox_source_root",
@@ -1237,6 +1248,7 @@ def create_sandbox_workspace(
         primary
         / ".agents"
     ).resolve()
+
     try:
         source.relative_to(
             primary_agents
@@ -1267,7 +1279,10 @@ def create_sandbox_workspace(
         command_profile,
     )
 
-    root = Path(layout["root"])
+    root = Path(
+        layout["root"]
+    )
+
     if root.exists():
         raise FileExistsError(
             "sandbox_workspace_already_exists"
@@ -1278,6 +1293,8 @@ def create_sandbox_workspace(
         exist_ok=False,
     )
 
+    boundary = None
+
     try:
         for name in (
             "home",
@@ -1285,14 +1302,27 @@ def create_sandbox_workspace(
             "cache",
             "logs",
         ):
-            Path(layout[name]).mkdir(
+            Path(
+                layout[name]
+            ).mkdir(
                 parents=True,
                 exist_ok=False,
             )
+
         _copy_snapshot_tree(
             source,
-            Path(layout["workspace"]),
+            Path(
+                layout["workspace"]
+            ),
         )
+
+        if os.name == "nt":
+            boundary = (
+                apply_low_integrity_sandbox_boundary(
+                    root,
+                    require_controlled_ancestry=True,
+                )
+            )
     except Exception:
         shutil.rmtree(
             root,
@@ -1300,43 +1330,114 @@ def create_sandbox_workspace(
         )
         raise
 
-    snapshot_hash = sandbox_workspace_hash(
-        Path(layout["workspace"])
+    snapshot_hash = (
+        sandbox_workspace_hash(
+            Path(
+                layout["workspace"]
+            )
+        )
     )
 
     result = {
         "sandbox_version": SANDBOX_WORKSPACE_VERSION,
         "scope": SANDBOX_SCOPE,
-        "profile_name": resolved["name"],
-        "profile_hash": resolved["profile_hash"],
-        "profile_version": resolved["profile_version"],
-        "root": str(root),
-        "workspace": str(layout["workspace"]),
-        "home": str(layout["home"]),
-        "temp": str(layout["temp"]),
-        "cache": str(layout["cache"]),
-        "logs": str(layout["logs"]),
-        "snapshot_hash": snapshot_hash,
+        "profile_name": resolved[
+            "name"
+        ],
+        "profile_hash": resolved[
+            "profile_hash"
+        ],
+        "profile_version": resolved[
+            "profile_version"
+        ],
+        "root": str(
+            root
+        ),
+        "workspace": str(
+            layout[
+                "workspace"
+            ]
+        ),
+        "home": str(
+            layout[
+                "home"
+            ]
+        ),
+        "temp": str(
+            layout[
+                "temp"
+            ]
+        ),
+        "cache": str(
+            layout[
+                "cache"
+            ]
+        ),
+        "logs": str(
+            layout[
+                "logs"
+            ]
+        ),
+        "snapshot_hash": (
+            snapshot_hash
+        ),
         "source_root_hash": _sha(
-            str(source)
+            str(
+                source
+            )
         ),
         "primary_root_hash": _sha(
-            str(primary)
+            str(
+                primary
+            )
         ),
     }
 
-    if "configuration_hash" in resolved:
+    if (
+        "configuration_hash"
+        in resolved
+    ):
         result.update(
             {
-                "configuration_version": resolved[
-                    "configuration_version"
-                ],
-                "configuration_source": resolved[
-                    "configuration_source"
-                ],
-                "configuration_hash": resolved[
-                    "configuration_hash"
-                ],
+                "configuration_version": (
+                    resolved[
+                        "configuration_version"
+                    ]
+                ),
+                "configuration_source": (
+                    resolved[
+                        "configuration_source"
+                    ]
+                ),
+                "configuration_hash": (
+                    resolved[
+                        "configuration_hash"
+                    ]
+                ),
+            }
+        )
+
+    if boundary is not None:
+        result.update(
+            {
+                "mandatory_integrity_label": (
+                    "low"
+                ),
+                "mandatory_integrity_sid": (
+                    boundary.root_label.sid
+                ),
+                "mandatory_integrity_rid": (
+                    boundary.root_label.rid
+                ),
+                "mandatory_integrity_no_write_up": (
+                    boundary.root_label.no_write_up
+                ),
+                "mandatory_integrity_labeled_path_count": (
+                    boundary.labeled_path_count
+                ),
+                "mandatory_integrity_verified_path_count": (
+                    boundary.verified_path_count
+                ),
             }
         )
 

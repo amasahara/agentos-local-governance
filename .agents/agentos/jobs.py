@@ -230,6 +230,7 @@ def _launch_windows_job_broker(
             completion_path
         ),
         "restricted_execution": True,
+        "low_integrity_execution": True,
     }
 
     broker_stderr = error_path.open(
@@ -306,6 +307,18 @@ def _launch_windows_job_broker(
                     is not True
                     or ready.get(
                         "restricted_token_verified"
+                    )
+                    is not True
+                    or ready.get(
+                        "low_integrity_execution"
+                    )
+                    is not True
+                    or ready.get(
+                        "low_integrity_token_verified"
+                    )
+                    is not True
+                    or ready.get(
+                        "sandbox_low_integrity_boundary_required"
                     )
                     is not True
                     or ready.get(

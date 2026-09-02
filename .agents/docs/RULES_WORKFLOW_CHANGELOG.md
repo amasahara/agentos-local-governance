@@ -1,3 +1,13 @@
+## v0.29.5 — Native Physical Isolation Extensions
+
+- Added bounded Windows Low Integrity enforcement for AgentOS-mediated sync and async worker roots.
+- Added Low mandatory-label sandbox SACLs with `NO_WRITE_UP` plus a bounded current-user DACL accessibility contract.
+- Production sandboxes require the controlled `*.agentos-sandboxes` ancestry; unrelated parent directories are not modified.
+- Added dedicated physical-isolation structural attestation, focused Windows CI, release activation, and release-integrity gates.
+- Activated only `low_integrity_attested` and `sandbox_low_integrity_label_attested` inside `windows_physical_isolation_policy`.
+- General host-filesystem isolation, general OS write confinement, primary-root-wide write confinement, desktop isolation, credential isolation, and same-user host-bypass resistance remain unclaimed.
+- Schema remains 62.
+
 ## v0.29.4 — Windows Restricted Execution
 - AgentOS-mediated Windows production process execution requires a verified
   Restricted Token on sync and async worker-root paths.

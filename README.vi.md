@@ -103,18 +103,29 @@ Xem hướng dẫn theo hành trình:
 
 Lịch sử phiên bản thuộc [CHANGELOG.md](CHANGELOG.md), Git history, tags và relea
 ## Bản phát hành hiện hành
-**v0.29.4 — Windows Restricted Execution** · schema **62**
+**v0.29.5 — Native Physical Isolation Extensions** · schema **62**
 
-v0.29.4 bổ sung Restricted Token native trên Windows cho phạm vi
-`agentos_mediated_process_execution`. Process do AgentOS quản trị được launch
-qua `CreateProcessAsUserW` ở trạng thái `CREATE_SUSPENDED`, xác minh lại token
-của child, gán vào Job Object rồi mới `ResumeThread`.
+v0.29.5 mở rộng boundary Windows của v0.29.4 từ Restricted Token sang
+**Restricted Token + Low Integrity** cho đúng phạm vi
+`agentos_mediated_process_execution`.
 
-Sync production đi qua restricted runner riêng. Async broker vẫn là trusted
-lifecycle owner của named Job Object, còn worker root chạy bằng Restricted
-Token. Đường production không có unrestricted `CreateProcessW` fallback.
+Sandbox do AgentOS tạo được gắn Low mandatory integrity label với
+`NO_WRITE_UP`; DACL được chuẩn hóa hẹp cho SID người dùng hiện tại để
+Restricted/LUA worker có thể đọc/ghi/thực thi trong sandbox. Production sync
+và governed async worker root đều được tạo suspended, xác minh Restricted +
+Low trên actual child token, gán vào Job Object rồi mới resume. Async broker
+vẫn là trusted lifecycle process.
 
-`restricted_token_attested = true` chỉ áp dụng cho phạm vi AgentOS-mediated nói
-trên. Low Integrity, desktop isolation, host-filesystem isolation, OS write
-confinement, credential isolation và same-user host-bypass resistance vẫn
-**không được claim**.
+Release attestation được kích hoạt ở phạm vi nói trên:
+
+```text
+restricted_token_attested = true
+low_integrity_attested = true
+sandbox_low_integrity_label_attested = true
+scope = agentos_mediated_process_execution
+```
+
+Các claim rộng hơn vẫn **không được kích hoạt**: host-filesystem isolation,
+OS write confinement tổng quát, desktop isolation, credential isolation và
+same-user host-bypass resistance. Low Integrity không phải namespace/container
+và không đồng nghĩa với cô lập toàn bộ filesystem của host.

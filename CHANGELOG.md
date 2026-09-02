@@ -1,4 +1,32 @@
 # Changelog
+## v0.29.5 — Native Physical Isolation Extensions
+- Extended the v0.29.4 Windows Restricted Token boundary with verified Low
+  Integrity (`S-1-16-4096`, RID 4096) for AgentOS-mediated process execution.
+- Added native `TokenIntegrityLevel` mutation and verification while preserving
+  the exact v0.29.4 Restricted Token profile and forbidding `SANDBOX_INERT`.
+- Added Low mandatory-label SACLs with `NO_WRITE_UP`; directories use inheritable
+  OI/CI labels and existing sandbox objects are explicitly labeled and verified.
+- Added a bounded current-user DACL contract so Restricted/LUA workers can
+  read/write/execute inside the AgentOS sandbox without granting `Everyone`,
+  `WRITE_DAC`, `WRITE_OWNER`, or `ACCESS_SYSTEM_SECURITY`.
+- Kept generic Low-MIC primitives root-local while production sandboxes require
+  the controlled `*.agentos-sandboxes` ancestry.
+- Switched synchronous production execution to Restricted + Low child creation,
+  actual child-token verification, Job Object assignment, then resume.
+- Switched governed asynchronous worker roots to Restricted + Low while keeping
+  the async broker as the trusted lifecycle process.
+- Added live Windows write-up probes: governed Low workers can write inside the
+  Low-labeled sandbox and are denied writes to controlled Medium targets.
+- Added dedicated physical-isolation structural attestation and focused
+  `windows-latest` CI coverage for token, MIC, DACL, sync, async, and activation.
+- Activated only the scoped claims
+  `low_integrity_attested = true` and
+  `sandbox_low_integrity_label_attested = true` under
+  `agentos_mediated_process_execution`.
+- General host-filesystem isolation, general OS write confinement, desktop
+  isolation, credential isolation, primary-root-wide write confinement, and
+  same-user host-bypass resistance remain unclaimed.
+- Database schema remains **62**; no migration is added.
 ## v0.29.4 — Windows Restricted Execution
 - Added Windows Restricted Token execution using
   `DISABLE_MAX_PRIVILEGE | LUA_TOKEN`; `SANDBOX_INERT` is forbidden.

@@ -1,12 +1,12 @@
 {
-  "release": "0.29.4",
+  "release": "0.29.5",
   "kind": "full",
-  "file_count": 356,
+  "file_count": 368,
   "files": [
     {
       "path": ".agents/agentos/__init__.py",
       "size": 23,
-      "sha256": "c2f78dfb7de38b729d01f33f49e22e969aed356ee5ddbdc62f2eb92429e99f34"
+      "sha256": "2a4f8131d5fda141c7d919b5583cebbcbd8bf4483070f3327088c91a8b0f903e"
     },
     {
       "path": ".agents/agentos/adaptive_budget.py",
@@ -260,8 +260,8 @@
     },
     {
       "path": ".agents/agentos/enforcement_attestation.py",
-      "size": 66925,
-      "sha256": "d93c96846689559969c9e02021f1b559f6fbd2e2da47873f16c24040634efc70"
+      "size": 67544,
+      "sha256": "3e9370faef8e43b5844f28ad200e96e38d2caefac491a09f6a2674e5b56c09c2"
     },
     {
       "path": ".agents/agentos/evaluation.py",
@@ -330,8 +330,8 @@
     },
     {
       "path": ".agents/agentos/jobs.py",
-      "size": 60946,
-      "sha256": "bc051cfcacb42c1ff6264c30fba9c57597a030fa35ccf076a16b5689c7314a3c"
+      "size": 61422,
+      "sha256": "26795e6a64de56c32e83962a517297fdc20488fed2321567d8015e160c34a79c"
     },
     {
       "path": ".agents/agentos/knowledge_graph.py",
@@ -605,8 +605,8 @@
     },
     {
       "path": ".agents/agentos/proxy.py",
-      "size": 45125,
-      "sha256": "5b99bbe54387d237c4fe9f607cbfc5b5f27ef76511b54a9cb6045d04ab3252b8"
+      "size": 46224,
+      "sha256": "0b78df8333dd7239f2d2d7ccb4da838cd1e60bbe675769bf338003fcd4a81606"
     },
     {
       "path": ".agents/agentos/read_only_extraction.py",
@@ -635,8 +635,8 @@
     },
     {
       "path": ".agents/agentos/release_integrity.py",
-      "size": 70073,
-      "sha256": "0652d052759f8c0a36e373ad3e7072c4d03e5288ae13f94e4da2e61e02563124"
+      "size": 78398,
+      "sha256": "5abe0ac738197a0cac1f0f1573eba3788f58875b2ba39e690df731990a8e4ad3"
     },
     {
       "path": ".agents/agentos/release_integrity_cli.py",
@@ -725,8 +725,8 @@
     },
     {
       "path": ".agents/agentos/tool_runtime_profiles.py",
-      "size": 37120,
-      "sha256": "a09dde095a103975fcf7afebdf3542a6c98cbc43c43d03789f915b936e32f180"
+      "size": 39327,
+      "sha256": "457f328a4c9d29389803f302cb1247ab1958e3eda9393db09fd772a05c0554ed"
     },
     {
       "path": ".agents/agentos/tooling.py",
@@ -750,8 +750,18 @@
     },
     {
       "path": ".agents/agentos/windows_job_broker.py",
-      "size": 11239,
-      "sha256": "0a569528ee4b26b0df0f92b295ec4fb0cd68b45366a9ffb4c3fd535dfe0edfcb"
+      "size": 13961,
+      "sha256": "a1533bb0f10bf064893619817581e2434faa85ca621a54138b1458021eeb226c"
+    },
+    {
+      "path": ".agents/agentos/windows_physical_isolation.py",
+      "size": 50305,
+      "sha256": "04ede262d0f739c59a751d6c5e7e8c63d7fb9ef7f34d807e30f9e1c54bcf7348"
+    },
+    {
+      "path": ".agents/agentos/windows_physical_isolation_attestation.py",
+      "size": 21686,
+      "sha256": "e72a195c61e59b379fc445c7f4f8009bac6b1777371a549315eabea840fba56c"
     },
     {
       "path": ".agents/agentos/windows_process_tree.py",
@@ -855,8 +865,8 @@
     },
     {
       "path": ".agents/config/generated/governance.effective.json",
-      "size": 68239,
-      "sha256": "afd5dda2c3c29b4b3cc583a6017c04ec028723af6a0901f8734d6883de88f5a2"
+      "size": 72347,
+      "sha256": "01440036179f6bff7b5330af0bff79ae7e5c3fde6b887ebb541fd9b4b94a0097"
     },
     {
       "path": ".agents/config/governance.json",
@@ -880,8 +890,8 @@
     },
     {
       "path": ".agents/config/policy/20-release.json",
-      "size": 11976,
-      "sha256": "29fe8cdefd340901902ea14bab1b4a7b759b538b5fceca6d0330ca167c222b92"
+      "size": 16084,
+      "sha256": "af0f3b7f3eb8347bb39839e187f89f3716be51de1531f05387adeb6edf4b4ee7"
     },
     {
       "path": ".agents/config/project_consolidation_policy.v0202.json",
@@ -900,8 +910,8 @@
     },
     {
       "path": ".agents/config/release_policy.json",
-      "size": 18649,
-      "sha256": "78fac415c4b572256934afb3c93094616f8ff65cc9e364cad39a54e6144b5722"
+      "size": 22765,
+      "sha256": "d876d2f10f18ca93979cd35fd95c850ab3dae0e18fab0cf615d96a5b06744bd2"
     },
     {
       "path": ".agents/config/schema_mapping_policy.v0211.json",
@@ -936,7 +946,7 @@
     {
       "path": ".agents/distribution/metadata.json",
       "size": 499,
-      "sha256": "cf0ce2bddf924734fdc6188c85c3c9850bae4943657068dbd223cd9ec43506c8"
+      "sha256": "ec14a0c2d90ce174976ff4d93ce9f96b0e8e3c1c427972293cfa04eae67cda08"
     },
     {
       "path": ".agents/docs/ADAPTIVE_TOKEN_BUDGET_MODEL_PROFILES_V0231.md",
@@ -1030,8 +1040,8 @@
     },
     {
       "path": ".agents/docs/INSTALL_LATEST_RELEASE.md",
-      "size": 3666,
-      "sha256": "9be15b1ef3239144679a100a8559a7cc698e1a00fcb34205737dc920ba8bf1df"
+      "size": 3920,
+      "sha256": "ba6491aba5e1f10c8c97379c8d841ce459ea5b6757e353a71355f29c7ed03eed"
     },
     {
       "path": ".agents/docs/ISOLATED_WORKSPACE_CONTROLLED_INTEGRATION_V0273.md",
@@ -1130,8 +1140,8 @@
     },
     {
       "path": ".agents/docs/RULES_WORKFLOW_CHANGELOG.md",
-      "size": 31709,
-      "sha256": "8518cdf715bdf2ef351d75690deb53aa5c60c092dbe413b03d786002ada50ee4"
+      "size": 32586,
+      "sha256": "7a36df38fcf36e97c9ee1022bf3f2c1b7395566da51a1919fae34b5785c52d3a"
     },
     {
       "path": ".agents/docs/RUNTIME_DATA_API_BUSINESS_ENFORCEMENT_V0262.md",
@@ -1262,6 +1272,11 @@
       "path": ".agents/docs/WINDOWS.md",
       "size": 605,
       "sha256": "5f1a3e272dabcf57a51f33abca8cec37ff3f149e0e5ee69d3353d5f8516b4ec2"
+    },
+    {
+      "path": ".agents/docs/WINDOWS_NATIVE_PHYSICAL_ISOLATION_V0295.md",
+      "size": 3807,
+      "sha256": "64bace44000ed421d682cb04dfd3edc36ebaf0354533c76f889759acca62f3d7"
     },
     {
       "path": ".agents/docs/WINDOWS_PROCESS_TREE_CONTAINMENT_V0291.md",
@@ -1570,8 +1585,8 @@
     },
     {
       "path": ".agents/tests/test_successor_policy_activation_v0294.py",
-      "size": 2443,
-      "sha256": "a0751d1699a18502757b98eb37f1b23b48fc0705eb72c84271e528c528f1b1ec"
+      "size": 2343,
+      "sha256": "375abeb65b21fc596274d3f89a053bc8222d4581c6a9273a4f1347f43ffc0b77"
     },
     {
       "path": ".agents/tests/test_sync_credential_boundary_v0293.py",
@@ -1619,9 +1634,44 @@
       "sha256": "0fa19bd72d42db428a08b468b04f1d984951883e06c1471f68161c152acaeb9e"
     },
     {
+      "path": ".agents/tests/test_windows_low_integrity_async_v0295.py",
+      "size": 6002,
+      "sha256": "69970b5267da87321035ffc614cdb3f46102514d52d5d0ea9461d580e604f09a"
+    },
+    {
+      "path": ".agents/tests/test_windows_low_integrity_primitives_v0295.py",
+      "size": 5097,
+      "sha256": "a49239eac0bf8131585bf4e46fd80e88d2c9215b0f8478d9c05e1ae5d0dfd565"
+    },
+    {
+      "path": ".agents/tests/test_windows_low_integrity_sync_v0295.py",
+      "size": 11505,
+      "sha256": "6fc7f3e7c51346e8c479514687915b78b5b4ee08f65f32fa1018acc12fa1bd02"
+    },
+    {
+      "path": ".agents/tests/test_windows_physical_isolation_activation_v0295.py",
+      "size": 5205,
+      "sha256": "44300b2f8d80c7f16782495a8f6e120fda5b2cbabec1a1c1f393f0b9aeef86d6"
+    },
+    {
+      "path": ".agents/tests/test_windows_physical_isolation_attestation_v0295.py",
+      "size": 3392,
+      "sha256": "d3716b97d608639e2198f619999b6065ec677f02d6bba0d98fdec5461eb078e0"
+    },
+    {
+      "path": ".agents/tests/test_windows_physical_isolation_ci_gate_v0295.py",
+      "size": 1601,
+      "sha256": "1dfd1ef28fb9c9bf3723a0a40c8e0478db55dbf9d68eeeccf3570420cc769409"
+    },
+    {
+      "path": ".agents/tests/test_windows_physical_isolation_release_integrity_v0295.py",
+      "size": 2799,
+      "sha256": "6d6fd71cce7e1b31902e3843c8658c6beaed8fb336c6548ffccbc50e3eefb420"
+    },
+    {
       "path": ".agents/tests/test_windows_process_exec_containment_v0291.py",
-      "size": 3213,
-      "sha256": "2f2df781063b790b01f4e6508d5a65db83aa1d7b9cdb712e9b9ae272643a13e9"
+      "size": 4053,
+      "sha256": "c39b6840ba487df34c923ff24e26cfcf499b521a992df174efeb4fd6e177038e"
     },
     {
       "path": ".agents/tests/test_windows_process_tree_activation_v0291.py",
@@ -1640,13 +1690,13 @@
     },
     {
       "path": ".agents/tests/test_windows_restricted_activation_v0294.py",
-      "size": 4686,
-      "sha256": "86bdef2c6429771e8913fa889f621d216d11777b0e95bececc9e319d1ecb84b1"
+      "size": 5289,
+      "sha256": "9fdb77aadd20a60dd1d48a0c31f7d3148592c2d3f7b53209abc7a899bfcf0ad6"
     },
     {
       "path": ".agents/tests/test_windows_restricted_async_v0294.py",
-      "size": 9344,
-      "sha256": "6e4e7833fe0183d669e6c5a1f422b45df5dd51366c278f867dd97e904835ec85"
+      "size": 9328,
+      "sha256": "237811e777ce00c1b5b92d4096145ee6fc3fab2aa549f33b9de71b68f127d297"
     },
     {
       "path": ".agents/tests/test_windows_restricted_attestation_v0294.py",
@@ -1660,13 +1710,13 @@
     },
     {
       "path": ".agents/tests/test_windows_restricted_execution_v0294.py",
-      "size": 7349,
-      "sha256": "971d88aa97eb2c045aee39adb61103ff582473b97541062984edf724d7cfb638"
+      "size": 7235,
+      "sha256": "713c3e0f6362bf2fdbefa8a47683f97ac25cfe00b9930d7d091cc5312c4b7932"
     },
     {
       "path": ".agents/tests/test_windows_restricted_fail_closed_v0294.py",
-      "size": 10193,
-      "sha256": "d37b5b878f7c6a7049c62aa8db9766ff1ed119ca21f11c3c0d51fc06ecadcd55"
+      "size": 10177,
+      "sha256": "d9cedbefc5ad4d5ae33a81f76062a1e633c409e0812f550e6813cab594e3a84f"
     },
     {
       "path": ".agents/tests/test_windows_restricted_release_integrity_v0294.py",
@@ -1675,8 +1725,8 @@
     },
     {
       "path": ".agents/tests/test_windows_restricted_sync_v0294.py",
-      "size": 10969,
-      "sha256": "150e854aa0d6354f2cf3ba28194e271952caeeb329e077d35f9c331f1563dd2e"
+      "size": 10953,
+      "sha256": "0d14abd8ba6189ea873ea5081dc2a68c9a96a40fe189c6c51464eded1c4d8bb2"
     },
     {
       "path": ".agents/tests/test_windows_sandbox_activation_v0292.py",
@@ -1687,6 +1737,16 @@
       "path": ".agents/tests/test_windows_sandbox_ci_gate_v0292.py",
       "size": 4678,
       "sha256": "f4225a92736f2d98925c980ec124093ab4e15dab0b7894c1a691360c003936a0"
+    },
+    {
+      "path": ".agents/tests/test_windows_sandbox_dacl_access_v0295.py",
+      "size": 4468,
+      "sha256": "11380963f5956fcef32f38904226fe03d3f0541d3142d90ff64f564885b652c2"
+    },
+    {
+      "path": ".agents/tests/test_windows_sandbox_mandatory_label_v0295.py",
+      "size": 5610,
+      "sha256": "303cb6bb3c0f8d7bed75a84320540e5ee9d17f5f02d81a5248a1931f7d74ce72"
     },
     {
       "path": ".agents/tests/test_workflow_completion_v0290.py",
@@ -1700,8 +1760,8 @@
     },
     {
       "path": ".github/workflows/agentos-release-validation.yml",
-      "size": 6707,
-      "sha256": "c85c4e026dceb22eeb7857017c3456d2ae2318c445de0675d67976ed5d0b0d8e"
+      "size": 7393,
+      "sha256": "47fd88779020fba08514913ea9b52df149bf9e49bd9a04e1449f300aa125222a"
     },
     {
       "path": ".gitignore",
@@ -1715,38 +1775,38 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 25812,
-      "sha256": "68abb97ff9380632fbadc63a63094523069c3bd78ec16e9972bf0cb1101d5d1c"
+      "size": 27697,
+      "sha256": "cd75af923ed458982dd7a7227c8ad600e8c16d7fa28ecba12e9a57545ba7f412"
     },
     {
       "path": "PACKAGE_COMPLETENESS.json",
       "size": 2894,
-      "sha256": "f6ecec48a0f21bb868e035f4e28a590505e7e671b2128cc4fe0e192e8f004e2d"
+      "sha256": "ef98a37616255ef8e1dbba687c5fa8e5069f91386524030f2d6bcbd4641b226b"
     },
     {
       "path": "README.en.md",
-      "size": 5095,
-      "sha256": "482b626049ee1791313dcf5c0ff09f90735e090840d972e4ea143b16a5429a9c"
+      "size": 5476,
+      "sha256": "edf983b1f8276a36fa4b035af6d3769d3bce80514ac54eb4b2325606f9f8a1aa"
     },
     {
       "path": "README.md",
-      "size": 6153,
-      "sha256": "d7161e01a65ba9ad94834e0f0c526f2d6d92dbea94f1c065739b7e7e8c988676"
+      "size": 6537,
+      "sha256": "4559d33f796d2b19d79262a6af5142f2ab1357b133430da6a01a6fc58c3ec9be"
     },
     {
       "path": "README.vi.md",
-      "size": 5527,
-      "sha256": "f50f6c3d7b9ec6767b5b68feb78b809e405e10a5d9e4c775f4b3e100d0c35175"
+      "size": 5911,
+      "sha256": "5ee185c106bcf766a81f906777bcbad1bad1124e02f54aa83951c0bee8bf4ef9"
     },
     {
       "path": "RELEASE_NOTES.md",
-      "size": 2087,
-      "sha256": "f1c2b014d4dfa5ccd104e92a1da7d0589d16c56d3d0b6eae771ac9f2964a7ab9"
+      "size": 4256,
+      "sha256": "a67d24833023abfa0f60b37c74e2e56e54d544474baecaad21d6dc9b926d5e8c"
     },
     {
       "path": "VERSION",
       "size": 7,
-      "sha256": "9d2e9b905735be07ee35c3132a0d7a6d5e2766e6c7ade3aeb0770b9b40adfec9"
+      "sha256": "7fe80f75149ac3aedd4c092959f7811ec0211d01421b04a103a698f33caff77e"
     },
     {
       "path": "huong_dan.en.md",

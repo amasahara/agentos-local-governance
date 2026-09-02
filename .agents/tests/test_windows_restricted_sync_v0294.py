@@ -339,14 +339,10 @@ def test_v0294_phase2_inherited_v0291_attestation_remains_green():
 
 
 def test_v0294_phase2_identity_and_schema_progress_to_release():
-    assert (ROOT / "VERSION").read_text(
-        encoding="utf-8"
-    ).strip() == "0.29.4"
-
+    assert (ROOT / 'VERSION').read_text(encoding='utf-8').strip() == '0.29.5'
     from agentos import __version__
     from agentos.schema_version import CURRENT_SCHEMA_VERSION
-
-    assert __version__ == "0.29.4"
+    assert __version__ == '0.29.5'
     assert CURRENT_SCHEMA_VERSION == 62
 
 @pytest.mark.skipif(

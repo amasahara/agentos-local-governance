@@ -10,11 +10,15 @@ from agentos import proxy
 
 def test_v0291_windows_sync_route_uses_contained_runner(monkeypatch, tmp_path):
     """
-    v0.29.4 strengthens the production Windows runner from the v0.29.1
-    Job-only adapter to the Restricted-Token + Job adapter. The inherited
-    contract remains: Windows process.exec must use the contained runner.
+    Successor contract: the inherited v0.29.1 requirement remains that
+    Windows process.exec uses the contained production runner.
+
+    v0.29.5 strengthens that runner to Restricted Token + Low Integrity +
+    Job Object. Patch the successor primitive actually imported by proxy at
+    call time rather than the v0.29.4 restricted-only predecessor primitive.
     """
     calls = []
+
     monkeypatch.setattr(
         proxy,
         "_is_windows_host",
@@ -22,8 +26,8 @@ def test_v0291_windows_sync_route_uses_contained_runner(monkeypatch, tmp_path):
     )
 
     from agentos import (
+        windows_physical_isolation,
         windows_process_tree,
-        windows_restricted_execution,
     )
 
     def fake_run(command, *, cwd, env, timeout):
@@ -35,6 +39,7 @@ def test_v0291_windows_sync_route_uses_contained_runner(monkeypatch, tmp_path):
                 timeout,
             )
         )
+
         return SimpleNamespace(
             returncode=0,
             stdout="ok",
@@ -42,8 +47,8 @@ def test_v0291_windows_sync_route_uses_contained_runner(monkeypatch, tmp_path):
         )
 
     monkeypatch.setattr(
-        windows_restricted_execution,
-        "run_restricted_contained_capture",
+        windows_physical_isolation,
+        "run_low_integrity_restricted_contained_capture",
         fake_run,
     )
 
@@ -56,6 +61,7 @@ def test_v0291_windows_sync_route_uses_contained_runner(monkeypatch, tmp_path):
 
     assert result.returncode == 0
     assert len(calls) == 1
+
     assert metadata["process_tree_contained"] is True
     assert (
         metadata[
@@ -69,7 +75,34 @@ def test_v0291_windows_sync_route_uses_contained_runner(monkeypatch, tmp_path):
         ]
         == "agentos_mediated_process_execution"
     )
+
     assert metadata["restricted_execution"] is True
+    assert metadata["restricted_token_verified"] is True
+
+    assert metadata["low_integrity_execution"] is True
+    assert metadata["low_integrity_token_verified"] is True
+    assert (
+        metadata[
+            "sandbox_low_integrity_boundary_required"
+        ]
+        is True
+    )
+
+    # Per-execution metadata remains a runtime evidence record, not the
+    # release-level attestation projection.
+    assert metadata["low_integrity_attested"] is False
+    assert (
+        metadata[
+            "host_filesystem_isolation_attested"
+        ]
+        is False
+    )
+    assert (
+        metadata[
+            "os_write_confinement_attested"
+        ]
+        is False
+    )
 
 def test_v0291_posix_sync_route_preserves_subprocess_run(monkeypatch, tmp_path):
     calls = []

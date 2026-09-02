@@ -76,31 +76,19 @@ def test_v0294_phase1_win32_abi_and_verification_markers_present():
 
 
 def test_v0294_phase1_policy_progresses_to_scoped_release_activation():
-    policy = json.loads(
-        (ROOT / ".agents/config/release_policy.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    section = _release_policy()["windows_restricted_execution_policy"]
-
-    assert policy["version"] == "0.29.4"
-    assert section["enabled"] is True
-    assert section["restricted_execution_version"] == 1
-    assert section["database_schema"] == 62
-    assert section["scope"] == "agentos_mediated_process_execution"
-    assert section["sync_execution_enforced"] is True
-    assert section["async_execution_enforced"] is True
-    assert section["restricted_token_attested"] is True
-    assert section["activation_complete"] is True
-    assert section["activation_version"] == "0.29.4"
-
-    for key in (
-        "low_integrity_attested",
-        "desktop_isolation_attested",
-        "host_filesystem_isolation_attested",
-        "os_write_confinement_attested",
-        "same_user_host_bypass_resistance_claimed",
-    ):
+    policy = json.loads((ROOT / '.agents/config/release_policy.json').read_text(encoding='utf-8'))
+    section = _release_policy()['windows_restricted_execution_policy']
+    assert policy['version'] == '0.29.5'
+    assert section['enabled'] is True
+    assert section['restricted_execution_version'] == 1
+    assert section['database_schema'] == 62
+    assert section['scope'] == 'agentos_mediated_process_execution'
+    assert section['sync_execution_enforced'] is True
+    assert section['async_execution_enforced'] is True
+    assert section['restricted_token_attested'] is True
+    assert section['activation_complete'] is True
+    assert section['activation_version'] == '0.29.4'
+    for key in ('low_integrity_attested', 'desktop_isolation_attested', 'host_filesystem_isolation_attested', 'os_write_confinement_attested', 'same_user_host_bypass_resistance_claimed'):
         assert section[key] is False
 
 def test_v0294_phase1_policy_sources_match():
@@ -237,11 +225,6 @@ def test_v0294_phase1_non_windows_fails_closed():
 
 
 def test_v0294_phase1_identity_and_schema_progress_to_release():
-    assert (ROOT / "VERSION").read_text(
-        encoding="utf-8"
-    ).strip() == "0.29.4"
-
-    source = (
-        ROOT / ".agents/agentos/schema_version.py"
-    ).read_text(encoding="utf-8")
-    assert "CURRENT_SCHEMA_VERSION = 62" in source
+    assert (ROOT / 'VERSION').read_text(encoding='utf-8').strip() == '0.29.5'
+    source = (ROOT / '.agents/agentos/schema_version.py').read_text(encoding='utf-8')
+    assert 'CURRENT_SCHEMA_VERSION = 62' in source

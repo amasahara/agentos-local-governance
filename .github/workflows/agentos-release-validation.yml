@@ -136,6 +136,10 @@ jobs:
         env:
           PYTHONPATH: .agents
         run: python -m pytest -q .agents/tests/test_windows_restricted_execution_v0294.py .agents/tests/test_windows_restricted_sync_v0294.py .agents/tests/test_windows_restricted_async_v0294.py .agents/tests/test_windows_restricted_fail_closed_v0294.py .agents/tests/test_windows_restricted_attestation_v0294.py .agents/tests/test_windows_restricted_ci_gate_v0294.py .agents/tests/test_windows_restricted_activation_v0294.py .agents/tests/test_successor_policy_activation_v0294.py .agents/tests/test_windows_restricted_release_integrity_v0294.py -rs
+      - name: Windows physical isolation v0.29.5
+        env:
+          PYTHONPATH: .agents
+        run: python -m pytest -q .agents/tests/test_windows_low_integrity_primitives_v0295.py .agents/tests/test_windows_sandbox_mandatory_label_v0295.py .agents/tests/test_windows_sandbox_dacl_access_v0295.py .agents/tests/test_windows_low_integrity_sync_v0295.py .agents/tests/test_windows_low_integrity_async_v0295.py .agents/tests/test_windows_physical_isolation_attestation_v0295.py .agents/tests/test_windows_physical_isolation_ci_gate_v0295.py .agents/tests/test_windows_physical_isolation_activation_v0295.py .agents/tests/test_windows_physical_isolation_release_integrity_v0295.py -rs
       - name: Full regression suite
         env:
           PYTHONPATH: .agents

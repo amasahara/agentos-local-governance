@@ -1,6 +1,6 @@
 # AgentOS — Cài đặt / làm mới từ Latest Full Release
 
-Current release: **v0.29.4 — Windows Restricted Execution**
+Current release: **v0.29.5 — Native Physical Isolation Extensions**
 Database schema: **62**
 
 > Release model invariant: **no updater script**.
@@ -78,19 +78,22 @@ python -m pytest -q .agents\tests -rs
 python tools\validate_release.py .
 git diff --check
 ```
+## v0.29.5 runtime note
 
-## v0.29.4 runtime note
+Windows production execution mediated by AgentOS now uses the v0.29.4
+Restricted Token boundary together with verified Low Integrity and a
+Low-labeled sandbox boundary.
 
-Windows production process execution mediated by AgentOS uses a verified
-Restricted Token plus the inherited Job Object boundary. Sync uses the
-dedicated restricted runner; async keeps the broker as trusted Job Object owner
-and restricts the governed worker root.
+Synchronous workers and governed asynchronous worker roots are created
+suspended, verified as Restricted + Low, assigned to the Job Object, and only
+then resumed. The asynchronous broker remains the trusted lifecycle process.
 
-The claim is limited to `agentos_mediated_process_execution`. Low Integrity and
-broader host/OS isolation claims remain disabled.
+The active claim is bounded to `agentos_mediated_process_execution`.
+General host-filesystem isolation, general OS write confinement, desktop
+isolation, credential isolation and same-user host-bypass resistance remain
+disabled.
 
-See [Windows Restricted Execution](WINDOWS_RESTRICTED_EXECUTION_V0294.md).
-
+See [Windows Native Physical Isolation v0.29.5](WINDOWS_NATIVE_PHYSICAL_ISOLATION_V0295.md).
 ## v0.28.1 runtime note
 
 The Optional Local Web Control Plane is foreground-only and loopback-only by default. It consumes the v0.28.0 Command Center read model and adds no database or governance mutation authority.

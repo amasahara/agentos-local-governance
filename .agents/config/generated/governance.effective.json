@@ -764,16 +764,16 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
+      ".agents/docs/GOVERNED_LEARNING_SIGNAL_INTEGRATION_V0310.md"
     ],
-    "current_release_name": "Release & Schema Metadata Coherence",
-    "current_schema": 63,
+    "current_release_name": "Governed Learning Signal Integration",
+    "current_schema": 64,
     "current_schema_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
+      ".agents/docs/GOVERNED_LEARNING_SIGNAL_INTEGRATION_V0310.md"
     ],
     "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
     "current_version_files": [
@@ -781,7 +781,7 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
+      ".agents/docs/GOVERNED_LEARNING_SIGNAL_INTEGRATION_V0310.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -792,7 +792,8 @@
       ".agents/docs/EXISTING_PROJECT.md",
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
-      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
+      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
+      ".agents/docs/GOVERNED_LEARNING_SIGNAL_INTEGRATION_V0310.md"
     ]
   },
   "drift_policy": {
@@ -967,6 +968,65 @@
     "signed_domain_event_required": true,
     "signed_request_event_required": true,
     "valid_project_root_requires_governed_mutations": true
+  },
+  "governed_learning_policy": {
+    "context": {
+      "context_authority_hash_may_include_learning_evidence": false,
+      "learning_derived_authority_class": "none",
+      "learning_derived_instruction_authority": false,
+      "learning_derived_knowledge_trust_class": "project_evidence",
+      "learning_derived_knowledge_uses_existing_provenance": true,
+      "learning_signal_context_source_registered": false,
+      "learning_signals_directly_injected": false
+    },
+    "database_schema": 64,
+    "degraded_safe": {
+      "learning_failure_must_not_weaken_governance": true,
+      "ordinary_governed_execution_may_continue_without_learning": true
+    },
+    "effectiveness": {
+      "automatic_deactivation_allowed": false,
+      "causal_effectiveness_claim_allowed": false,
+      "human_review_required_for_state_change": true
+    },
+    "enabled": true,
+    "mcp": {
+      "mutation_allowed": false,
+      "read_only": true,
+      "tools": [
+        "agentos.learning_signals_get",
+        "agentos.learning_signal_links_get",
+        "agentos.knowledge_usage_get",
+        "agentos.learning_status_get"
+      ]
+    },
+    "promotion": {
+      "automatic_architecture_mutation": false,
+      "automatic_memory_authority_promotion": false,
+      "automatic_policy_activation": false,
+      "automatic_skill_graduation": false,
+      "minimum_distinct_tasks": 2,
+      "minimum_occurrences": 3,
+      "promotion_cooldown_days": 7,
+      "window_days": 30
+    },
+    "retention": {
+      "automatic_archive_enabled": false,
+      "canonical_signal_deletion_allowed": false,
+      "max_active_signals_per_signature": 50,
+      "retrieval_max_age_days": 90
+    },
+    "scope": "agentos_governed_learning_evidence_linkage",
+    "signal_creation": {
+      "completed_task_required_for_cross_task_learning": true,
+      "per_task_monotonic_sequence_required": true,
+      "raw_content_duplication_allowed": false,
+      "same_active_session_context_reuse_allowed": false,
+      "source_hash_pin_required": true,
+      "transactional_sequence_assignment_required": true,
+      "verification_required_for_verification_signals": true
+    },
+    "version": 1
   },
   "human_clarification_policy": {
     "blocking_decisions_block_dependent_mutation": true,
@@ -1222,7 +1282,8 @@
       ".agents/config/governance.json",
       ".agents/config/policy/00-core.json",
       ".agents/config/policy/10-bootstrap.json",
-      ".agents/config/policy/20-release.json"
+      ".agents/config/policy/20-release.json",
+      ".agents/config/policy/learning.json"
     ]
   },
   "primary_project_consolidation_policy": {
@@ -1469,7 +1530,7 @@
       ".agents/docs/EXISTING_PROJECT.md",
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
-      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
+      ".agents/docs/GOVERNED_LEARNING_SIGNAL_INTEGRATION_V0310.md"
     ],
     "current_docs_must_match_release": true,
     "identity_sources": [
@@ -1484,7 +1545,7 @@
       "governed_project"
     ],
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
-    "version": "0.30.1"
+    "version": "0.31.0"
   },
   "repository_policy": {
     "application_root_metadata_owned_by_agentos": false,
@@ -1686,7 +1747,7 @@
     "bootstrap_artifact_metadata": ".agents/schema/bootstrap_v46.json",
     "bootstrap_artifact_sql": ".agents/schema/bootstrap_v46.sql",
     "bootstrap_schema": 46,
-    "current_database_schema": 63,
+    "current_database_schema": 64,
     "existing_database_mode": "incremental_from_recorded_version",
     "fresh_database_mode": "bootstrap_then_incremental",
     "fresh_replay_migrations_1_to_46": false,
@@ -1720,9 +1781,10 @@
       60,
       61,
       62,
-      63
+      63,
+      64
     ],
-    "schema_change": "release_schema_metadata_coherence_schema_63",
+    "schema_change": "schema 64 governed learning linkage",
     "schema_fingerprint_required": true,
     "schema_migration_markers_preserved": true,
     "source_database_write_authority_changed": false,
@@ -1767,7 +1829,7 @@
     "target_schema_snapshot_required": true,
     "type_compatibility_required": true
   },
-  "schema_version": 63,
+  "schema_version": 64,
   "secret_resolver_policy": {
     "aliases": {},
     "allowed_capabilities": [
@@ -1882,7 +1944,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.30.1",
+  "version": "0.31.0",
   "windows_physical_isolation_policy": {
     "activation_complete": true,
     "activation_version": "0.29.5",

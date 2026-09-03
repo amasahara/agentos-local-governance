@@ -217,7 +217,12 @@ def test_v0282_distribution_role_uses_authoritative_metadata() -> None:
         distribution / "VERSION"
     ).read_text(encoding="utf-8").strip()
     assert result["release"] == expected_release
-    assert result["schema"] == 63
+    expected_schema = json.loads(
+        (distribution / "PACKAGE_COMPLETENESS.json").read_text(
+            encoding="utf-8"
+        )
+    )["schema"]
+    assert result["schema"] == expected_schema
 
 
 def test_v0282_project_init_preserves_application_root(

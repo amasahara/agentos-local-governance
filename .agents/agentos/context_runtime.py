@@ -21,6 +21,7 @@ from typing import Any
 from .db import connect
 from .policy import load_policy
 from .retrieval import search_knowledge
+from .learning_signals import record_knowledge_usage_rows
 
 MANDATORY = {"AGENTS.md", ".agents/config/governance.json", "huong_dan.md"}
 
@@ -185,6 +186,7 @@ def build_context_pack(root: Path, task_id: str, max_lines: int = 500, mode: str
         c.execute("UPDATE context_packs SET status='superseded' WHERE task_id=? AND status='active'",(task_id,))
         c.execute("INSERT INTO context_packs(task_id,revision,content_hash,manifest_json,status) VALUES(?,?,?,?, 'active')",(task_id,rev,digest,json.dumps(manifest,sort_keys=True)))
         c.execute("INSERT INTO context_knowledge_events(task_id,context_revision,candidate_count,included_count,omitted_count,fallback_used,manifest_hash) VALUES(?,?,?,?,?,?,?)",(task_id,rev,manifest["knowledge_candidates"],manifest["included_knowledge"],len(manifest["omitted_knowledge"]),int(fallback_used),digest))
+        record_knowledge_usage_rows(c, task_id=task_id, context_revision=int(rev), context_pack_hash=digest, knowledge=knowledge)
     return {**manifest,"revision":rev,"status":"active"}
 
 

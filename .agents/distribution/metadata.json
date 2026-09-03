@@ -1,14 +1,14 @@
 {
-  "format": 1,
-  "repository_role": "agentos_distribution",
-  "agentos_version": "0.30.1",
-  "schema_version": 63,
-  "payload_root": ".agents",
-  "installed_metadata_root": ".agents/release",
-  "project_identity_policy": "generated_by_project_init_or_project_adopt",
+  "agent_plane_launcher": ".agents/bin/agentos",
+  "agentos_version": "0.31.0",
   "copies_application_readme": false,
   "copies_application_version": false,
+  "format": 1,
   "includes_release_tests": false,
+  "installed_metadata_root": ".agents/release",
+  "payload_root": ".agents",
   "privileged_control_plane_launcher": ".agents/bin/agentos-admin",
-  "agent_plane_launcher": ".agents/bin/agentos"
+  "project_identity_policy": "generated_by_project_init_or_project_adopt",
+  "repository_role": "agentos_distribution",
+  "schema_version": 64
 }

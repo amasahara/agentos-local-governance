@@ -1,23 +1,5 @@
 {
-  "project_bootstrap_policy": {
-    "new_project_command": "project-init",
-    "existing_project_command": "project-adopt",
-    "adoption_default_mode": "read_only_plan",
-    "apply_requires_human_confirmation": true,
-    "project_uuid": "generated_per_project",
-    "initial_purpose_status": "UNCONFIRMED",
-    "managed_root": ".agents",
-    "application_root_writes": [],
-    "installed_metadata_root": ".agents/release"
-  },
   "installed_payload_policy": {
-    "include": [
-      ".agents/agentos",
-      ".agents/bin/current",
-      ".agents/schema",
-      ".agents/config/policy",
-      ".agents/docs/current"
-    ],
     "exclude": [
       ".agents/tests",
       ".agents/bin/historical",
@@ -27,17 +9,48 @@
       "README.md",
       "VERSION",
       "huong_dan.md"
+    ],
+    "include": [
+      ".agents/agentos",
+      ".agents/bin/current",
+      ".agents/schema",
+      ".agents/config/policy",
+      ".agents/docs/current"
     ]
   },
+  "project_bootstrap_policy": {
+    "adoption_default_mode": "read_only_plan",
+    "application_root_writes": [],
+    "apply_requires_human_confirmation": true,
+    "existing_project_command": "project-adopt",
+    "initial_purpose_status": "UNCONFIRMED",
+    "installed_metadata_root": ".agents/release",
+    "managed_root": ".agents",
+    "new_project_command": "project-init",
+    "project_uuid": "generated_per_project"
+  },
   "schema_bootstrap_policy": {
-    "version": 1,
-    "bootstrap_schema": 46,
-    "bootstrap_artifact_sql": ".agents/schema/bootstrap_v46.sql",
+    "baseline_rotation": "explicit_release_only",
     "bootstrap_artifact_metadata": ".agents/schema/bootstrap_v46.json",
-    "fresh_database_mode": "bootstrap_then_incremental",
+    "bootstrap_artifact_sql": ".agents/schema/bootstrap_v46.sql",
+    "bootstrap_schema": 46,
+    "current_database_schema": 64,
     "existing_database_mode": "incremental_from_recorded_version",
+    "fresh_database_mode": "bootstrap_then_incremental",
     "fresh_replay_migrations_1_to_46": false,
-    "current_database_schema": 63,
+    "legacy_unversioned_reconciliation": {
+      "eligible_schema_migrations": [
+        32,
+        33,
+        34
+      ],
+      "fresh_bootstrap_path_affected": false,
+      "preserve_existing_rows": true,
+      "reconciliation_mode": "full_historical_replay_once",
+      "schema_object_name_and_sql_match_required": true,
+      "unknown_schema_object_allowed": false
+    },
+    "mcp_mutation_authority_changed": false,
     "post_baseline_migrations_at_release": [
       47,
       48,
@@ -55,28 +68,16 @@
       60,
       61,
       62,
-      63
+      63,
+      64
     ],
-    "schema_change": "release_schema_metadata_coherence_schema_63",
-    "baseline_rotation": "explicit_release_only",
-    "transactional_savepoint_required": true,
+    "schema_change": "schema 64 governed learning linkage",
     "schema_fingerprint_required": true,
     "schema_migration_markers_preserved": true,
     "source_database_write_authority_changed": false,
     "target_database_write_authority_changed": false,
-    "mcp_mutation_authority_changed": false,
+    "transactional_savepoint_required": true,
     "unversioned_nonempty_database": "fail_closed_except_exact_legacy_module_local_contract",
-    "legacy_unversioned_reconciliation": {
-      "eligible_schema_migrations": [
-        32,
-        33,
-        34
-      ],
-      "fresh_bootstrap_path_affected": false,
-      "preserve_existing_rows": true,
-      "reconciliation_mode": "full_historical_replay_once",
-      "schema_object_name_and_sql_match_required": true,
-      "unknown_schema_object_allowed": false
-    }
+    "version": 1
   }
 }

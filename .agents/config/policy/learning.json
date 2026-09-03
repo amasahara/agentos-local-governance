@@ -1,0 +1,61 @@
+{
+  "governed_learning_policy": {
+    "context": {
+      "context_authority_hash_may_include_learning_evidence": false,
+      "learning_derived_authority_class": "none",
+      "learning_derived_instruction_authority": false,
+      "learning_derived_knowledge_trust_class": "project_evidence",
+      "learning_derived_knowledge_uses_existing_provenance": true,
+      "learning_signal_context_source_registered": false,
+      "learning_signals_directly_injected": false
+    },
+    "database_schema": 64,
+    "degraded_safe": {
+      "learning_failure_must_not_weaken_governance": true,
+      "ordinary_governed_execution_may_continue_without_learning": true
+    },
+    "effectiveness": {
+      "automatic_deactivation_allowed": false,
+      "causal_effectiveness_claim_allowed": false,
+      "human_review_required_for_state_change": true
+    },
+    "enabled": true,
+    "mcp": {
+      "mutation_allowed": false,
+      "read_only": true,
+      "tools": [
+        "agentos.learning_signals_get",
+        "agentos.learning_signal_links_get",
+        "agentos.knowledge_usage_get",
+        "agentos.learning_status_get"
+      ]
+    },
+    "promotion": {
+      "automatic_architecture_mutation": false,
+      "automatic_memory_authority_promotion": false,
+      "automatic_policy_activation": false,
+      "automatic_skill_graduation": false,
+      "minimum_distinct_tasks": 2,
+      "minimum_occurrences": 3,
+      "promotion_cooldown_days": 7,
+      "window_days": 30
+    },
+    "retention": {
+      "automatic_archive_enabled": false,
+      "canonical_signal_deletion_allowed": false,
+      "max_active_signals_per_signature": 50,
+      "retrieval_max_age_days": 90
+    },
+    "scope": "agentos_governed_learning_evidence_linkage",
+    "signal_creation": {
+      "completed_task_required_for_cross_task_learning": true,
+      "per_task_monotonic_sequence_required": true,
+      "raw_content_duplication_allowed": false,
+      "same_active_session_context_reuse_allowed": false,
+      "source_hash_pin_required": true,
+      "transactional_sequence_assignment_required": true,
+      "verification_required_for_verification_signals": true
+    },
+    "version": 1
+  }
+}

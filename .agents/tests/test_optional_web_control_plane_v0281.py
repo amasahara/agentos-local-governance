@@ -152,6 +152,14 @@ def test_policy_poisoning_mutation_authority_fails_closed(tmp_path: Path, monkey
         wcp.create_web_control_plane(tmp_path, port=0)
 
 
+
+def test_future_database_schema_is_rejected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    future = json.loads(json.dumps(_POLICY))
+    future["web_control_plane_policy"]["database_schema"] = wcp.CURRENT_SCHEMA_VERSION + 1
+    monkeypatch.setattr(wcp, "load_policy", lambda _root: future)
+    with pytest.raises(RuntimeError, match="web_control_plane_schema_incompatible"):
+        wcp.create_web_control_plane(tmp_path, host="127.0.0.1", port=0)
+
 def test_root_is_static_shell_and_bootstrap_secret_is_fragment_only(running_web):
     _root, server, launch = running_web
     status, headers, raw = _request(launch, "GET", "/")

@@ -111,8 +111,9 @@ def _policy(root: Path) -> dict[str, Any]:
     poisoned = [key for key in required_false if merged.get(key) is not False]
     if poisoned:
         raise RuntimeError(f"web_control_plane_authority_invariant_violated:{poisoned}")
-    if int(merged.get("database_schema", 0)) != CURRENT_SCHEMA_VERSION:
-        raise RuntimeError("web_control_plane_schema_mismatch")
+    declared_schema = int(merged.get("database_schema", 0))
+    if declared_schema <= 0 or declared_schema > CURRENT_SCHEMA_VERSION:
+        raise RuntimeError("web_control_plane_schema_incompatible")
     if int(merged.get("web_version", 0)) != WEB_CONTROL_PLANE_VERSION:
         raise RuntimeError("web_control_plane_version_mismatch")
     ttl = int(merged.get("session_ttl_seconds", 0) or 0)

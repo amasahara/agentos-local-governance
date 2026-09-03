@@ -16,11 +16,11 @@ def _project_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def test_schema_63_is_last_registered_migration() -> None:
+def test_schema_63_context_authority_migration_is_preserved() -> None:
     migrations = db._all_migrations()
-    assert CURRENT_SCHEMA_VERSION == 63
-    assert len(migrations) == 63
-    assert migrations[-1] is migration_63
+    assert CURRENT_SCHEMA_VERSION >= 63
+    assert len(migrations) == CURRENT_SCHEMA_VERSION
+    assert migrations[62] is migration_63
 
 
 def test_release_policy_activates_context_authority() -> None:

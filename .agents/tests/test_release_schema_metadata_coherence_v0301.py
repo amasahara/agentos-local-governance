@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from agentos.release_coherence import check_schema_bootstrap_coherence
+from agentos.schema_version import CURRENT_SCHEMA_VERSION
 
 
 def _write(path: Path, value: dict) -> None:
@@ -46,7 +47,9 @@ def _codes(report: dict) -> set[str]:
 
 def test_current_repository_schema_bootstrap_is_coherent() -> None:
     root = Path(__file__).resolve().parents[2]
-    report = check_schema_bootstrap_coherence(root, schema_version=63)
+    report = check_schema_bootstrap_coherence(
+        root, schema_version=CURRENT_SCHEMA_VERSION
+    )
     assert report["ok"] is True, report
 
 

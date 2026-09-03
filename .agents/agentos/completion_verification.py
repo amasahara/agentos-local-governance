@@ -458,7 +458,34 @@ def verify_completion(
                 (external_hash, attempt_id),
             )
 
-    return {**event_payload, "external_event_hash": external_hash or None}
+    learning_signal=None
+    learning_error=None
+    if request_status=="verified":
+        try:
+            from .learning_signals import create_learning_signal
+            learning_signal=create_learning_signal(
+                root,
+                task_id=str(request["task_id"]),
+                session_id=str(verifier_session_id),
+                signal_kind="completion_verified",
+                source_type="completion_verification",
+                source_id=str(request_id),
+                expected_source_hash=result_hash,
+            )
+        except Exception as exc:
+            # Learning observation is degraded-safe; verification remains authoritative.
+            learning_error=f"{type(exc).__name__}:{exc}"
+    return {
+        **event_payload,
+        "external_event_hash":external_hash or None,
+        "learning_signal_id":(
+            learning_signal.get("signal_id")
+            if isinstance(learning_signal,dict)
+            else None
+        ),
+        "learning_degraded":learning_error is not None,
+        "learning_error":learning_error,
+    }
 
 
 def completion_status(

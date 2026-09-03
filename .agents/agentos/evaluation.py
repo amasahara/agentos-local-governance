@@ -83,7 +83,34 @@ def record_outcome(root: Path, task_id: str, outcome: str, rated_by: str, test_p
     with connect(root) as c:
         if not c.execute("SELECT 1 FROM tasks WHERE id=?",(task_id,)).fetchone(): raise RuntimeError("task not found")
         cur=c.execute("INSERT INTO task_outcomes(task_id,outcome,rated_by,test_pass_rate,rework_count,note,benchmark_key,task_category,agent_id,model_id,policy_revision,context_revision,retrieval_backend,repository_revision) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(task_id,outcome,rated_by,test_pass_rate,rework_count,note,cohort.get("benchmark_key"),cohort.get("task_category"),cohort.get("agent_id"),cohort.get("model_id"),cohort.get("policy_revision"),cohort.get("context_revision"),cohort.get("retrieval_backend"),cohort.get("repository_revision")))
-    return {"outcome_id":cur.lastrowid,"task_id":task_id,"outcome":outcome}
+    outcome_id=int(cur.lastrowid)
+    learning_signal=None
+    learning_error=None
+    try:
+        from .learning_signals import create_learning_signal
+        learning_signal=create_learning_signal(
+            root,
+            task_id=task_id,
+            session_id=cohort.get("session_id"),
+            signal_kind=f"outcome_{outcome}",
+            source_type="task_outcome",
+            source_id=str(outcome_id),
+        )
+    except Exception as exc:
+        # Learning observation is degraded-safe; outcome persistence remains authoritative.
+        learning_error=f"{type(exc).__name__}:{exc}"
+    return {
+        "outcome_id":outcome_id,
+        "task_id":task_id,
+        "outcome":outcome,
+        "learning_signal_id":(
+            learning_signal.get("signal_id")
+            if isinstance(learning_signal,dict)
+            else None
+        ),
+        "learning_degraded":learning_error is not None,
+        "learning_error":learning_error,
+    }
 
 def _wilson(successes: int, n: int, z: float=1.95996398454) -> tuple[float,float]:
     if not n: return (0.0,0.0)

@@ -91,26 +91,27 @@ State the problem and acceptance criteria, place changes by responsibility and l
 
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
 ## Current release
-**v0.30.1 — Release & Schema Metadata Coherence** · schema **63**
+**v0.31.0 — Governed Learning Signal Integration** · schema **64**
 
-This release is a coherence-only prerequisite for v0.31.0. It does not add a
-new database migration or learning feature. It aligns current release identity,
-schema-bootstrap metadata, and generated policy with runtime schema 63, and it
-adds a fail-closed contiguous migration check for bootstrap schema 46 → 63.
+Database schema: **64**
 
-Historical subsystem fields such as `database_schema = 55` remain descriptive
-metadata for the release in which those subsystems were introduced; they are
-not rewritten merely to match the current schema.
+v0.31.0 adds governed learning linkage through `learning_signals`,
+`learning_signal_links`, and `knowledge_usage`. Raw learning signals remain
+telemetry/linkage only: they are not registered as a Context Authority source
+kind and are never injected directly into context. `context_runtime` continues
+to retrieve only `skill`, `memory`, and `finding`.
+
+Learning-derived knowledge continues through the existing project-evidence
+provenance path and never gains instruction authority. This release does not
+auto-graduate skills, auto-activate policy, mutate Architecture Authority, or
+auto-deactivate knowledge.
 
 ### Inherited predecessor contracts
 
-v0.30.1 preserves **v0.30.0 — Context Authority & Untrusted Provenance**.
-Evidence-derived or untrusted context still cannot promote itself into AgentOS
-instruction authority in the governed Context Transport path. This predecessor
-contract does not claim that prompt injection is eliminated or that human review
-is replaced.
+v0.31.0 preserves **v0.30.1 — Release & Schema Metadata Coherence** and
+**v0.30.0 — Context Authority & Untrusted Provenance**.
 
-v0.30.1 also preserves **v0.29.5 — Native Physical Isolation Extensions** and
-its bounded v0.29.4 Restricted Token predecessor. Those Windows execution claims
-remain scoped to AgentOS-mediated process execution and do not imply general
-host isolation or same-user host-bypass resistance.
+It also preserves **v0.29.5 — Native Physical Isolation Extensions** and its
+bounded non-claims: Windows enforcement remains scoped to AgentOS-mediated
+process execution and does not imply general host isolation or same-user
+host-bypass resistance.

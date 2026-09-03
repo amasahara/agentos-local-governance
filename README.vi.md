@@ -103,25 +103,26 @@ Xem hướng dẫn theo hành trình:
 
 Lịch sử phiên bản thuộc [CHANGELOG.md](CHANGELOG.md), Git history, tags và relea
 ## Bản phát hành hiện hành
-**v0.30.1 — Release & Schema Metadata Coherence** · schema **63**
+**v0.31.0 — Governed Learning Signal Integration** · schema **64**
 
-Đây là release prerequisite chỉ sửa coherence trước v0.31.0; **không có migration
-DB mới và chưa triển khai learning loop**. Release đồng bộ current-release
-identity, schema-bootstrap metadata và generated policy với runtime schema 63,
-đồng thời thêm gate fail-closed yêu cầu migration sau bootstrap schema 46 phải
-liên tục chính xác từ 47 đến 63.
+Database schema: **64**
 
-Các trường lịch sử như `database_schema = 55` của subsystem vẫn là metadata mô
-tả thời điểm feature được giới thiệu và không bị ép thành schema hiện hành.
+v0.31.0 bổ sung lớp liên kết learning có quản trị gồm `learning_signals`,
+`learning_signal_links` và `knowledge_usage`. Raw learning signal chỉ là
+telemetry/linkage: không được đăng ký thành Context Authority source kind và
+không được inject trực tiếp vào context. `context_runtime` tiếp tục chỉ retrieve
+`skill`, `memory` và `finding`.
+
+Learning-derived knowledge vẫn đi qua provenance hiện hữu của project evidence,
+không có instruction authority. Release không tự graduate skill, không tự activate
+policy, không tự thay Architecture Authority và không tự deactivate knowledge.
 
 ### Kế thừa các predecessor contract
 
-v0.30.1 giữ nguyên **v0.30.0 — Context Authority & Untrusted Provenance**.
-Context có nguồn evidence/untrusted vẫn không thể tự nâng mình thành AgentOS
-instruction authority trong governed Context Transport path. Contract này không
-claim đã loại bỏ prompt injection hoặc thay thế human review.
+v0.31.0 giữ nguyên **v0.30.1 — Release & Schema Metadata Coherence** và
+**v0.30.0 — Context Authority & Untrusted Provenance**.
 
-v0.30.1 cũng giữ nguyên **v0.29.5 — Native Physical Isolation Extensions** và
-predecessor v0.29.4 Restricted Token có phạm vi giới hạn. Các claim Windows này
-vẫn chỉ thuộc AgentOS-mediated process execution và không đồng nghĩa với general
-host isolation hay same-user host-bypass resistance.
+v0.31.0 cũng giữ nguyên **v0.29.5 — Native Physical Isolation Extensions** cùng
+các non-claim giới hạn: các kiểm chứng Windows chỉ thuộc AgentOS-mediated process
+execution, không đồng nghĩa với general host isolation hoặc same-user host-bypass
+resistance.

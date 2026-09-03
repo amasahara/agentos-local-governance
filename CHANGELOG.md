@@ -1,3 +1,9 @@
+## v0.31.0 — Governed Learning Signal Integration
+
+- Schema 63 → 64.
+- Governed learning signal/link/knowledge-usage integration.
+- Raw learning signals remain outside context retrieval and instruction authority.
+
 # Changelog
 
 ## v0.30.1 — Release & Schema Metadata Coherence

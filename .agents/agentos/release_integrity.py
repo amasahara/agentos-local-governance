@@ -75,6 +75,9 @@ CORE_FILES = (
     ".agents/agentos/context_authority_surface.py",
     ".agents/agentos/context_authority_cli.py",
     ".agents/agentos/mcp_v0300.py",
+    ".agents/agentos/learning_signals.py",
+    ".agents/agentos/learning_cli.py",
+    ".agents/agentos/mcp_v0310.py",
 )
 RELEASE_FILES = (
     ".agents/tests/test_release_line_endings_v0242.py",
@@ -190,6 +193,8 @@ RELEASE_FILES = (
     '.agents/tests/test_windows_physical_isolation_release_integrity_v0295.py',
     '.agents/docs/WINDOWS_NATIVE_PHYSICAL_ISOLATION_V0295.md',
     ".agents/docs/CONTEXT_AUTHORITY_UNTRUSTED_PROVENANCE_V0300.md",
+    ".agents/tests/test_governed_learning_signals_v0310.py",
+    ".agents/docs/GOVERNED_LEARNING_SIGNAL_INTEGRATION_V0310.md",
     ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
 )
 EXTENSION_FILES = (
@@ -739,6 +744,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 required_policy_sections.add("windows_process_tree_containment_policy")
             if release_version >= (0, 30, 0):
                 required_policy_sections.add("context_authority_policy")
+            if release_version >= (0, 31, 0):
+                required_policy_sections.add("governed_learning_policy")
             if release_version >= (0, 29, 4):
                 required_policy_sections.add("windows_restricted_execution_policy")
             if release_version >= (0, 29, 5):
@@ -1834,6 +1841,7 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             V0273_TOOL_NAMES,
             V0280_TOOL_NAMES,
             V0300_TOOL_NAMES,
+            V0310_TOOL_NAMES,
         )
         if (
             len(CORE_TOOL_NAMES) != 14
@@ -1852,11 +1860,12 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             or len(V0273_TOOL_NAMES) != 4
             or len(V0280_TOOL_NAMES) != 3
             or len(V0300_TOOL_NAMES) != 4
-            or len(ALL_TOOLS) != 128
+            or len(V0310_TOOL_NAMES) != 4
+            or len(ALL_TOOLS) != 132
         ):
             findings.append(_finding(
                 "mcp_tool_surface_changed",
-                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + 4 v0.25.5 + 3 v0.26.0 + 3 v0.26.1 + 3 v0.26.2 + 3 v0.26.3 + 3 v0.27.0 + 3 v0.27.1 + 3 v0.27.2 + 4 v0.27.3 + 3 v0.28.0 + 1 v0.29.0 + 4 v0.30.0 + health = 128 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} + {len(V0255_TOOL_NAMES)} + {len(V0260_TOOL_NAMES)} + {len(V0261_TOOL_NAMES)} + {len(V0262_TOOL_NAMES)} + {len(V0263_TOOL_NAMES)} + {len(V0270_TOOL_NAMES)} + {len(V0271_TOOL_NAMES)} + {len(V0272_TOOL_NAMES)} + {len(V0273_TOOL_NAMES)} + {len(V0280_TOOL_NAMES)} + {len(V0300_TOOL_NAMES)} / {len(ALL_TOOLS)}",
+                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + 4 v0.25.5 + 3 v0.26.0 + 3 v0.26.1 + 3 v0.26.2 + 3 v0.26.3 + 3 v0.27.0 + 3 v0.27.1 + 3 v0.27.2 + 4 v0.27.3 + 3 v0.28.0 + 1 v0.29.0 + 4 v0.30.0 + 4 v0.31.0 + health = 132 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} + {len(V0255_TOOL_NAMES)} + {len(V0260_TOOL_NAMES)} + {len(V0261_TOOL_NAMES)} + {len(V0262_TOOL_NAMES)} + {len(V0263_TOOL_NAMES)} + {len(V0270_TOOL_NAMES)} + {len(V0271_TOOL_NAMES)} + {len(V0272_TOOL_NAMES)} + {len(V0273_TOOL_NAMES)} + {len(V0280_TOOL_NAMES)} + {len(V0300_TOOL_NAMES)} + {len(V0310_TOOL_NAMES)} / {len(ALL_TOOLS)}",
                 ".agents/agentos/mcp_runtime.py",
             ))
     except Exception as exc:

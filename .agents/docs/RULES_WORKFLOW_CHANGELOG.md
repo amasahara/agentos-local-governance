@@ -1,3 +1,9 @@
+## v0.31.0 — Governed Learning Signal Integration
+
+- Schema 63 → 64.
+- Governed learning signal/link/knowledge-usage integration.
+- Raw learning signals remain outside context retrieval and instruction authority.
+
 ## v0.30.1 — Release & Schema Metadata Coherence
 - Release/schema coherence prerequisite only; database schema remains 63.
 - Bootstrap schema remains 46; post-baseline migrations are exactly 47..63.

@@ -47,6 +47,7 @@ from .mcp_v0273 import TOOLS as V0273_TOOLS, TOOL_NAMES as V0273_TOOL_NAMES, dis
 from .mcp_v0280 import TOOLS as V0280_TOOLS, TOOL_NAMES as V0280_TOOL_NAMES, dispatch as dispatch_v0280_tool
 from .mcp_v0290 import TOOLS as V0290_TOOLS, TOOL_NAMES as V0290_TOOL_NAMES, dispatch as dispatch_v0290_tool
 from .mcp_v0300 import TOOLS as V0300_TOOLS, TOOL_NAMES as V0300_TOOL_NAMES, dispatch as dispatch_v0300_tool
+from .mcp_v0310 import TOOLS as V0310_TOOLS, TOOL_NAMES as V0310_TOOL_NAMES, dispatch as dispatch_v0310_tool
 
 VERSION = __version__
 
@@ -62,7 +63,7 @@ def _merge_tools() -> tuple[list[dict[str, Any]], set[str], set[str]]:
     tools: list[dict[str, Any]] = []
     names: set[str] = set()
     duplicates: set[str] = set()
-    for definition in [*CORE_TOOLS, *FEATURE_TOOLS, *V0252_TOOLS, *V0253_TOOLS, *V0254_TOOLS, *V0255_TOOLS, *V0260_TOOLS, *V0261_TOOLS, *V0262_TOOLS, *V0263_TOOLS, *V0270_TOOLS, *V0271_TOOLS, *V0272_TOOLS, *V0273_TOOLS, *V0280_TOOLS, *V0290_TOOLS, *V0300_TOOLS, HEALTH_TOOL]:
+    for definition in [*CORE_TOOLS, *FEATURE_TOOLS, *V0252_TOOLS, *V0253_TOOLS, *V0254_TOOLS, *V0255_TOOLS, *V0260_TOOLS, *V0261_TOOLS, *V0262_TOOLS, *V0263_TOOLS, *V0270_TOOLS, *V0271_TOOLS, *V0272_TOOLS, *V0273_TOOLS, *V0280_TOOLS, *V0290_TOOLS, *V0300_TOOLS, *V0310_TOOLS, HEALTH_TOOL]:
         name = str(definition["name"])
         if name in names:
             duplicates.add(name)
@@ -107,7 +108,7 @@ def _health(root: Path, task_id: str | None, session_id: str | None) -> dict[str
         "project_root_name": root.name,
         "tool_count": len(ALL_TOOLS),
         "core_proxy_tool_count": len(CORE_TOOLS),
-        "extension_readonly_tool_count": len(FEATURE_TOOLS) + len(V0252_TOOLS) + len(V0253_TOOLS) + len(V0254_TOOLS) + len(V0255_TOOLS) + len(V0260_TOOLS) + len(V0261_TOOLS) + len(V0262_TOOLS) + len(V0263_TOOLS) + len(V0270_TOOLS) + len(V0271_TOOLS) + len(V0272_TOOLS) + len(V0273_TOOLS) + len(V0280_TOOLS) + len(V0290_TOOLS) + len(V0300_TOOLS) - 1,
+        "extension_readonly_tool_count": len(FEATURE_TOOLS) + len(V0252_TOOLS) + len(V0253_TOOLS) + len(V0254_TOOLS) + len(V0255_TOOLS) + len(V0260_TOOLS) + len(V0261_TOOLS) + len(V0262_TOOLS) + len(V0263_TOOLS) + len(V0270_TOOLS) + len(V0271_TOOLS) + len(V0272_TOOLS) + len(V0273_TOOLS) + len(V0280_TOOLS) + len(V0290_TOOLS) + len(V0300_TOOLS) + len(V0310_TOOLS) - 1,
         "monotonic_blocker_tool_count": 1,
         "duplicate_tools": [],
         "subprocess_forwarding": False,
@@ -187,6 +188,10 @@ def serve(root: Path, task_id: str | None = None, session_id: str | None = None)
                 continue
             if name == HEALTH_TOOL["name"]:
                 _reply(identifier, _tool_result(_health(root, task_id, session_id)))
+                continue
+            if name in V0310_TOOL_NAMES:
+                value = dispatch_v0310_tool(root, name, arguments)
+                _reply(identifier, _tool_result(value))
                 continue
             if name in V0300_TOOL_NAMES:
                 value = dispatch_v0300_tool(root, name, arguments)

@@ -20,7 +20,7 @@ from .db import connect
 
 CLAIM_TYPES = {"business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"}
 RISK_LEVELS = {"low", "medium", "high"}
-SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy", "governed_skill_contract_policy", "architecture_aware_skill_selection_policy", "privileged_control_plane_policy", "sandbox_workspace_runtime_profile_policy", "context_authority_policy"}
+SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy", "governed_skill_contract_policy", "architecture_aware_skill_selection_policy", "privileged_control_plane_policy", "sandbox_workspace_runtime_profile_policy", "context_authority_policy", "governed_learning_policy"}
 SAFE_OVERRIDE_KEYS = {"source_root", "test_path", "encoding", "runtime_paths"}
 
 
@@ -983,6 +983,78 @@ def _validate_context_authority_policy_v0300(
             "context authority overclaim: " + repr(overclaims)
         )
 
+def _validate_governed_learning_policy_v0310(policy: dict[str, Any], version: tuple[int, ...]) -> None:
+    """Fail closed on v0.31.0 governed-learning authority invariants."""
+    if version < (0, 31, 0):
+        return
+    section = policy.get("governed_learning_policy")
+    if not isinstance(section, dict) or section.get("enabled") is not True:
+        raise RuntimeError("governed learning policy is required and enabled")
+    if int(section.get("version", 0)) != 1:
+        raise RuntimeError("governed learning policy version is invalid")
+    if int(section.get("database_schema", 0)) != 64:
+        raise RuntimeError("governed learning policy schema is invalid")
+    creation = section.get("signal_creation") or {}
+    for key in (
+        "completed_task_required_for_cross_task_learning",
+        "verification_required_for_verification_signals",
+        "source_hash_pin_required",
+        "per_task_monotonic_sequence_required",
+        "transactional_sequence_assignment_required",
+    ):
+        if creation.get(key) is not True:
+            raise RuntimeError("governed learning signal invariant disabled:" + key)
+    for key in ("same_active_session_context_reuse_allowed", "raw_content_duplication_allowed"):
+        if creation.get(key) is not False:
+            raise RuntimeError("governed learning safety invariant violated:" + key)
+    retention = section.get("retention") or {}
+    if retention.get("canonical_signal_deletion_allowed") is not False:
+        raise RuntimeError("canonical learning signal deletion is forbidden in v0.31.0")
+    if retention.get("automatic_archive_enabled") is not False:
+        raise RuntimeError("automatic learning archive is forbidden in v0.31.0")
+    promotion = section.get("promotion") or {}
+    for key in (
+        "automatic_memory_authority_promotion",
+        "automatic_skill_graduation",
+        "automatic_policy_activation",
+        "automatic_architecture_mutation",
+    ):
+        if promotion.get(key) is not False:
+            raise RuntimeError("governed learning automatic authority mutation forbidden:" + key)
+    context = section.get("context") or {}
+    if context.get("learning_signals_directly_injected") is not False:
+        raise RuntimeError("raw learning signals must not be injected into context")
+    if context.get("learning_signal_context_source_registered") is not False:
+        raise RuntimeError("raw learning signal must not become a registered context source")
+    if context.get("learning_derived_knowledge_uses_existing_provenance") is not True:
+        raise RuntimeError("learning-derived knowledge must use existing knowledge provenance")
+    if context.get("learning_derived_knowledge_trust_class") != "project_evidence":
+        raise RuntimeError("learning-derived knowledge trust class is invalid")
+    if context.get("learning_derived_authority_class") != "none":
+        raise RuntimeError("learning-derived authority class is invalid")
+    if context.get("learning_derived_instruction_authority") is not False:
+        raise RuntimeError("learning-derived evidence cannot gain instruction authority")
+    if context.get("context_authority_hash_may_include_learning_evidence") is not False:
+        raise RuntimeError("learning-derived evidence cannot alter context authority hash")
+    effectiveness = section.get("effectiveness") or {}
+    if effectiveness.get("automatic_deactivation_allowed") is not False:
+        raise RuntimeError("automatic learning-driven deactivation is forbidden")
+    if effectiveness.get("human_review_required_for_state_change") is not True:
+        raise RuntimeError("human review is required for learning-driven state change")
+    if effectiveness.get("causal_effectiveness_claim_allowed") is not False:
+        raise RuntimeError("causal effectiveness claims are forbidden in v0.31.0")
+    mcp = section.get("mcp") or {}
+    if mcp.get("mutation_allowed") is not False or mcp.get("read_only") is not True:
+        raise RuntimeError("governed learning MCP must remain read-only")
+    expected_tools = {
+        "agentos.learning_signals_get",
+        "agentos.learning_signal_links_get",
+        "agentos.knowledge_usage_get",
+        "agentos.learning_status_get",
+    }
+    if set(mcp.get("tools", [])) != expected_tools:
+        raise RuntimeError("governed learning MCP read surface is invalid")
+
 def validate_policy(policy: dict[str, Any]) -> None:
     """Fail closed while preserving historical policy contracts by release version."""
     required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy"}
@@ -1008,6 +1080,10 @@ def validate_policy(policy: dict[str, Any]) -> None:
         policy,
         version,
     )
+    _validate_governed_learning_policy_v0310(
+        policy,
+        version,
+    )
     if version >= (0, 27, 0):
         required.add("governed_skill_contract_policy")
     if version >= (0, 27, 1):
@@ -1023,6 +1099,8 @@ def validate_policy(policy: dict[str, Any]) -> None:
         required.add("sandbox_workspace_runtime_profile_policy")
     if version >= (0, 30, 0):
         required.add("context_authority_policy")
+    if version >= (0, 31, 0):
+        required.add("governed_learning_policy")
     missing = sorted(required - policy.keys())
     if missing:
         raise RuntimeError(f"missing policy keys: {missing}")

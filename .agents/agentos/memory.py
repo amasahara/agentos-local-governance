@@ -31,7 +31,26 @@ def record_finding(root: Path, kind: str, message: str, path: str | None=None, s
             c.execute("UPDATE project_findings SET occurrences=occurrences+1,last_seen_at=CURRENT_TIMESTAMP,status='active' WHERE id=?",(row["id"],)); fid=row["id"]; count=row["occurrences"]+1
         else:
             cur=c.execute("INSERT INTO project_findings(finding_key,kind,path,symbol,message,first_seen_task_id) VALUES(?,?,?,?,?,?)",(key,kind,path,symbol,message,task_id)); fid=cur.lastrowid; count=1
-    return {"finding_id":fid,"occurrences":count,"finding_key":key}
+    result={"finding_id":fid,"occurrences":count,"finding_key":key}
+    if task_id:
+        try:
+            from .learning_signals import create_learning_signal
+            signal=create_learning_signal(
+                root,
+                task_id=str(task_id),
+                session_id=None,
+                signal_kind="project_finding_observed",
+                source_type="project_finding",
+                source_id=str(fid),
+            )
+            result["learning_signal_id"]=signal.get("signal_id")
+            result["learning_degraded"]=False
+        except Exception as exc:
+            # Learning observation is degraded-safe; finding persistence remains authoritative.
+            result["learning_signal_id"]=None
+            result["learning_degraded"]=True
+            result["learning_error"]=f"{type(exc).__name__}:{exc}"
+    return result
 
 
 def remember(root: Path, kind: str, statement: str, source_path: str | None=None, task_id: str | None=None, confidence: float=1.0, evidence_hash: str | None=None, owner_scope: str="project", sensitivity: str="normal", consent_source: str | None=None, expires_at: str | None=None) -> dict[str, Any]:

@@ -1,131 +1,81 @@
-# AgentOS Local Governance v0.29.5 — Native Physical Isolation Extensions
+# AgentOS Local Governance v0.30.0 — Context Authority & Untrusted Provenance
 
-v0.29.5 strengthens Windows execution for the bounded
-**AgentOS-mediated process execution** scope by combining the v0.29.4
-Restricted Token boundary with Windows Mandatory Integrity Control (MIC).
+v0.30.0 adds an explicit **context authority boundary** to AgentOS context assembly.
 
-## Runtime boundary
+The release separates verified provenance from instruction authority. Content is classified by source origin, and evidence does not gain authority merely because it contains instruction-like text or is transformed, summarized, retrieved, or projected into a Context Transport pack.
 
-The production Windows path is now:
+## Activated guarantees
 
-```text
-AgentOS sandbox creation
-        ↓
-verified Low mandatory label + bounded current-user DACL
-        ↓
-Restricted primary token
-        ↓
-set TokenIntegrityLevel = Low
-        ↓
-verify Restricted + Low source token
-        ↓
-CreateProcessAsUserW(... CREATE_SUSPENDED ...)
-        ↓
-verify actual child Restricted + Low
-        ↓
-assign Job Object
-        ↓
-ResumeThread
-```
+- deterministic source-origin context classification;
+- explicit authority classes for governance, human request, approved task state, and human decisions;
+- explicit evidence/untrusted classes for project evidence, tool evidence, external content, generated evidence, and unknown sources;
+- unknown provenance fails to `unknown_untrusted`;
+- evidence-derived content cannot promote itself into instruction authority;
+- exact authority copies may preserve only the same explicit authority class;
+- Context Transport pins `provenance_manifest_hash` and `context_authority_hash`;
+- transport read paths revalidate stored hash-only provenance and detect provenance/authority drift;
+- provenance persistence stores hashes, labels, producer/transform metadata, and parent IDs rather than raw context content;
+- four agent-plane read-only CLI inspection commands;
+- four read-only MCP inspection tools;
+- structural enforcement attestation for the bounded context-authority contract.
 
-Synchronous `process.exec` uses this path directly. For asynchronous execution,
-the broker remains the trusted lifecycle owner of the named Job Object while
-the governed worker root runs under Restricted + Low Integrity.
+## Read-only operator surfaces
 
-## Sandbox integrity boundary
-
-The AgentOS-managed execution sandbox uses:
+CLI:
 
 ```text
-Low SID: S-1-16-4096
-Low RID: 4096
-Directory label: S:(ML;OICI;NW;;;LW)
-File label:      S:(ML;;NW;;;LW)
+context-authority-status
+context-provenance-show
+context-authority-explain
+context-authority-findings
 ```
 
-Existing sandbox objects are explicitly labeled and verified. Directory labels
-carry object/container inheritance for future descendants.
-
-The sandbox DACL preserves existing entries and adds a bounded allow ACE for
-the current user SID so Restricted/LUA workers can operate inside the sandbox.
-It does not grant `Everyone` or broad security-descriptor control such as
-`WRITE_DAC`, `WRITE_OWNER`, or `ACCESS_SYSTEM_SECURITY`.
-
-Production sandbox creation additionally requires the controlled
-`*.agentos-sandboxes` ancestry. The generic Low-MIC primitive remains root-local
-and does not rewrite unrelated parent directories.
-
-## Runtime verification
-
-The release contains live Windows coverage for:
-
-- Restricted + Low primary-token creation;
-- Low mandatory-label application and inspection;
-- DACL accessibility under Restricted/LUA execution;
-- synchronous child Restricted + Low verification;
-- asynchronous broker/worker Restricted + Low verification;
-- assign-before-resume ordering;
-- successful writes inside the Low-labeled sandbox;
-- denied writes from Low workers to controlled Medium-integrity targets;
-- predecessor v0.29.4 Restricted Token and Job Object regressions.
-
-## Release attestation
-
-The following claims are active only within:
+MCP:
 
 ```text
-scope = agentos_mediated_process_execution
+agentos.context_authority_status_get
+agentos.context_provenance_get
+agentos.context_authority_explain
+agentos.context_authority_findings_get
 ```
 
-```text
-restricted_token_attested = true
-low_integrity_attested = true
-sandbox_low_integrity_label_attested = true
-```
+No MCP authority-grant, trust-promotion, provenance-override, approval, or finding-waiver surface is added.
 
-The physical-isolation attester also verifies the sync and async production
-routes, controlled sandbox ancestry, Low-token identity, MIC/DACL contracts,
-fail-closed downgrade prevention, and focused `windows-latest` CI coverage.
+## Database
+
+Database schema: **63**.
+
+## Bounded claim
+
+**AgentOS v0.30.0 deterministically distinguishes explicit AgentOS context authority from evidence-derived and untrusted provenance, preserves provenance across the governed Context Transport path, and prevents evidence-derived context from being promoted into AgentOS instruction authority by that path.**
 
 ## Explicit non-claims
 
-v0.29.5 does **not** claim:
+This release does **not** claim that prompt injection is eliminated, semantic correctness is guaranteed, a model cannot be manipulated, every possible input channel is secured, or human review/approval is replaced.
+
+Existing Windows Restricted Token + Low Integrity and other v0.29.x claims remain separately bounded to their previously attested scopes.
+
+## Inherited predecessor contract — v0.29.5 — Native Physical Isolation Extensions
+
+v0.30.0 preserves the bounded v0.29.5 Native Physical Isolation Extensions
+contract. Restricted Token + Low Integrity remains scoped to
+`agentos_mediated_process_execution`; broader host-filesystem isolation,
+general OS write confinement, desktop isolation, credential isolation, and
+same-user host-bypass resistance remain unclaimed.
+
+## Inherited v0.29.4/v0.29.5 Windows execution contract
+
+The v0.30.0 release preserves the predecessor Windows execution claims:
 
 ```text
+v0.29.4 Restricted Token
+restricted_token_attested = true
+v0.29.5 — Native Physical Isolation Extensions
+low_integrity_attested = true
 host_filesystem_isolation_attested = false
-os_write_confinement_attested = false
-primary_root_write_up_prevention_attested = false
-desktop_isolation_attested = false
-credential_isolation_attested = false
-same_user_host_bypass_resistance_claimed = false
 ```
 
-Low Integrity is a Windows MIC boundary, not a namespace or container. A Low
-process may still read many Medium objects and may write other Low-labeled
-objects when the DACL permits. Therefore the release does not represent the
-bounded write-up probes as complete host-filesystem confinement.
-
-## Compatibility
-
-v0.29.5 preserves:
-
-- the v0.29.4 Restricted Token profile and scoped attestation;
-- the v0.29.1 Job Object process-tree containment contract;
-- the v0.29.2 sandbox/runtime profile lifecycle;
-- the v0.29.3 credential boundary;
-- the trusted asynchronous broker lifecycle;
-- conservative global non-claim projections.
-
-The v0.29.4 `windows_restricted_execution_policy.low_integrity_attested`
-remains `false`; Low Integrity attestation belongs to the new bounded
-`windows_physical_isolation_policy`.
-
-## Schema
-
-Database schema remains **62**. There is no v0.29.5 database migration.
-
-## Finalization
-
-Before commit/tag, regenerate deterministic effective governance, package
-completeness, manifest, and checksum artifacts with repository tools; then run
-full Windows regression and the standard release-integrity gates.
+These predecessor claims remain bounded to `agentos_mediated_process_execution`.
+They do not imply general host-filesystem isolation, general OS write
+confinement, desktop isolation, credential isolation, or same-user host
+bypass resistance.

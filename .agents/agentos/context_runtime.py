@@ -119,7 +119,7 @@ def _symbol_window_excerpt(path: Path, symbols: list[dict[str, Any]], request_te
 
 
 def _knowledge_candidates(root: Path, request: str, cfg: dict[str, Any]) -> tuple[list[dict[str, Any]], bool, str | None]:
-    """Return trusted knowledge candidates using lexical-first semantic fallback."""
+    """Return provenance-verified knowledge candidates using lexical-first semantic fallback."""
     try:
         lexical=search_knowledge(root,request,["skill","memory","finding"],12,"lexical_structured")
         results=lexical["results"]; fallback=False
@@ -174,7 +174,7 @@ def build_context_pack(root: Path, task_id: str, max_lines: int = 500, mode: str
             text=str(item.get("text") or item.get("title") or "")
             cost=max(1,len(text)//4)
             if cost<=knowledge_budget:
-                knowledge.append({**item,"approx_tokens":cost,"selection_reasons":["knowledge_relevance","trusted_provenance"]})
+                knowledge.append({**item,"approx_tokens":cost,"selection_reasons":["knowledge_relevance","verified_evidence_provenance"]})
                 knowledge_budget-=cost; used_tokens+=cost
             else:
                 omitted_knowledge.append({"kind":item["kind"],"id":item["id"],"reason":"global_budget_exceeded","relevance_score":item.get("score")})

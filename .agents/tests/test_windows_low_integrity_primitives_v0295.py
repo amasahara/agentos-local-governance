@@ -134,8 +134,8 @@ def test_v0295_phase1_live_restricted_low_integrity_token():
 
 
 def test_v0295_phase1_release_identity_and_schema_v0295():
-    assert (ROOT / 'VERSION').read_text(encoding='utf-8').strip() == '0.29.5'
+    assert tuple(int(part) for part in (ROOT / "VERSION").read_text(encoding="utf-8").strip().split(".")) >= (0, 29, 5)
     from agentos import __version__
     from agentos.schema_version import CURRENT_SCHEMA_VERSION
-    assert __version__ == '0.29.5'
-    assert CURRENT_SCHEMA_VERSION == 62
+    assert __version__ == (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    assert CURRENT_SCHEMA_VERSION >= 62

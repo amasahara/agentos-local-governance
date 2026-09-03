@@ -102,7 +102,7 @@ def test_empty_snapshot_is_read_only_and_privacy_safe(runtime):
     root, _ = runtime
     report = cc.command_center_snapshot(root)
     assert report["ok"] is True
-    assert report["schema"] == 62
+    assert report["schema"] == 63
     assert report["authority"]["projection_only"] is True
     assert report["authority"]["mutation_authority"] is False
     assert report["authority"]["mcp_mutation_allowed"] is False

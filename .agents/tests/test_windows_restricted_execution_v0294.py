@@ -78,7 +78,7 @@ def test_v0294_phase1_win32_abi_and_verification_markers_present():
 def test_v0294_phase1_policy_progresses_to_scoped_release_activation():
     policy = json.loads((ROOT / '.agents/config/release_policy.json').read_text(encoding='utf-8'))
     section = _release_policy()['windows_restricted_execution_policy']
-    assert policy['version'] == '0.29.5'
+    assert tuple(int(part) for part in policy["version"].split(".")) >= (0, 29, 5)
     assert section['enabled'] is True
     assert section['restricted_execution_version'] == 1
     assert section['database_schema'] == 62
@@ -225,6 +225,7 @@ def test_v0294_phase1_non_windows_fails_closed():
 
 
 def test_v0294_phase1_identity_and_schema_progress_to_release():
-    assert (ROOT / 'VERSION').read_text(encoding='utf-8').strip() == '0.29.5'
+    assert tuple(int(part) for part in (ROOT / "VERSION").read_text(encoding="utf-8").strip().split(".")) >= (0, 29, 5)
+    from agentos.schema_version import CURRENT_SCHEMA_VERSION
     source = (ROOT / '.agents/agentos/schema_version.py').read_text(encoding='utf-8')
-    assert 'CURRENT_SCHEMA_VERSION = 62' in source
+    assert f"CURRENT_SCHEMA_VERSION = {CURRENT_SCHEMA_VERSION}" in source

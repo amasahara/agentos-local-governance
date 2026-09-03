@@ -16,10 +16,10 @@ def test_v0292_schema_and_distribution_invariants_are_preserved():
     current = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     assert current == __version__
     assert tuple(int(part) for part in current.split(".")) >= (0, 29, 2)
-    assert CURRENT_SCHEMA_VERSION == 62
+    assert CURRENT_SCHEMA_VERSION >= 62
     metadata = json.loads((ROOT / ".agents/distribution/metadata.json").read_text(encoding="utf-8"))
     assert metadata["agentos_version"] == current
-    assert metadata["schema_version"] == 62
+    assert metadata["schema_version"] == CURRENT_SCHEMA_VERSION
 
 def test_v0292_release_policy_guarantees_are_preserved():
     policy = json.loads((ROOT / ".agents/config/release_policy.json").read_text(encoding="utf-8"))

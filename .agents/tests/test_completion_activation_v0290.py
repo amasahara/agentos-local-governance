@@ -29,8 +29,8 @@ def test_release_identity_preserves_v0290_schema62_contract():
 
     assert release_tuple >= (0, 29, 0)
     assert agentos.__version__ == release
-    assert SCHEMA_VERSION == 62
-    assert CURRENT_SCHEMA_VERSION == 62
+    assert SCHEMA_VERSION == CURRENT_SCHEMA_VERSION
+    assert CURRENT_SCHEMA_VERSION >= MIGRATION_VERSION
     assert MIGRATION_VERSION == 62
 
 
@@ -38,12 +38,13 @@ def test_migration62_is_registered_last():
     from agentos.db import _all_migrations
 
     migrations = _all_migrations()
-    assert len(migrations) == 62
-    assert migrations[-1].__name__ == "migration_62"
+    assert len(migrations) >= 62
+    assert migrations[61].__name__ == "migration_62"
 
 
 def test_fresh_database_materializes_schema62():
     from agentos.db import connect
+    from agentos.schema_version import CURRENT_SCHEMA_VERSION
 
     with TemporaryDirectory() as td:
         root = Path(td) / "project"
@@ -53,7 +54,7 @@ def test_fresh_database_materializes_schema62():
             versions = [int(row[0]) for row in c.execute("SELECT version FROM schema_migrations ORDER BY version")]
             tables = {str(row[0]) for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
 
-    assert versions == list(range(1, 63))
+    assert versions == list(range(1, CURRENT_SCHEMA_VERSION + 1))
     assert "completion_verification_requests" in tables
     assert "completion_verification_attempts" in tables
 

@@ -71,6 +71,10 @@ CORE_FILES = (
     '.agents/agentos/windows_restricted_attestation.py',
     '.agents/agentos/windows_physical_isolation.py',
     '.agents/agentos/windows_physical_isolation_attestation.py',
+    ".agents/agentos/context_authority.py",
+    ".agents/agentos/context_authority_surface.py",
+    ".agents/agentos/context_authority_cli.py",
+    ".agents/agentos/mcp_v0300.py",
 )
 RELEASE_FILES = (
     ".agents/tests/test_release_line_endings_v0242.py",
@@ -134,6 +138,11 @@ RELEASE_FILES = (
     ".agents/tests/test_completion_surface_v0290.py",
     ".agents/tests/test_completion_attestation_v0290.py",
     ".agents/tests/test_completion_activation_v0290.py",
+    ".agents/tests/test_context_authority_v0300.py",
+    ".agents/tests/test_context_authority_policy_v0300.py",
+    ".agents/tests/test_context_authority_transport_v0300.py",
+    ".agents/tests/test_context_authority_surface_v0300.py",
+    ".agents/tests/test_context_authority_release_v0300.py",
     ".agents/tests/test_windows_process_tree_v0291.py",
     ".agents/tests/test_windows_process_exec_containment_v0291.py",
     ".agents/tests/test_windows_job_broker_v0291.py",
@@ -179,6 +188,7 @@ RELEASE_FILES = (
     '.agents/tests/test_windows_physical_isolation_activation_v0295.py',
     '.agents/tests/test_windows_physical_isolation_release_integrity_v0295.py',
     '.agents/docs/WINDOWS_NATIVE_PHYSICAL_ISOLATION_V0295.md',
+    ".agents/docs/CONTEXT_AUTHORITY_UNTRUSTED_PROVENANCE_V0300.md",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",
@@ -723,8 +733,10 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 required_policy_sections.add("isolated_workspace_integration_policy")
             if release_version >= (0, 28, 3):
                 required_policy_sections.add("privileged_control_plane_policy")
-                if release_version >= (0, 29, 1):
-                    required_policy_sections.add("windows_process_tree_containment_policy")
+            if release_version >= (0, 29, 1):
+                required_policy_sections.add("windows_process_tree_containment_policy")
+            if release_version >= (0, 30, 0):
+                required_policy_sections.add("context_authority_policy")
             if release_version >= (0, 29, 4):
                 required_policy_sections.add("windows_restricted_execution_policy")
             if release_version >= (0, 29, 5):
@@ -1279,6 +1291,78 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                     )
                 )
 
+        context_authority_attestation = (
+            attestation_report.get("context_authority") or {}
+        )
+        if attested_release_version >= (0, 30, 0):
+            required_context_assertions = (
+                "structurally_attested",
+                "origin_classification",
+                "authority_promotion_forbidden",
+                "hash_only_persistence",
+                "transport_pinned",
+                "cli_read_only",
+                "mcp_read_only",
+                "broad_nonclaims_preserved",
+            )
+            missing_context_assertions = [
+                key
+                for key in required_context_assertions
+                if context_authority_attestation.get(key) is not True
+            ]
+            if missing_context_assertions:
+                findings.append(
+                    _finding(
+                        "context_authority_attestation_failed",
+                        "v0.30.0 Context Authority attestation is not green: "
+                        + repr(missing_context_assertions),
+                        ".agents/agentos/enforcement_attestation.py",
+                    )
+                )
+            if context_authority_attestation.get("policy_scope") != "agentos_context_assembly":
+                findings.append(
+                    _finding(
+                        "context_authority_scope_invalid",
+                        "v0.30.0 context authority scope must remain agentos_context_assembly",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+            from .policy import load_release_policy as _load_release_policy_v0300
+            context_policy = (
+                _load_release_policy_v0300(root).get("context_authority_policy")
+                or {}
+            )
+            if (
+                context_policy.get("database_schema") != 63
+                or context_policy.get("classification_basis") != "source_origin_only"
+                or context_policy.get("unknown_source_untrusted") is not True
+                or context_policy.get("evidence_instruction_authority") is not False
+                or context_policy.get("derived_content_may_raise_authority") is not False
+                or context_policy.get("mcp_mutation_allowed") is not False
+            ):
+                findings.append(
+                    _finding(
+                        "context_authority_policy_activation_invalid",
+                        "v0.30.0 context authority activation policy is incomplete",
+                        ".agents/config/release_policy.json",
+                    )
+                )
+            context_nonclaims = context_policy.get("non_claims") or {}
+            for key in (
+                "prompt_injection_eliminated",
+                "semantic_correctness_guaranteed",
+                "model_manipulation_prevented",
+                "all_agent_input_channels_secured",
+                "human_review_replaced",
+            ):
+                if context_nonclaims.get(key) is not False:
+                    findings.append(
+                        _finding(
+                            "context_authority_overclaim",
+                            "v0.30.0 context authority broad nonclaim must remain false: " + key,
+                            ".agents/config/release_policy.json",
+                        )
+                    )
         physical_isolation_attestation = (
             attestation_report.get(
                 "windows_physical_isolation"
@@ -1747,6 +1831,7 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             V0272_TOOL_NAMES,
             V0273_TOOL_NAMES,
             V0280_TOOL_NAMES,
+            V0300_TOOL_NAMES,
         )
         if (
             len(CORE_TOOL_NAMES) != 14
@@ -1764,11 +1849,12 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             or len(V0272_TOOL_NAMES) != 3
             or len(V0273_TOOL_NAMES) != 4
             or len(V0280_TOOL_NAMES) != 3
-            or len(ALL_TOOLS) != 124
+            or len(V0300_TOOL_NAMES) != 4
+            or len(ALL_TOOLS) != 128
         ):
             findings.append(_finding(
                 "mcp_tool_surface_changed",
-                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + 4 v0.25.5 + 3 v0.26.0 + 3 v0.26.1 + 3 v0.26.2 + 3 v0.26.3 + 3 v0.27.0 + 3 v0.27.1 + 3 v0.27.2 + 4 v0.27.3 + 3 v0.28.0 + 1 v0.29.0 + health = 124 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} + {len(V0255_TOOL_NAMES)} + {len(V0260_TOOL_NAMES)} + {len(V0261_TOOL_NAMES)} + {len(V0262_TOOL_NAMES)} + {len(V0263_TOOL_NAMES)} + {len(V0270_TOOL_NAMES)} + {len(V0271_TOOL_NAMES)} + {len(V0272_TOOL_NAMES)} + {len(V0273_TOOL_NAMES)} + {len(V0280_TOOL_NAMES)} / {len(ALL_TOOLS)}",
+                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + 4 v0.25.5 + 3 v0.26.0 + 3 v0.26.1 + 3 v0.26.2 + 3 v0.26.3 + 3 v0.27.0 + 3 v0.27.1 + 3 v0.27.2 + 4 v0.27.3 + 3 v0.28.0 + 1 v0.29.0 + 4 v0.30.0 + health = 128 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} + {len(V0255_TOOL_NAMES)} + {len(V0260_TOOL_NAMES)} + {len(V0261_TOOL_NAMES)} + {len(V0262_TOOL_NAMES)} + {len(V0263_TOOL_NAMES)} + {len(V0270_TOOL_NAMES)} + {len(V0271_TOOL_NAMES)} + {len(V0272_TOOL_NAMES)} + {len(V0273_TOOL_NAMES)} + {len(V0280_TOOL_NAMES)} + {len(V0300_TOOL_NAMES)} / {len(ALL_TOOLS)}",
                 ".agents/agentos/mcp_runtime.py",
             ))
     except Exception as exc:
@@ -1850,6 +1936,9 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 ),
                 "windows_physical_isolation": attestation_report.get(
                     "windows_physical_isolation"
+                ),
+                "context_authority": attestation_report.get(
+                    "context_authority"
                 ),
                 "finding_count": len(
                     attestation_report.get("findings", [])

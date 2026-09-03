@@ -90,31 +90,22 @@ Version history belongs in [CHANGELOG.md](CHANGELOG.md), Git history, tags, and 
 State the problem and acceptance criteria, place changes by responsibility and lifecycle, update relevant tests and documentation, run release validation and manifest verification, and do not commit runtime caches or reproducible test output.
 
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
+
 ## Current release
-**v0.29.5 — Native Physical Isolation Extensions** · schema **62**
+**v0.30.0 — Context Authority & Untrusted Provenance** · schema **63**
 
-v0.29.5 extends the v0.29.4 Windows boundary from Restricted Token execution
-to **Restricted Token + Low Integrity** within the bounded
-`agentos_mediated_process_execution` scope.
+v0.30.0 adds an explicit authority boundary to context assembly. AgentOS classifies context by **source origin** rather than by instruction-like wording. Project, tool, external, and generated evidence remains evidence and cannot self-promote into instruction authority.
 
-AgentOS-created sandboxes receive a Low mandatory integrity label with
-`NO_WRITE_UP`. Their DACL is narrowly normalized for the current user SID so
-the Restricted/LUA worker can read, write, and execute inside the sandbox.
-Both synchronous production execution and governed asynchronous worker roots
-are created suspended, have the actual child token verified as Restricted +
-Low, are assigned to the Job Object, and only then resume. The async broker
-remains the trusted lifecycle process.
+Context Transport additionally pins `provenance_manifest_hash` and `context_authority_hash`; the read path revalidates hash-only provenance and reports stale state when authority/provenance changes.
 
-Release attestation is activated only for this bounded scope:
+CLI and MCP expose read-only inspection only. No trust-promotion, authority-grant, provenance-override, or approval MCP surface is added.
 
-```text
-restricted_token_attested = true
-low_integrity_attested = true
-sandbox_low_integrity_label_attested = true
-scope = agentos_mediated_process_execution
-```
+The bounded claim is: **AgentOS deterministically distinguishes explicit context authority from evidence/untrusted provenance and prevents evidence-derived context from being promoted into AgentOS instruction authority in the governed Context Transport path.**
 
-Broader claims remain **disabled**: general host-filesystem isolation, general
-OS write confinement, desktop isolation, credential isolation, and same-user
-host-bypass resistance. Low Integrity is not a filesystem namespace or
-container and does not imply complete host isolation.
+This release does not claim prompt-injection elimination, semantic correctness, prevention of every form of model manipulation, replacement of human review, or general host isolation.
+
+### Inherited predecessor security baseline
+
+v0.30.0 preserves **v0.29.5 — Native Physical Isolation Extensions** and its
+bounded predecessor v0.29.4 Restricted Token contract. Those historical
+activation contracts remain scoped to AgentOS-mediated process execution.

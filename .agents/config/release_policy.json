@@ -1,23 +1,26 @@
 {
-  "version": "0.29.5",
+  "version": "0.30.0",
   "documentation_policy": {
     "current_release_identity_files": [
       "README.md",
       "README.en.md",
-      "RELEASE_NOTES.md"
+      "RELEASE_NOTES.md",
+      ".agents/docs/CONTEXT_AUTHORITY_UNTRUSTED_PROVENANCE_V0300.md"
     ],
-    "current_release_name": "Native Physical Isolation Extensions",
-    "current_schema": 62,
+    "current_release_name": "Context Authority & Untrusted Provenance",
+    "current_schema": 63,
     "current_schema_files": [
       "README.md",
       "README.en.md",
-      "RELEASE_NOTES.md"
+      "RELEASE_NOTES.md",
+      ".agents/docs/CONTEXT_AUTHORITY_UNTRUSTED_PROVENANCE_V0300.md"
     ],
     "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
     "current_version_files": [
       "README.md",
       "README.en.md",
-      "RELEASE_NOTES.md"
+      "RELEASE_NOTES.md",
+      ".agents/docs/CONTEXT_AUTHORITY_UNTRUSTED_PROVENANCE_V0300.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -26,7 +29,8 @@
       ".agents/docs/NEW_PROJECT.md",
       ".agents/docs/EXISTING_PROJECT.md",
       ".agents/docs/WINDOWS.md",
-      ".agents/docs/REFERENCE.md"
+      ".agents/docs/REFERENCE.md",
+      ".agents/docs/CONTEXT_AUTHORITY_UNTRUSTED_PROVENANCE_V0300.md"
     ]
   },
   "governed_skill_contract_policy": {
@@ -203,7 +207,7 @@
     "enabled": true,
     "optional": true,
     "web_version": 1,
-    "database_schema": 62,
+    "database_schema": 63,
     "default_host": "127.0.0.1",
     "default_port": 8765,
     "loopback_only": true,
@@ -567,5 +571,65 @@
     "async_completion_requires_low_integrity_verification": true,
     "activation_complete": true,
     "activation_version": "0.29.5"
+  },
+  "context_authority_policy": {
+    "enabled": true,
+    "authority_version": 1,
+    "provenance_version": 1,
+    "database_schema": 63,
+    "scope": "agentos_context_assembly",
+    "classification_basis": "source_origin_only",
+    "unknown_source_untrusted": true,
+    "evidence_instruction_authority": false,
+    "semantic_instruction_detection_grants_authority": false,
+    "derived_content_may_raise_authority": false,
+    "exact_authority_copy_may_preserve_same_authority": true,
+    "generated_summary_instruction_authority": false,
+    "external_content_instruction_authority": false,
+    "tool_output_instruction_authority": false,
+    "project_evidence_instruction_authority": false,
+    "raw_context_persistence_allowed": false,
+    "source_locator_hash_only_persistence": true,
+    "provenance_manifest_hash_required": true,
+    "context_authority_hash_required": true,
+    "transport_pack_pin_required": true,
+    "mcp_status_read_only": true,
+    "mcp_mutation_allowed": false,
+    "authority_classes": [
+      "none",
+      "governance",
+      "human_request",
+      "approved_task",
+      "human_decision"
+    ],
+    "trust_classes": [
+      "governance_authority",
+      "human_authority",
+      "approved_task_authority",
+      "project_evidence",
+      "tool_evidence",
+      "external_untrusted",
+      "generated_evidence",
+      "unknown_untrusted"
+    ],
+    "non_claims": {
+      "prompt_injection_eliminated": false,
+      "semantic_correctness_guaranteed": false,
+      "model_manipulation_prevented": false,
+      "all_agent_input_channels_secured": false,
+      "human_review_replaced": false
+    },
+    "mcp_read_tools": [
+      "agentos.context_authority_status_get",
+      "agentos.context_provenance_get",
+      "agentos.context_authority_explain",
+      "agentos.context_authority_findings_get"
+    ],
+    "cli_read_commands": [
+      "context-authority-status",
+      "context-provenance-show",
+      "context-authority-explain",
+      "context-authority-findings"
+    ]
   }
 }

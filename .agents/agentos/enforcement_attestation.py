@@ -307,6 +307,10 @@ def attest_enforcement(
         "sandbox_workspace_runtime_profile_policy",
         {},
     )
+    context_authority_policy = policy.get(
+        "context_authority_policy",
+        {},
+    )
     restricted_execution_policy = policy.get(
         "windows_restricted_execution_policy",
         {},
@@ -1872,6 +1876,120 @@ def attest_enforcement(
         "credential boundary overclaims credential/OS/host isolation",
     )
 
+    # --------------------------------------------------------
+    # v0.30.0 Context Authority & Untrusted Provenance
+    # --------------------------------------------------------
+    context_check_names: list[str] = []
+
+    def require_context(name: str, condition: bool, message: str) -> None:
+        context_check_names.append(name)
+        require(name, condition, message)
+
+    context_authority_source = _source(root, ".agents/agentos/context_authority.py")
+    context_surface_source = _source(root, ".agents/agentos/context_authority_surface.py")
+    context_transport_source = _source(root, ".agents/agentos/context_transport.py")
+    context_cli_source = _source(root, ".agents/agentos/context_authority_cli.py")
+    context_mcp_source = _source(root, ".agents/agentos/mcp_v0300.py")
+
+    require_context(
+        "context_authority_policy_origin_classification",
+        (
+            context_authority_policy.get("enabled") is True
+            and context_authority_policy.get("classification_basis") == "source_origin_only"
+            and context_authority_policy.get("unknown_source_untrusted") is True
+        ),
+        "context authority is not origin-classified/fail-closed",
+    )
+    require_context(
+        "context_authority_no_promotion",
+        (
+            context_authority_policy.get("evidence_instruction_authority") is False
+            and context_authority_policy.get("derived_content_may_raise_authority") is False
+            and context_authority_policy.get("semantic_instruction_detection_grants_authority") is False
+            and "_SOURCE_CLASSIFICATION" in context_authority_source
+            and "_AUTHORITY_PRESERVING_TRANSFORMS" in context_authority_source
+        ),
+        "evidence/derived content can promote authority",
+    )
+    require_context(
+        "context_authority_hash_only_persistence",
+        (
+            context_authority_policy.get("raw_context_persistence_allowed") is False
+            and context_authority_policy.get("source_locator_hash_only_persistence") is True
+            and "source_locator_hash" in context_authority_source
+            and "content_hash" in context_authority_source
+            and "_persist_context_provenance_conn(" in context_transport_source
+            and "raw_context_included" in context_surface_source
+        ),
+        "context authority persistence is not hash/label only",
+    )
+    require_context(
+        "context_authority_transport_pinned",
+        (
+            "provenance_manifest_hash" in context_transport_source
+            and "context_authority_hash" in context_transport_source
+            and "_stored_provenance_evaluation(" in context_transport_source
+            and "context_provenance_pin_mismatch" in context_transport_source
+        ),
+        "context transport does not pin/revalidate provenance authority",
+    )
+    require_context(
+        "context_authority_cli_read_only",
+        (
+            set(context_authority_policy.get("cli_read_commands", []))
+            == {
+                "context-authority-status",
+                "context-provenance-show",
+                "context-authority-explain",
+                "context-authority-findings",
+            }
+        ),
+        "context authority CLI surface is not read-only",
+    )
+    require_context(
+        "context_authority_mcp_read_only",
+        (
+            context_authority_policy.get("mcp_mutation_allowed") is False
+            and set(context_authority_policy.get("mcp_read_tools", []))
+            == {
+                "agentos.context_authority_status_get",
+                "agentos.context_provenance_get",
+                "agentos.context_authority_explain",
+                "agentos.context_authority_findings_get",
+            }
+        ),
+        "context authority MCP surface exposes mutation authority",
+    )
+    require_context(
+        "context_authority_no_mutation_symbols",
+        (
+            "authority_grant" not in context_cli_source
+            and "trust_promote" not in context_cli_source
+            and "provenance_override" not in context_cli_source
+            and "authority_grant" not in context_mcp_source
+            and "trust_promote" not in context_mcp_source
+            and "provenance_override" not in context_mcp_source
+        ),
+        "context authority surface includes a mutation symbol",
+    )
+    context_non_claims = context_authority_policy.get("non_claims", {})
+    require_context(
+        "context_authority_broad_nonclaims_preserved",
+        (
+            isinstance(context_non_claims, dict)
+            and context_non_claims.get("prompt_injection_eliminated") is False
+            and context_non_claims.get("semantic_correctness_guaranteed") is False
+            and context_non_claims.get("model_manipulation_prevented") is False
+            and context_non_claims.get("all_agent_input_channels_secured") is False
+            and context_non_claims.get("human_review_replaced") is False
+        ),
+        "context authority overclaims semantic/model/input-channel safety",
+    )
+    context_structural_ok = all(
+        checks.get(name) is True
+        for name in context_check_names
+    )
+
     credential_structural_ok = all(
         checks.get(name) is True
         for name in credential_check_names
@@ -2071,6 +2189,18 @@ def attest_enforcement(
                 )
                 is True
             ),
+        },
+        "context_authority": {
+            "structurally_attested": context_structural_ok,
+            "origin_classification": checks.get("context_authority_policy_origin_classification") is True,
+            "authority_promotion_forbidden": checks.get("context_authority_no_promotion") is True,
+            "hash_only_persistence": checks.get("context_authority_hash_only_persistence") is True,
+            "transport_pinned": checks.get("context_authority_transport_pinned") is True,
+            "cli_read_only": checks.get("context_authority_cli_read_only") is True,
+            "mcp_read_only": checks.get("context_authority_mcp_read_only") is True,
+            "broad_nonclaims_preserved": checks.get("context_authority_broad_nonclaims_preserved") is True,
+            "policy_scope": context_authority_policy.get("scope"),
+            "raw_context_persisted": False,
         },
         "mcp": {
             "ok": bool(

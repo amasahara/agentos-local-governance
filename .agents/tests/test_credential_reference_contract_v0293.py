@@ -242,7 +242,7 @@ def test_v0293_phase2_identity_and_nonclaims_are_preserved_under_successor():
     ).strip()
 
     assert tuple(int(part) for part in current.split(".")) >= (0, 29, 3)
-    assert CURRENT_SCHEMA_VERSION == 62
+    assert CURRENT_SCHEMA_VERSION >= 62
     assert section["sandbox_configuration_attested"] is True
     assert section["credential_boundary_enabled"] is True
     assert section["credential_boundary_attested"] is True

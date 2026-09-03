@@ -66,6 +66,10 @@ jobs:
           PYTHONPATH: .agents
         run: python -m pytest -q .agents/tests/test_secret_lineage_v0226.py .agents/tests/test_sandbox_configuration_v0293.py .agents/tests/test_credential_reference_contract_v0293.py .agents/tests/test_sync_credential_boundary_v0293.py .agents/tests/test_async_credential_boundary_v0293.py .agents/tests/test_credential_boundary_attestation_v0293.py .agents/tests/test_credential_boundary_ci_gate_v0293.py .agents/tests/test_credential_boundary_activation_v0293.py -rs
 
+      - name: Context authority focused validation (Ubuntu)
+        env:
+          PYTHONPATH: .agents
+        run: python -m pytest -q .agents/tests/test_context_authority_v0300.py .agents/tests/test_context_authority_policy_v0300.py .agents/tests/test_context_authority_transport_v0300.py .agents/tests/test_context_authority_surface_v0300.py .agents/tests/test_context_authority_release_v0300.py -rs
       - name: Full regression suite
         env:
           PYTHONPATH: .agents
@@ -140,6 +144,10 @@ jobs:
         env:
           PYTHONPATH: .agents
         run: python -m pytest -q .agents/tests/test_windows_low_integrity_primitives_v0295.py .agents/tests/test_windows_sandbox_mandatory_label_v0295.py .agents/tests/test_windows_sandbox_dacl_access_v0295.py .agents/tests/test_windows_low_integrity_sync_v0295.py .agents/tests/test_windows_low_integrity_async_v0295.py .agents/tests/test_windows_physical_isolation_attestation_v0295.py .agents/tests/test_windows_physical_isolation_ci_gate_v0295.py .agents/tests/test_windows_physical_isolation_activation_v0295.py .agents/tests/test_windows_physical_isolation_release_integrity_v0295.py -rs
+      - name: Context authority focused validation (Windows)
+        env:
+          PYTHONPATH: .agents
+        run: python -m pytest -q .agents/tests/test_context_authority_v0300.py .agents/tests/test_context_authority_policy_v0300.py .agents/tests/test_context_authority_transport_v0300.py .agents/tests/test_context_authority_surface_v0300.py .agents/tests/test_context_authority_release_v0300.py -rs
       - name: Full regression suite
         env:
           PYTHONPATH: .agents

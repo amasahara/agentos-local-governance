@@ -1,8 +1,8 @@
 {
-  "release": "0.29.5",
+  "release": "0.30.0",
   "kind": "agentos_distribution_repository",
-  "schema": 62,
-  "authoritative_file_count": 368,
+  "schema": 63,
+  "authoritative_file_count": 378,
   "required_top_level": [
     "VERSION",
     "AGENTS.md",

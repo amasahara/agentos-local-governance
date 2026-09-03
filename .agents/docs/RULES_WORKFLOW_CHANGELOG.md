@@ -1,3 +1,17 @@
+## v0.30.0 — Context Authority & Untrusted Provenance
+
+- Added deterministic source-origin context authority/provenance classification.
+- Evidence, tool output, external content, generated summaries, and unknown
+  provenance do not gain AgentOS instruction authority from their text.
+- Added schema 63 hash/label-only provenance state and Context Transport
+  `provenance_manifest_hash` / `context_authority_hash` pins.
+- Added four read-only CLI commands and four read-only MCP inspection tools.
+- Added bounded structural attestation and explicit broad non-claims.
+- Prompt-injection elimination, semantic correctness, universal model
+  manipulation prevention, replacement of human review, and general host
+  isolation remain explicitly unclaimed.
+- Database schema is 63.
+
 ## v0.29.5 — Native Physical Isolation Extensions
 
 - Added bounded Windows Low Integrity enforcement for AgentOS-mediated sync and async worker roots.

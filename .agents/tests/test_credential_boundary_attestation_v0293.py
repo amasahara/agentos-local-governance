@@ -80,4 +80,4 @@ def test_v0293_phase5_attestation_is_preserved_under_successor_without_overclaim
         encoding="utf-8"
     ).strip()
     assert tuple(int(part) for part in current.split(".")) >= (0, 29, 3)
-    assert CURRENT_SCHEMA_VERSION == 62
+    assert CURRENT_SCHEMA_VERSION >= 62

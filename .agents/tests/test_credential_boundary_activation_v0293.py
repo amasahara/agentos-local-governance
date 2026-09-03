@@ -24,7 +24,7 @@ def test_v0293_release_identity_and_schema_are_preserved_under_successor():
 
     assert __version__ == current
     assert tuple(int(part) for part in current.split(".")) >= (0, 29, 3)
-    assert CURRENT_SCHEMA_VERSION == 62
+    assert CURRENT_SCHEMA_VERSION >= 62
 
     metadata = json.loads(
         (ROOT / ".agents/distribution/metadata.json").read_text(
@@ -32,7 +32,7 @@ def test_v0293_release_identity_and_schema_are_preserved_under_successor():
         )
     )
     assert metadata["agentos_version"] == current
-    assert metadata["schema_version"] == 62
+    assert metadata["schema_version"] == CURRENT_SCHEMA_VERSION
 
 
 def test_v0293_policy_guarantees_are_preserved_under_successor():

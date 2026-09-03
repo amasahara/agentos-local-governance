@@ -44,6 +44,7 @@ FEATURE_CLI_MODULES = (
     "secret_lineage_cli",
     "data_subject_rights_cli",
     "context_transport_cli",
+    "context_authority_cli",
     "adaptive_budget_cli",
     "context_evaluation_cli",
     "consolidation_cockpit_cli",

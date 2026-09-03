@@ -115,30 +115,22 @@ Trước khi gửi thay đổi:
 - không biến assumption về business hoặc architecture thành authority.
 
 Các thay đổi governance phải giữ `AGENTS.md`, structured policy, runtime, tests, documentation, changelog và release identity nhất quán.
+
 ## Bản phát hành hiện hành
-**v0.29.5 — Native Physical Isolation Extensions** · schema **62**
+**v0.30.0 — Context Authority & Untrusted Provenance** · schema **63**
 
-v0.29.5 mở rộng boundary Windows của v0.29.4 từ Restricted Token sang
-**Restricted Token + Low Integrity** cho đúng phạm vi
-`agentos_mediated_process_execution`.
+v0.30.0 bổ sung ranh giới authority cho context assembly. AgentOS phân loại context theo **nguồn gốc** thay vì dựa vào nội dung có vẻ giống chỉ thị. Project/tool/external/generated evidence giữ vai trò evidence và không tự trở thành instruction authority.
 
-Sandbox do AgentOS tạo được gắn Low mandatory integrity label với
-`NO_WRITE_UP`; DACL được chuẩn hóa hẹp cho SID người dùng hiện tại để
-Restricted/LUA worker có thể đọc/ghi/thực thi trong sandbox. Production sync
-và governed async worker root đều được tạo suspended, xác minh Restricted +
-Low trên actual child token, gán vào Job Object rồi mới resume. Async broker
-vẫn là trusted lifecycle process.
+Context Transport pin thêm `provenance_manifest_hash` và `context_authority_hash`; read path revalidate provenance hash-only và đánh dấu stale khi authority/provenance thay đổi.
 
-Release attestation được kích hoạt ở phạm vi nói trên:
+CLI và MCP chỉ cung cấp surface quan sát read-only. Không có trust promotion, authority grant, provenance override hoặc approval qua MCP.
 
-```text
-restricted_token_attested = true
-low_integrity_attested = true
-sandbox_low_integrity_label_attested = true
-scope = agentos_mediated_process_execution
-```
+Claim được giới hạn: **AgentOS phân biệt deterministic explicit context authority với evidence/untrusted provenance và ngăn evidence-derived context được nâng thành AgentOS instruction authority trong governed Context Transport path.**
 
-Các claim rộng hơn vẫn **không được kích hoạt**: host-filesystem isolation,
-OS write confinement tổng quát, desktop isolation, credential isolation và
-same-user host-bypass resistance. Low Integrity không phải namespace/container
-và không đồng nghĩa với cô lập toàn bộ filesystem của host.
+Release này không claim đã loại bỏ prompt injection, bảo đảm semantic correctness, ngăn mọi model manipulation, thay thế human review, hoặc cung cấp general host isolation.
+
+### Inherited predecessor security baseline
+
+v0.30.0 preserves **v0.29.5 — Native Physical Isolation Extensions** and its
+bounded predecessor v0.29.4 Restricted Token contract. Those historical
+activation contracts remain scoped to AgentOS-mediated process execution.

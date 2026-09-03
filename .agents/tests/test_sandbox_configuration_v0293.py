@@ -140,7 +140,7 @@ def test_v0293_phase1_contract_is_preserved_under_successor_release():
     ).strip()
 
     assert tuple(int(part) for part in current.split(".")) >= (0, 29, 3)
-    assert CURRENT_SCHEMA_VERSION == 62
+    assert CURRENT_SCHEMA_VERSION >= 62
     assert section["sandbox_configuration_attested"] is True
     assert section["credential_boundary_enabled"] is True
 

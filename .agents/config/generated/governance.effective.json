@@ -385,6 +385,66 @@
     "symbol_index_baseline_mode": "full_rebuild_measure_only",
     "wall_clock_thresholds": "disabled_until_environment_pinned"
   },
+  "context_authority_policy": {
+    "authority_classes": [
+      "none",
+      "governance",
+      "human_request",
+      "approved_task",
+      "human_decision"
+    ],
+    "authority_version": 1,
+    "classification_basis": "source_origin_only",
+    "cli_read_commands": [
+      "context-authority-status",
+      "context-provenance-show",
+      "context-authority-explain",
+      "context-authority-findings"
+    ],
+    "context_authority_hash_required": true,
+    "database_schema": 63,
+    "derived_content_may_raise_authority": false,
+    "enabled": true,
+    "evidence_instruction_authority": false,
+    "exact_authority_copy_may_preserve_same_authority": true,
+    "external_content_instruction_authority": false,
+    "generated_summary_instruction_authority": false,
+    "mcp_mutation_allowed": false,
+    "mcp_read_tools": [
+      "agentos.context_authority_status_get",
+      "agentos.context_provenance_get",
+      "agentos.context_authority_explain",
+      "agentos.context_authority_findings_get"
+    ],
+    "mcp_status_read_only": true,
+    "non_claims": {
+      "all_agent_input_channels_secured": false,
+      "human_review_replaced": false,
+      "model_manipulation_prevented": false,
+      "prompt_injection_eliminated": false,
+      "semantic_correctness_guaranteed": false
+    },
+    "project_evidence_instruction_authority": false,
+    "provenance_manifest_hash_required": true,
+    "provenance_version": 1,
+    "raw_context_persistence_allowed": false,
+    "scope": "agentos_context_assembly",
+    "semantic_instruction_detection_grants_authority": false,
+    "source_locator_hash_only_persistence": true,
+    "tool_output_instruction_authority": false,
+    "transport_pack_pin_required": true,
+    "trust_classes": [
+      "governance_authority",
+      "human_authority",
+      "approved_task_authority",
+      "project_evidence",
+      "tool_evidence",
+      "external_untrusted",
+      "generated_evidence",
+      "unknown_untrusted"
+    ],
+    "unknown_source_untrusted": true
+  },
   "context_expansion_evaluation_policy": {
     "allowed_reason_codes": [
       "inspection",
@@ -1391,7 +1451,8 @@
       ".agents/docs/NEW_PROJECT.md",
       ".agents/docs/EXISTING_PROJECT.md",
       ".agents/docs/WINDOWS.md",
-      ".agents/docs/REFERENCE.md"
+      ".agents/docs/REFERENCE.md",
+      ".agents/docs/CONTEXT_AUTHORITY_UNTRUSTED_PROVENANCE_V0300.md"
     ],
     "current_docs_must_match_release": true,
     "identity_sources": [
@@ -1406,7 +1467,7 @@
       "governed_project"
     ],
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
-    "version": "0.29.5"
+    "version": "0.30.0"
   },
   "repository_policy": {
     "application_root_metadata_owned_by_agentos": false,
@@ -1681,7 +1742,7 @@
     "target_schema_snapshot_required": true,
     "type_compatibility_required": true
   },
-  "schema_version": 62,
+  "schema_version": 63,
   "secret_resolver_policy": {
     "aliases": {},
     "allowed_capabilities": [
@@ -1796,7 +1857,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.29.5",
+  "version": "0.30.0",
   "windows_physical_isolation_policy": {
     "activation_complete": true,
     "activation_version": "0.29.5",

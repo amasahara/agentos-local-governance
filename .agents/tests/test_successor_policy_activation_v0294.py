@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def test_v0294_successor_keeps_v0293_sandbox_configuration_contract_active():
     policy = load_policy(ROOT)
-    assert policy['version'] == '0.29.5'
+    assert tuple(int(part) for part in policy["version"].split(".")) >= (0, 29, 5)
     configuration = sandbox_configuration_from_policy(policy)
     assert configuration['configuration_source'] == 'effective_policy'
     assert len(configuration['configuration_hash']) == 64

@@ -39,7 +39,7 @@ _DEFAULT_POLICY: dict[str, Any] = {
     "enabled": True,
     "optional": True,
     "web_version": WEB_CONTROL_PLANE_VERSION,
-    "database_schema": 62,
+    "database_schema": 63,
     "default_host": "127.0.0.1",
     "default_port": 8765,
     "loopback_only": True,

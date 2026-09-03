@@ -20,7 +20,7 @@ _POLICY = {
         "enabled": True,
         "optional": True,
         "web_version": 1,
-        "database_schema": 62,
+        "database_schema": 63,
         "default_host": "127.0.0.1",
         "default_port": 8765,
         "loopback_only": True,
@@ -45,7 +45,7 @@ _POLICY = {
 _SNAPSHOT = {
     "ok": True,
     "version": "0.28.1",
-    "schema": 61,
+    "schema": 63,
     "overall_status": "pass",
     "architecture": {"active_baseline": None},
     "execution": {"workers_total": 0},

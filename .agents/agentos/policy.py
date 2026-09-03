@@ -20,7 +20,7 @@ from .db import connect
 
 CLAIM_TYPES = {"business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"}
 RISK_LEVELS = {"low", "medium", "high"}
-SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy", "governed_skill_contract_policy", "architecture_aware_skill_selection_policy", "privileged_control_plane_policy", "sandbox_workspace_runtime_profile_policy"}
+SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy", "governed_skill_contract_policy", "architecture_aware_skill_selection_policy", "privileged_control_plane_policy", "sandbox_workspace_runtime_profile_policy", "context_authority_policy"}
 SAFE_OVERRIDE_KEYS = {"source_root", "test_path", "encoding", "runtime_paths"}
 
 
@@ -859,6 +859,130 @@ def _validate_sync_credential_boundary_v0293_preactivation(
             "process credential capability is invalid"
         )
 
+
+def _validate_context_authority_policy_v0300(
+    policy: dict[str, Any],
+    version: tuple[int, ...],
+) -> None:
+    """Fail closed on v0.30.0 context-authority/provenance invariants."""
+    if version < (0, 30, 0):
+        return
+    section = policy.get("context_authority_policy")
+    if not isinstance(section, dict):
+        raise RuntimeError("context authority policy is required")
+
+    required_true = (
+        "enabled",
+        "unknown_source_untrusted",
+        "exact_authority_copy_may_preserve_same_authority",
+        "source_locator_hash_only_persistence",
+        "provenance_manifest_hash_required",
+        "context_authority_hash_required",
+        "transport_pack_pin_required",
+        "mcp_status_read_only",
+    )
+    disabled = [
+        key for key in required_true
+        if section.get(key) is not True
+    ]
+    if disabled:
+        raise RuntimeError(
+            "context authority invariant disabled: " + repr(disabled)
+        )
+
+    required_false = (
+        "evidence_instruction_authority",
+        "semantic_instruction_detection_grants_authority",
+        "derived_content_may_raise_authority",
+        "generated_summary_instruction_authority",
+        "external_content_instruction_authority",
+        "tool_output_instruction_authority",
+        "project_evidence_instruction_authority",
+        "raw_context_persistence_allowed",
+        "mcp_mutation_allowed",
+    )
+    poisoned = [
+        key for key in required_false
+        if section.get(key) is not False
+    ]
+    if poisoned:
+        raise RuntimeError(
+            "context authority fail-closed invariant violated: "
+            + repr(poisoned)
+        )
+
+    if int(section.get("authority_version", 0)) != 1:
+        raise RuntimeError("context authority version is invalid")
+    if int(section.get("provenance_version", 0)) != 1:
+        raise RuntimeError("context provenance version is invalid")
+    if int(section.get("database_schema", 0)) != 63:
+        raise RuntimeError("context authority schema is invalid")
+    if section.get("scope") != "agentos_context_assembly":
+        raise RuntimeError("context authority scope is invalid")
+    if section.get("classification_basis") != "source_origin_only":
+        raise RuntimeError(
+            "context authority must classify by source origin"
+        )
+
+    expected_mcp_tools = {
+        "agentos.context_authority_status_get",
+        "agentos.context_provenance_get",
+        "agentos.context_authority_explain",
+        "agentos.context_authority_findings_get",
+    }
+    if set(section.get("mcp_read_tools", [])) != expected_mcp_tools:
+        raise RuntimeError("context authority MCP read surface is invalid")
+    expected_cli_commands = {
+        "context-authority-status",
+        "context-provenance-show",
+        "context-authority-explain",
+        "context-authority-findings",
+    }
+    if set(section.get("cli_read_commands", [])) != expected_cli_commands:
+        raise RuntimeError("context authority CLI read surface is invalid")
+
+    expected_authority = {
+        "none",
+        "governance",
+        "human_request",
+        "approved_task",
+        "human_decision",
+    }
+    if set(section.get("authority_classes", [])) != expected_authority:
+        raise RuntimeError("context authority class registry is invalid")
+
+    expected_trust = {
+        "governance_authority",
+        "human_authority",
+        "approved_task_authority",
+        "project_evidence",
+        "tool_evidence",
+        "external_untrusted",
+        "generated_evidence",
+        "unknown_untrusted",
+    }
+    if set(section.get("trust_classes", [])) != expected_trust:
+        raise RuntimeError("context trust class registry is invalid")
+
+    non_claims = section.get("non_claims")
+    if not isinstance(non_claims, dict):
+        raise RuntimeError("context authority non-claims are required")
+    required_non_claims = (
+        "prompt_injection_eliminated",
+        "semantic_correctness_guaranteed",
+        "model_manipulation_prevented",
+        "all_agent_input_channels_secured",
+        "human_review_replaced",
+    )
+    overclaims = [
+        key for key in required_non_claims
+        if non_claims.get(key) is not False
+    ]
+    if overclaims:
+        raise RuntimeError(
+            "context authority overclaim: " + repr(overclaims)
+        )
+
 def validate_policy(policy: dict[str, Any]) -> None:
     """Fail closed while preserving historical policy contracts by release version."""
     required = {"version", "instruction_policy", "filesystem_policy", "claim_policy", "workflows", "workflow_policy", "drift_policy", "tool_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy"}
@@ -880,6 +1004,10 @@ def validate_policy(policy: dict[str, Any]) -> None:
     _validate_sync_credential_boundary_v0293_preactivation(
         policy,
     )
+    _validate_context_authority_policy_v0300(
+        policy,
+        version,
+    )
     if version >= (0, 27, 0):
         required.add("governed_skill_contract_policy")
     if version >= (0, 27, 1):
@@ -893,6 +1021,8 @@ def validate_policy(policy: dict[str, Any]) -> None:
         required.add("completion_verification_policy")
     if version >= (0, 29, 2):
         required.add("sandbox_workspace_runtime_profile_policy")
+    if version >= (0, 30, 0):
+        required.add("context_authority_policy")
     missing = sorted(required - policy.keys())
     if missing:
         raise RuntimeError(f"missing policy keys: {missing}")
@@ -989,7 +1119,9 @@ def validate_policy(policy: dict[str, Any]) -> None:
         if web_poisoned:
             raise RuntimeError(f"web control plane authority invariant violated: {web_poisoned}")
         expected_web_schema = (
-            62
+            63
+            if version >= (0, 30, 0)
+            else 62
             if version >= (0, 29, 0)
             else 61
         )

@@ -1,4 +1,16 @@
 # Changelog
+
+## v0.30.0 — Context Authority & Untrusted Provenance
+
+- Added deterministic source-origin context authority/provenance classification.
+- Added schema 63 hash/label-only provenance records, authority evaluations, and findings.
+- Bound `provenance_manifest_hash` and `context_authority_hash` into Context Transport packs.
+- Added fail-closed provenance pin revalidation and authority/provenance stale detection.
+- Renamed context knowledge selection wording from `trusted_provenance` to `verified_evidence_provenance`.
+- Added four read-only CLI and four read-only MCP context-authority inspection surfaces.
+- Added structural context-authority attestation with explicit broad non-claims.
+- Preserved existing Requirement-Preserving Context Transport and v0.29.x enforcement boundaries.
+
 ## v0.29.5 — Native Physical Isolation Extensions
 - Extended the v0.29.4 Windows Restricted Token boundary with verified Low
   Integrity (`S-1-16-4096`, RID 4096) for AgentOS-mediated process execution.

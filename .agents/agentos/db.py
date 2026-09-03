@@ -1066,7 +1066,8 @@ def _feature_migrations() -> list:
     from .multi_agent_supervisor import migration_60
     from .multi_agent_workspace import migration_61
     from .completion_verification import migration_62
-    return [migration_32, migration_33, migration_34, migration_35, migration_36, migration_37, migration_38, migration_39, migration_40, _m41, migration_42, migration_43, migration_44, migration_45, migration_46, migration_47, migration_48, migration_49, migration_50, migration_51, migration_52, migration_53, migration_54, migration_55, migration_56, migration_57, migration_58, migration_59, migration_60, migration_61, migration_62]
+    from .context_authority import migration_63
+    return [migration_32, migration_33, migration_34, migration_35, migration_36, migration_37, migration_38, migration_39, migration_40, _m41, migration_42, migration_43, migration_44, migration_45, migration_46, migration_47, migration_48, migration_49, migration_50, migration_51, migration_52, migration_53, migration_54, migration_55, migration_56, migration_57, migration_58, migration_59, migration_60, migration_61, migration_62, migration_63]
 
 
 MIGRATIONS = [_m1, _m2, _m3, _m4, _m5, _m6, _m7, _m8, _m9, _m10, _m11, _m12, _m13, _m14, _m15, _m16, _m17, _m18, _m19, _m20, _m21, _m22, _m23, _m24, _m25, _m26, _m27, _m28, _m29, _m30, _m31]

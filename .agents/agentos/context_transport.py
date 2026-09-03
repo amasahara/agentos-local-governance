@@ -30,6 +30,11 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .context_runtime import context_status
+from .context_authority import (
+    ProvenanceRecord,
+    evaluate_provenance,
+    make_provenance_record,
+)
 from .adaptive_budget import (
     AdaptiveBudgetError,
     persist_budget_decision,
@@ -87,6 +92,7 @@ CRITICAL_POLICY_SECTIONS = (
     "data_subject_rights_policy",
     "privacy_boundary_policy",
     "context_transport_policy",
+    "context_authority_policy",
     "adaptive_token_budget_policy",
     "context_expansion_evaluation_policy",
     "db_aware_context_projection_policy",
@@ -847,6 +853,7 @@ def _canonical_candidates(canonical_manifest: dict[str, Any]) -> list[dict[str, 
                 "raw_text": text,
                 "relevance_score": float(item.get("score") or 0.0),
                 "canonical_index": index,
+                "knowledge_kind": str(item.get("kind") or "unknown"),
             }
         )
     return items
@@ -904,6 +911,7 @@ def _evidence_plane(
                     "kind": item["kind"],
                     "path": item.get("path"),
                     "source_hash": item.get("source_hash"),
+                    "knowledge_kind": item.get("knowledge_kind"),
                     "source_handle": {
                         "kind": item["kind"],
                         "path": item.get("path"),
@@ -947,6 +955,285 @@ def _evidence_plane(
         "omitted_count": len(omitted),
     }, raw_tokens, used
 
+
+
+def _compact_provenance(record: ProvenanceRecord) -> dict[str, Any]:
+    """Return non-content provenance metadata safe for a transport manifest."""
+    return {
+        "provenance_id": record.provenance_id,
+        "source_kind": record.source_kind,
+        "trust_class": record.trust_class,
+        "authority_class": record.authority_class,
+        "instruction_authority": record.instruction_authority,
+    }
+
+
+def _knowledge_source_kind(kind: str) -> str:
+    value = str(kind or "").strip().lower()
+    if value in {"skill", "memory", "finding"}:
+        return f"knowledge_{value}"
+    return "project_document"
+
+
+def _control_provenance(
+    control: dict[str, Any],
+    task_id: str,
+) -> list[ProvenanceRecord]:
+    """Build provenance for explicit control-plane authority sources."""
+    records = [
+        make_provenance_record(
+            source_kind="original_request",
+            content_hash=str(control["original_user_request_hash"]),
+            source_locator=f"task:{task_id}:original_request",
+            producer="human",
+        ),
+        make_provenance_record(
+            source_kind="agents_md",
+            content_hash=str(control["instruction_authority"]["content_hash"]),
+            source_locator=str(control["instruction_authority"]["path"]),
+            producer="agentos",
+        ),
+        make_provenance_record(
+            source_kind="governance_policy",
+            content_hash=str(control["policy_authority"]["projection_hash"]),
+            source_locator="effective_policy:context_projection",
+            producer="agentos",
+        ),
+        make_provenance_record(
+            source_kind="approved_scope",
+            content_hash=str(control["approved_scope"]["hash"]),
+            source_locator=f"task:{task_id}:approved_scope",
+            producer="agentos",
+        ),
+    ]
+    plan_hash = str(control.get("active_plan", {}).get("plan_hash") or "")
+    if plan_hash:
+        records.append(
+            make_provenance_record(
+                source_kind="active_plan",
+                content_hash=plan_hash,
+                source_locator=f"task:{task_id}:active_plan",
+                producer="agentos",
+            )
+        )
+    return records
+
+
+def _canonical_source_provenance(
+    canonical_manifest: dict[str, Any],
+) -> dict[str, ProvenanceRecord]:
+    """Build one origin record for every canonical evidence candidate."""
+    records: dict[str, ProvenanceRecord] = {}
+    for index, src in enumerate(canonical_manifest.get("sources", [])):
+        candidate_id = f"SRC-{index:04d}"
+        records[candidate_id] = make_provenance_record(
+            source_kind="project_file",
+            content_hash=str(src.get("content_hash") or ""),
+            source_locator=str(src.get("path") or ""),
+            producer="context_runtime",
+        )
+    for index, item in enumerate(canonical_manifest.get("knowledge_sources", [])):
+        candidate_id = f"KNW-{index:04d}"
+        text = str(item.get("text") or item.get("title") or "")
+        locator = str(
+            item.get("source_path")
+            or item.get("graduated_path")
+            or item.get("id")
+            or item.get("kind")
+            or candidate_id
+        )
+        records[candidate_id] = make_provenance_record(
+            source_kind=_knowledge_source_kind(str(item.get("kind") or "")),
+            content_hash=_sha256_text(text),
+            source_locator=locator,
+            producer="context_runtime",
+        )
+    return records
+
+
+def _build_context_provenance(
+    control: dict[str, Any],
+    task_id: str,
+    canonical_manifest: dict[str, Any],
+    evidence: dict[str, Any],
+) -> dict[str, Any]:
+    """Build source-origin authority/provenance and bind projected evidence."""
+    records = _control_provenance(control, task_id)
+    source_records = _canonical_source_provenance(canonical_manifest)
+    records.extend(source_records.values())
+
+    for item in evidence.get("included", []):
+        candidate_id = str(item.get("candidate_id") or "")
+        parent = source_records.get(candidate_id)
+        if parent is None:
+            continue
+        derived = make_provenance_record(
+            source_kind=parent.source_kind,
+            content_hash=_sha256_text(str(item.get("excerpt") or "")),
+            source_locator=f"transport:{task_id}:{candidate_id}:projected",
+            producer="context_transport",
+            transform=str(item.get("codec") or "verbatim"),
+            parents=[parent],
+        )
+        records.append(derived)
+        item["provenance"] = {
+            **_compact_provenance(derived),
+            "derived_from_provenance_id": parent.provenance_id,
+            "transform": str(item.get("codec") or "verbatim"),
+        }
+
+    for item in evidence.get("omitted", []):
+        parent = source_records.get(str(item.get("candidate_id") or ""))
+        if parent is not None:
+            item["provenance"] = _compact_provenance(parent)
+
+    for handle in evidence.get("expansion_index", []):
+        parent = source_records.get(str(handle.get("candidate_id") or ""))
+        if parent is not None:
+            handle["provenance"] = _compact_provenance(parent)
+
+    unique_records = {record.provenance_id: record for record in records}
+    ordered_records = [unique_records[key] for key in sorted(unique_records)]
+    evaluation = evaluate_provenance(ordered_records)
+    return {
+        "records": ordered_records,
+        "evaluation": evaluation,
+        "manifest": {
+            "provenance_version": 1,
+            "classification_basis": "source_origin_only",
+            "semantic_instruction_detection_used": False,
+            "record_count": evaluation["record_count"],
+            "authority_record_count": evaluation["authority_record_count"],
+            "finding_count": evaluation["finding_count"],
+            "blocking_finding_count": evaluation["blocking_finding_count"],
+            "provenance_manifest_hash": evaluation["provenance_manifest_hash"],
+            "context_authority_hash": evaluation["context_authority_hash"],
+            "record_ids": [record.provenance_id for record in ordered_records],
+        },
+    }
+
+
+def _persist_context_provenance_conn(
+    c: Any,
+    *,
+    pack_id: int,
+    task_id: str,
+    context_revision: int,
+    provenance: dict[str, Any],
+) -> None:
+    """Persist hash/label provenance only; never raw context content."""
+    for record in provenance["records"]:
+        c.execute(
+            """
+            INSERT OR IGNORE INTO context_provenance_records(
+                task_id,context_revision,transport_pack_id,
+                provenance_id,provenance_version,source_kind,
+                trust_class,authority_class,instruction_authority,
+                source_locator_hash,content_hash,producer,transform,
+                parent_ids_json
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                task_id,
+                context_revision,
+                pack_id,
+                record.provenance_id,
+                record.provenance_version,
+                record.source_kind,
+                record.trust_class,
+                record.authority_class,
+                int(record.instruction_authority),
+                record.source_locator_hash,
+                record.content_hash,
+                record.producer,
+                record.transform,
+                _canonical_json(list(record.parent_ids)),
+            ),
+        )
+
+    evaluation = provenance["evaluation"]
+    cur = c.execute(
+        """
+        INSERT INTO context_authority_evaluations(
+            task_id,context_revision,transport_pack_id,
+            provenance_manifest_hash,context_authority_hash,status,
+            record_count,authority_record_count,finding_count
+        ) VALUES(?,?,?,?,?,?,?,?,?)
+        """,
+        (
+            task_id,
+            context_revision,
+            pack_id,
+            evaluation["provenance_manifest_hash"],
+            evaluation["context_authority_hash"],
+            "pass" if evaluation["ok"] else "blocked",
+            evaluation["record_count"],
+            evaluation["authority_record_count"],
+            evaluation["finding_count"],
+        ),
+    )
+    evaluation_id = int(cur.lastrowid)
+    for finding in evaluation["findings"]:
+        c.execute(
+            """
+            INSERT INTO context_authority_findings(
+                evaluation_id,provenance_id,code,severity,detail_hash
+            ) VALUES(?,?,?,?,?)
+            """,
+            (
+                evaluation_id,
+                finding.get("provenance_id"),
+                str(finding.get("code") or "unknown"),
+                str(finding.get("severity") or "info"),
+                _sha256_text(_canonical_json(finding)),
+            ),
+        )
+
+
+def _stored_provenance_evaluation(
+    root: Path,
+    task_id: str,
+    context_revision: int,
+    record_ids: list[str],
+) -> dict[str, Any]:
+    """Re-evaluate exactly the hash-only records pinned by one manifest."""
+    ids = sorted({str(value) for value in record_ids if str(value)})
+    if not ids:
+        raise ContextTransportError("context_provenance_record_ids_missing")
+    placeholders = ",".join("?" for _ in ids)
+    with connect(root) as c:
+        rows = c.execute(
+            f"""
+            SELECT provenance_id,provenance_version,source_kind,
+                   trust_class,authority_class,instruction_authority,
+                   source_locator_hash,content_hash,producer,transform,
+                   parent_ids_json
+              FROM context_provenance_records
+             WHERE task_id=? AND context_revision=?
+               AND provenance_id IN ({placeholders})
+            """,
+            (task_id, context_revision, *ids),
+        ).fetchall()
+    if len(rows) != len(ids):
+        raise ContextTransportError("context_provenance_records_missing")
+    records: list[ProvenanceRecord] = []
+    for row in rows:
+        records.append(
+            ProvenanceRecord(
+                provenance_id=str(row["provenance_id"]),
+                provenance_version=int(row["provenance_version"]),
+                source_kind=str(row["source_kind"]),
+                trust_class=str(row["trust_class"]),
+                authority_class=str(row["authority_class"]),
+                instruction_authority=bool(row["instruction_authority"]),
+                source_locator_hash=str(row["source_locator_hash"]),
+                content_hash=str(row["content_hash"]),
+                producer=str(row["producer"]),
+                transform=str(row["transform"]),
+                parent_ids=tuple(json.loads(row["parent_ids_json"] or "[]")),
+            )
+        )
+    return evaluate_provenance(records)
 
 def _persist_ledger(root: Path, task_id: str, context_revision: int, ledger: list[dict[str, Any]]) -> None:
     with connect(root, immediate=True) as c:
@@ -1053,6 +1340,14 @@ def compile_transport_pack(
     plan_json = str(plan_row["plan_json"]) if plan_row else None
     ledger = build_requirement_ledger(str(task["request"]), plan_json)
     control, control_hashes = _control_plane(root, task, ledger)
+    control_records = _control_provenance(control, task_id)
+    compact_control = {record.source_kind: _compact_provenance(record) for record in control_records}
+    control["original_request_provenance"] = compact_control["original_request"]
+    control["instruction_authority"]["provenance"] = compact_control["agents_md"]
+    control["policy_authority"]["provenance"] = compact_control["governance_policy"]
+    control["approved_scope"]["provenance"] = compact_control["approved_scope"]
+    if "active_plan" in compact_control:
+        control["active_plan"]["provenance"] = compact_control["active_plan"]
     try:
         profile = resolve_model_profile(root, model_profile)
     except AdaptiveBudgetError as exc:
@@ -1163,6 +1458,14 @@ def compile_transport_pack(
     evidence, raw_evidence_tokens, evidence_tokens = _evidence_plane(
         root, canonical_manifest, context_revision, ledger, tokenizer, evidence_budget
     )
+    provenance = _build_context_provenance(control, task_id, canonical_manifest, evidence)
+    if not provenance["evaluation"]["ok"]:
+        raise ContextTransportError("context_authority_gate_failed")
+    gate["context_authority"] = True
+    gate["provenance_pinned"] = bool(
+        provenance["evaluation"]["provenance_manifest_hash"]
+        and provenance["evaluation"]["context_authority_hash"]
+    )
     manifest: dict[str, Any] = {
         "transport_version": TRANSPORT_VERSION,
         "task_id": task_id,
@@ -1198,6 +1501,7 @@ def compile_transport_pack(
         },
         "control_plane": control,
         "evidence_plane": evidence,
+        "context_provenance": provenance["manifest"],
         "authority_hashes": {
             "combined": control_hashes["authority_hash"],
             "agents": control["instruction_authority"]["content_hash"],
@@ -1241,20 +1545,26 @@ def compile_transport_pack(
             INSERT INTO context_transport_packs(
                 task_id,context_revision,transport_revision,transport_version,status,model_profile,tokenizer_id,
                 original_request_hash,authority_hash,scope_hash,plan_hash,source_freshness_hash,transport_hash,
+                provenance_manifest_hash,context_authority_hash,
                 raw_tokens,transport_tokens,control_tokens,evidence_tokens,token_budget,saved_tokens,compression_ratio,
                 preservation_rate,manifest_json,failure_reason,model_profile_hash,budget_mode,budget_decision_id
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)
             """,
             (
                 task_id, context_revision, revision, TRANSPORT_VERSION, manifest["status"], model_profile, tokenizer.tokenizer_id,
                 control["original_user_request_hash"], control_hashes["authority_hash"], control_hashes["scope_hash"], control_hashes["plan_hash"] or None,
-                freshness_hash, manifest["transport_hash"], raw_context_tokens, transport_tokens, control_tokens, evidence_tokens,
+                freshness_hash, manifest["transport_hash"],
+                provenance["evaluation"]["provenance_manifest_hash"], provenance["evaluation"]["context_authority_hash"],
+                raw_context_tokens, transport_tokens, control_tokens, evidence_tokens,
                 budget.input_budget, int(manifest["metrics"]["saved_tokens"]), float(manifest["metrics"]["compression_ratio"]),
                 float(gate["requirement_preservation_rate"]), _canonical_json(manifest),
                 profile.profile_hash, decision.mode, budget_decision_id,
             ),
         )
         pack_id = int(c.execute("SELECT last_insert_rowid() AS id").fetchone()["id"])
+        _persist_context_provenance_conn(
+            c, pack_id=pack_id, task_id=task_id, context_revision=context_revision, provenance=provenance
+        )
         persist_projection_telemetry_conn(
             c, pack_id, task_id, context_revision, revision, evidence
         )
@@ -1306,6 +1616,22 @@ def context_transport_get(root: Path, task_id: str, revision: int | None = None,
     manifest = json.loads(row["manifest_json"])
     if _nowless_transport_hash(manifest) != row["transport_hash"]:
         raise ContextTransportError("transport_integrity_hash_mismatch")
+    provenance_meta = manifest.get("context_provenance")
+    if not isinstance(provenance_meta, dict):
+        raise ContextTransportError("context_provenance_manifest_missing")
+    if (
+        str(row.get("provenance_manifest_hash") or "") != str(provenance_meta.get("provenance_manifest_hash") or "")
+        or str(row.get("context_authority_hash") or "") != str(provenance_meta.get("context_authority_hash") or "")
+    ):
+        raise ContextTransportError("context_provenance_pin_mismatch")
+    stored_provenance = _stored_provenance_evaluation(
+        root, task_id, int(row["context_revision"]), list(provenance_meta.get("record_ids") or [])
+    )
+    if (
+        stored_provenance["provenance_manifest_hash"] != provenance_meta.get("provenance_manifest_hash")
+        or stored_provenance["context_authority_hash"] != provenance_meta.get("context_authority_hash")
+    ):
+        raise ContextTransportError("context_provenance_hash_mismatch")
     current = _current_authority_state(root, task_id)
     canonical = context_status(root, task_id)
     stale_reasons: list[str] = []
@@ -1323,6 +1649,23 @@ def context_transport_get(root: Path, task_id: str, revision: int | None = None,
         stale_reasons.append("canonical_context_stale")
     elif int(canonical["revision"]) != int(row["context_revision"]):
         stale_reasons.append("canonical_context_revision_changed")
+    if canonical.get("exists"):
+        task = _task_row(root, task_id)
+        with connect(root) as c:
+            plan_row = c.execute(
+                "SELECT plan_json FROM task_plans WHERE task_id=? AND status='active' ORDER BY revision DESC LIMIT 1",
+                (task_id,),
+            ).fetchone()
+        plan_json = str(plan_row["plan_json"]) if plan_row else None
+        current_ledger = build_requirement_ledger(str(task["request"]), plan_json)
+        current_control, _ = _control_plane(root, task, current_ledger)
+        current_provenance = _build_context_provenance(
+            current_control, task_id, canonical["manifest"], manifest["evidence_plane"]
+        )
+        if current_provenance["evaluation"]["context_authority_hash"] != row["context_authority_hash"]:
+            stale_reasons.append("context_authority_changed")
+        if current_provenance["evaluation"]["provenance_manifest_hash"] != row["provenance_manifest_hash"]:
+            stale_reasons.append("context_provenance_changed")
     return {
         "ok": not stale_reasons,
         "pack_id": row["id"],
@@ -1333,6 +1676,13 @@ def context_transport_get(root: Path, task_id: str, revision: int | None = None,
         "stale": bool(stale_reasons),
         "stale_reasons": stale_reasons,
         "transport_hash": row["transport_hash"],
+        "provenance": {
+            "ok": stored_provenance["ok"],
+            "provenance_manifest_hash": row["provenance_manifest_hash"],
+            "context_authority_hash": row["context_authority_hash"],
+            "record_count": stored_provenance["record_count"],
+            "authority_record_count": stored_provenance["authority_record_count"],
+        },
         "manifest": manifest,
     }
 
@@ -1349,6 +1699,7 @@ def context_transport_explain(root: Path, task_id: str, revision: int | None = N
         "stale": pack["stale"],
         "stale_reasons": pack["stale_reasons"],
         "preservation_gate": manifest["preservation_gate"],
+        "context_provenance": manifest.get("context_provenance", {}),
         "compression_ladder": evidence["compression_ladder"],
         "included_evidence": [
             {
@@ -1357,6 +1708,7 @@ def context_transport_explain(root: Path, task_id: str, revision: int | None = N
                 "codec": item["codec"],
                 "rank_score": item["rank_score"],
                 "tokens": item["tokens"],
+                "provenance": item.get("provenance"),
             }
             for item in evidence["included"]
         ],

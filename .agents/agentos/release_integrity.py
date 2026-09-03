@@ -143,6 +143,7 @@ RELEASE_FILES = (
     ".agents/tests/test_context_authority_transport_v0300.py",
     ".agents/tests/test_context_authority_surface_v0300.py",
     ".agents/tests/test_context_authority_release_v0300.py",
+    ".agents/tests/test_release_schema_metadata_coherence_v0301.py",
     ".agents/tests/test_windows_process_tree_v0291.py",
     ".agents/tests/test_windows_process_exec_containment_v0291.py",
     ".agents/tests/test_windows_job_broker_v0291.py",
@@ -189,6 +190,7 @@ RELEASE_FILES = (
     '.agents/tests/test_windows_physical_isolation_release_integrity_v0295.py',
     '.agents/docs/WINDOWS_NATIVE_PHYSICAL_ISOLATION_V0295.md',
     ".agents/docs/CONTEXT_AUTHORITY_UNTRUSTED_PROVENANCE_V0300.md",
+    ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
 )
 EXTENSION_FILES = (
     ".agents/agentos/project_identity.py",

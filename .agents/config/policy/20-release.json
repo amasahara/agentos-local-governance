@@ -1,6 +1,6 @@
 {
   "release_policy": {
-    "version": "0.30.0",
+    "version": "0.30.1",
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
     "identity_sources": [
       "VERSION",
@@ -10,13 +10,14 @@
     ],
     "current_docs": [
       "README.md",
+      "README.vi.md",
       "README.en.md",
       ".agents/docs/QUICKSTART.md",
       ".agents/docs/NEW_PROJECT.md",
       ".agents/docs/EXISTING_PROJECT.md",
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
-      ".agents/docs/CONTEXT_AUTHORITY_UNTRUSTED_PROVENANCE_V0300.md"
+      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
     ],
     "current_docs_must_match_release": true,
     "manifest_required": true,
@@ -436,6 +437,43 @@
       "context-provenance-show",
       "context-authority-explain",
       "context-authority-findings"
+    ]
+  },
+  "documentation_policy": {
+    "current_release_identity_files": [
+      "README.md",
+      "README.vi.md",
+      "README.en.md",
+      "RELEASE_NOTES.md",
+      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
+    ],
+    "current_release_name": "Release & Schema Metadata Coherence",
+    "current_schema": 63,
+    "current_schema_files": [
+      "README.md",
+      "README.vi.md",
+      "README.en.md",
+      "RELEASE_NOTES.md",
+      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
+    ],
+    "current_version_files": [
+      "README.md",
+      "README.vi.md",
+      "README.en.md",
+      "RELEASE_NOTES.md",
+      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
+    ],
+    "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
+    "local_link_check_files": [
+      "README.md",
+      "README.vi.md",
+      "README.en.md",
+      ".agents/docs/QUICKSTART.md",
+      ".agents/docs/NEW_PROJECT.md",
+      ".agents/docs/EXISTING_PROJECT.md",
+      ".agents/docs/WINDOWS.md",
+      ".agents/docs/REFERENCE.md",
+      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
     ]
   }
 }

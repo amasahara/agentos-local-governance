@@ -90,22 +90,27 @@ Version history belongs in [CHANGELOG.md](CHANGELOG.md), Git history, tags, and 
 State the problem and acceptance criteria, place changes by responsibility and lifecycle, update relevant tests and documentation, run release validation and manifest verification, and do not commit runtime caches or reproducible test output.
 
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
-
 ## Current release
-**v0.30.0 — Context Authority & Untrusted Provenance** · schema **63**
+**v0.30.1 — Release & Schema Metadata Coherence** · schema **63**
 
-v0.30.0 adds an explicit authority boundary to context assembly. AgentOS classifies context by **source origin** rather than by instruction-like wording. Project, tool, external, and generated evidence remains evidence and cannot self-promote into instruction authority.
+This release is a coherence-only prerequisite for v0.31.0. It does not add a
+new database migration or learning feature. It aligns current release identity,
+schema-bootstrap metadata, and generated policy with runtime schema 63, and it
+adds a fail-closed contiguous migration check for bootstrap schema 46 → 63.
 
-Context Transport additionally pins `provenance_manifest_hash` and `context_authority_hash`; the read path revalidates hash-only provenance and reports stale state when authority/provenance changes.
+Historical subsystem fields such as `database_schema = 55` remain descriptive
+metadata for the release in which those subsystems were introduced; they are
+not rewritten merely to match the current schema.
 
-CLI and MCP expose read-only inspection only. No trust-promotion, authority-grant, provenance-override, or approval MCP surface is added.
+### Inherited predecessor contracts
 
-The bounded claim is: **AgentOS deterministically distinguishes explicit context authority from evidence/untrusted provenance and prevents evidence-derived context from being promoted into AgentOS instruction authority in the governed Context Transport path.**
+v0.30.1 preserves **v0.30.0 — Context Authority & Untrusted Provenance**.
+Evidence-derived or untrusted context still cannot promote itself into AgentOS
+instruction authority in the governed Context Transport path. This predecessor
+contract does not claim that prompt injection is eliminated or that human review
+is replaced.
 
-This release does not claim prompt-injection elimination, semantic correctness, prevention of every form of model manipulation, replacement of human review, or general host isolation.
-
-### Inherited predecessor security baseline
-
-v0.30.0 preserves **v0.29.5 — Native Physical Isolation Extensions** and its
-bounded predecessor v0.29.4 Restricted Token contract. Those historical
-activation contracts remain scoped to AgentOS-mediated process execution.
+v0.30.1 also preserves **v0.29.5 — Native Physical Isolation Extensions** and
+its bounded v0.29.4 Restricted Token predecessor. Those Windows execution claims
+remain scoped to AgentOS-mediated process execution and do not imply general
+host isolation or same-user host-bypass resistance.

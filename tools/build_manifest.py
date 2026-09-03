@@ -107,6 +107,16 @@ def main() -> None:
     if not release:
         raise SystemExit("VERSION must be non-empty")
     _compile_effective_policy(root)
+    from agentos.release_coherence import check_schema_bootstrap_coherence
+    schema_coherence = check_schema_bootstrap_coherence(
+        root,
+        schema_version=int(CURRENT_SCHEMA_VERSION),
+    )
+    if schema_coherence.get("ok") is not True:
+        raise SystemExit(
+            "schema bootstrap coherence failed before manifest generation: "
+            + json.dumps(schema_coherence.get("findings", []), ensure_ascii=False)
+        )
     _sync_package_completeness(root, release=release, schema=int(CURRENT_SCHEMA_VERSION))
 
     files = []

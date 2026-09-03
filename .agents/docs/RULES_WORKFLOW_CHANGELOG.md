@@ -1,3 +1,9 @@
+## v0.30.1 — Release & Schema Metadata Coherence
+- Release/schema coherence prerequisite only; database schema remains 63.
+- Bootstrap schema remains 46; post-baseline migrations are exactly 47..63.
+- Generated effective policy, package completeness, manifest, and checksums are regenerated from authoritative sources.
+- Historical release-coherence fixtures without a declared schema-bootstrap contract remain valid.
+- v0.30.0 Context Authority and bounded v0.29.5/v0.29.4 Windows predecessor contracts remain preserved.
 ## v0.30.0 — Context Authority & Untrusted Provenance
 
 - Added deterministic source-origin context authority/provenance classification.

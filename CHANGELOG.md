@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.30.1 — Release & Schema Metadata Coherence
+- Repaired current schema-bootstrap metadata to schema 63 while keeping bootstrap baseline 46 unchanged.
+- Added fail-closed contiguous post-bootstrap migration validation for the exact sequence 47..63.
+- Integrated schema-bootstrap coherence into release metadata validation, manifest generation, and release validation.
+- Reconciled current README/release-note identity that was still describing v0.29.5/schema 62.
+- Kept historical subsystem `database_schema` introduction metadata unchanged.
+- Database schema remains 63; no learning-loop feature is introduced in this prerequisite node.
+
+
 ## v0.30.0 — Context Authority & Untrusted Provenance
 
 - Added deterministic source-origin context authority/provenance classification.

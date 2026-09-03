@@ -115,22 +115,26 @@ Trước khi gửi thay đổi:
 - không biến assumption về business hoặc architecture thành authority.
 
 Các thay đổi governance phải giữ `AGENTS.md`, structured policy, runtime, tests, documentation, changelog và release identity nhất quán.
-
 ## Bản phát hành hiện hành
-**v0.30.0 — Context Authority & Untrusted Provenance** · schema **63**
+**v0.30.1 — Release & Schema Metadata Coherence** · schema **63**
 
-v0.30.0 bổ sung ranh giới authority cho context assembly. AgentOS phân loại context theo **nguồn gốc** thay vì dựa vào nội dung có vẻ giống chỉ thị. Project/tool/external/generated evidence giữ vai trò evidence và không tự trở thành instruction authority.
+Đây là release prerequisite chỉ sửa coherence trước v0.31.0; **không có migration
+DB mới và chưa triển khai learning loop**. Release đồng bộ current-release
+identity, schema-bootstrap metadata và generated policy với runtime schema 63,
+đồng thời thêm gate fail-closed yêu cầu migration sau bootstrap schema 46 phải
+liên tục chính xác từ 47 đến 63.
 
-Context Transport pin thêm `provenance_manifest_hash` và `context_authority_hash`; read path revalidate provenance hash-only và đánh dấu stale khi authority/provenance thay đổi.
+Các trường lịch sử như `database_schema = 55` của subsystem vẫn là metadata mô
+tả thời điểm feature được giới thiệu và không bị ép thành schema hiện hành.
 
-CLI và MCP chỉ cung cấp surface quan sát read-only. Không có trust promotion, authority grant, provenance override hoặc approval qua MCP.
+### Kế thừa các predecessor contract
 
-Claim được giới hạn: **AgentOS phân biệt deterministic explicit context authority với evidence/untrusted provenance và ngăn evidence-derived context được nâng thành AgentOS instruction authority trong governed Context Transport path.**
+v0.30.1 giữ nguyên **v0.30.0 — Context Authority & Untrusted Provenance**.
+Context có nguồn evidence/untrusted vẫn không thể tự nâng mình thành AgentOS
+instruction authority trong governed Context Transport path. Contract này không
+claim đã loại bỏ prompt injection hoặc thay thế human review.
 
-Release này không claim đã loại bỏ prompt injection, bảo đảm semantic correctness, ngăn mọi model manipulation, thay thế human review, hoặc cung cấp general host isolation.
-
-### Inherited predecessor security baseline
-
-v0.30.0 preserves **v0.29.5 — Native Physical Isolation Extensions** and its
-bounded predecessor v0.29.4 Restricted Token contract. Those historical
-activation contracts remain scoped to AgentOS-mediated process execution.
+v0.30.1 cũng giữ nguyên **v0.29.5 — Native Physical Isolation Extensions** và
+predecessor v0.29.4 Restricted Token có phạm vi giới hạn. Các claim Windows này
+vẫn chỉ thuộc AgentOS-mediated process execution và không đồng nghĩa với general
+host isolation hay same-user host-bypass resistance.

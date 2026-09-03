@@ -760,23 +760,39 @@
   },
   "documentation_policy": {
     "current_release_identity_files": [
-      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
+      "README.md",
+      "README.vi.md",
+      "README.en.md",
+      "RELEASE_NOTES.md",
+      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
     ],
-    "current_release_name": "Tool Exclusivity & Enforcement Attestation",
-    "current_schema": 60,
+    "current_release_name": "Release & Schema Metadata Coherence",
+    "current_schema": 63,
     "current_schema_files": [
-      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
+      "README.md",
+      "README.vi.md",
+      "README.en.md",
+      "RELEASE_NOTES.md",
+      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
     ],
-    "current_upgrade_guide": ".agents/docs/INSTALL_LATEST_RELEASE.md",
+    "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
     "current_version_files": [
-      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
+      "README.md",
+      "README.vi.md",
+      "README.en.md",
+      "RELEASE_NOTES.md",
+      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
     ],
     "local_link_check_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
-      ".agents/docs/INSTALL_LATEST_RELEASE.md",
-      ".agents/docs/MULTI_AGENT_WORKER_SUPERVISOR_V0272.md"
+      ".agents/docs/QUICKSTART.md",
+      ".agents/docs/NEW_PROJECT.md",
+      ".agents/docs/EXISTING_PROJECT.md",
+      ".agents/docs/WINDOWS.md",
+      ".agents/docs/REFERENCE.md",
+      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
     ]
   },
   "drift_policy": {
@@ -1446,13 +1462,14 @@
     "checksums_required": true,
     "current_docs": [
       "README.md",
+      "README.vi.md",
       "README.en.md",
       ".agents/docs/QUICKSTART.md",
       ".agents/docs/NEW_PROJECT.md",
       ".agents/docs/EXISTING_PROJECT.md",
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
-      ".agents/docs/CONTEXT_AUTHORITY_UNTRUSTED_PROVENANCE_V0300.md"
+      ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md"
     ],
     "current_docs_must_match_release": true,
     "identity_sources": [
@@ -1467,7 +1484,7 @@
       "governed_project"
     ],
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
-    "version": "0.30.0"
+    "version": "0.30.1"
   },
   "repository_policy": {
     "application_root_metadata_owned_by_agentos": false,
@@ -1669,7 +1686,7 @@
     "bootstrap_artifact_metadata": ".agents/schema/bootstrap_v46.json",
     "bootstrap_artifact_sql": ".agents/schema/bootstrap_v46.sql",
     "bootstrap_schema": 46,
-    "current_database_schema": 55,
+    "current_database_schema": 63,
     "existing_database_mode": "incremental_from_recorded_version",
     "fresh_database_mode": "bootstrap_then_incremental",
     "fresh_replay_migrations_1_to_46": false,
@@ -1695,9 +1712,17 @@
       52,
       53,
       54,
-      55
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63
     ],
-    "schema_change": "additive_structural_enforcement_schema_55",
+    "schema_change": "release_schema_metadata_coherence_schema_63",
     "schema_fingerprint_required": true,
     "schema_migration_markers_preserved": true,
     "source_database_write_authority_changed": false,
@@ -1857,7 +1882,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.30.0",
+  "version": "0.30.1",
   "windows_physical_isolation_policy": {
     "activation_complete": true,
     "activation_version": "0.29.5",

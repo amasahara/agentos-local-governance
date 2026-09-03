@@ -28,5 +28,55 @@
       "VERSION",
       "huong_dan.md"
     ]
+  },
+  "schema_bootstrap_policy": {
+    "version": 1,
+    "bootstrap_schema": 46,
+    "bootstrap_artifact_sql": ".agents/schema/bootstrap_v46.sql",
+    "bootstrap_artifact_metadata": ".agents/schema/bootstrap_v46.json",
+    "fresh_database_mode": "bootstrap_then_incremental",
+    "existing_database_mode": "incremental_from_recorded_version",
+    "fresh_replay_migrations_1_to_46": false,
+    "current_database_schema": 63,
+    "post_baseline_migrations_at_release": [
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63
+    ],
+    "schema_change": "release_schema_metadata_coherence_schema_63",
+    "baseline_rotation": "explicit_release_only",
+    "transactional_savepoint_required": true,
+    "schema_fingerprint_required": true,
+    "schema_migration_markers_preserved": true,
+    "source_database_write_authority_changed": false,
+    "target_database_write_authority_changed": false,
+    "mcp_mutation_authority_changed": false,
+    "unversioned_nonempty_database": "fail_closed_except_exact_legacy_module_local_contract",
+    "legacy_unversioned_reconciliation": {
+      "eligible_schema_migrations": [
+        32,
+        33,
+        34
+      ],
+      "fresh_bootstrap_path_affected": false,
+      "preserve_existing_rows": true,
+      "reconciliation_mode": "full_historical_replay_once",
+      "schema_object_name_and_sql_match_required": true,
+      "unknown_schema_object_allowed": false
+    }
   }
 }

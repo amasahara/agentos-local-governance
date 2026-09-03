@@ -1,71 +1,51 @@
-# AgentOS Local Governance v0.30.0 — Context Authority & Untrusted Provenance
+# AgentOS Local Governance v0.30.1 — Release & Schema Metadata Coherence
 
-v0.30.0 adds an explicit **context authority boundary** to AgentOS context assembly.
+v0.30.1 is the mandatory coherence prerequisite before v0.31.0. Database
+schema remains **63**; no migration is added.
 
-The release separates verified provenance from instruction authority. Content is classified by source origin, and evidence does not gain authority merely because it contains instruction-like text or is transformed, summarized, retrieved, or projected into a Context Transport pack.
+## What changed
 
-## Activated guarantees
+- Aligns current release documentation identity with v0.30.1 / schema 63.
+- Repairs `schema_bootstrap_policy.current_database_schema` to 63.
+- Requires the exact contiguous post-bootstrap sequence **47..63** for bootstrap
+  schema 46; missing, duplicate, out-of-order, or above-current migrations fail.
+- Adds a reusable schema-bootstrap coherence validator to release coherence.
+- Keeps the generic historical release-coherence API backward-compatible when a
+  fixture/repository does not declare the schema-bootstrap contract.
+- Makes `tools/build_manifest.py` validate generated-policy coherence before
+  package/manifest/checksum generation.
+- Adds a dedicated `schema_bootstrap_coherence` result to `validate_release.py`.
+- Preserves historical subsystem `database_schema` metadata when it describes
+  feature-introduction schema rather than current release schema.
 
-- deterministic source-origin context classification;
-- explicit authority classes for governance, human request, approved task state, and human decisions;
-- explicit evidence/untrusted classes for project evidence, tool evidence, external content, generated evidence, and unknown sources;
-- unknown provenance fails to `unknown_untrusted`;
-- evidence-derived content cannot promote itself into instruction authority;
-- exact authority copies may preserve only the same explicit authority class;
-- Context Transport pins `provenance_manifest_hash` and `context_authority_hash`;
-- transport read paths revalidate stored hash-only provenance and detect provenance/authority drift;
-- provenance persistence stores hashes, labels, producer/transform metadata, and parent IDs rather than raw context content;
-- four agent-plane read-only CLI inspection commands;
-- four read-only MCP inspection tools;
-- structural enforcement attestation for the bounded context-authority contract.
+## Authority and behavior boundaries
 
-## Read-only operator surfaces
+This release does **not** add learning signals, does not grant new MCP mutation
+authority, and does not change Architecture or human-approval authority.
+Generated governance, `MANIFEST.json`, `CHECKSUMS.sha256`, and
+`PACKAGE_COMPLETENESS.json` must be regenerated from authoritative sources and
+are never hand-edited.
 
-CLI:
+## Schema
 
-```text
-context-authority-status
-context-provenance-show
-context-authority-explain
-context-authority-findings
-```
+Database schema remains **63**. The bootstrap baseline remains schema 46.
+The post-baseline migration contract is exactly 47 through 63.
 
-MCP:
+## Inherited predecessor contract — v0.30.0 — Context Authority & Untrusted Provenance
 
-```text
-agentos.context_authority_status_get
-agentos.context_provenance_get
-agentos.context_authority_explain
-agentos.context_authority_findings_get
-```
+v0.30.1 preserves the v0.30.0 context-authority boundary. Source-origin
+classification, hash-only provenance persistence, Context Transport provenance
+pinning, and the rule that evidence-derived content cannot promote itself into
+AgentOS instruction authority remain unchanged.
 
-No MCP authority-grant, trust-promotion, provenance-override, approval, or finding-waiver surface is added.
-
-## Database
-
-Database schema: **63**.
-
-## Bounded claim
-
-**AgentOS v0.30.0 deterministically distinguishes explicit AgentOS context authority from evidence-derived and untrusted provenance, preserves provenance across the governed Context Transport path, and prevents evidence-derived context from being promoted into AgentOS instruction authority by that path.**
-
-## Explicit non-claims
-
-This release does **not** claim that prompt injection is eliminated, semantic correctness is guaranteed, a model cannot be manipulated, every possible input channel is secured, or human review/approval is replaced.
-
-Existing Windows Restricted Token + Low Integrity and other v0.29.x claims remain separately bounded to their previously attested scopes.
-
-## Inherited predecessor contract — v0.29.5 — Native Physical Isolation Extensions
-
-v0.30.0 preserves the bounded v0.29.5 Native Physical Isolation Extensions
-contract. Restricted Token + Low Integrity remains scoped to
-`agentos_mediated_process_execution`; broader host-filesystem isolation,
-general OS write confinement, desktop isolation, credential isolation, and
-same-user host-bypass resistance remain unclaimed.
+The predecessor non-claims also remain unchanged: this release does **not** claim
+that prompt injection is eliminated, semantic correctness is guaranteed, model
+manipulation is impossible, all input channels are secured, or human review is
+replaced.
 
 ## Inherited v0.29.4/v0.29.5 Windows execution contract
 
-The v0.30.0 release preserves the predecessor Windows execution claims:
+The bounded Windows execution claims remain preserved:
 
 ```text
 v0.29.4 Restricted Token
@@ -75,7 +55,11 @@ low_integrity_attested = true
 host_filesystem_isolation_attested = false
 ```
 
-These predecessor claims remain bounded to `agentos_mediated_process_execution`.
-They do not imply general host-filesystem isolation, general OS write
-confinement, desktop isolation, credential isolation, or same-user host
-bypass resistance.
+These claims remain scoped to `agentos_mediated_process_execution`; they do not
+imply general host-filesystem isolation, general OS write confinement, desktop
+isolation, credential isolation, or same-user host-bypass resistance.
+
+## Next node
+
+Only after all v0.30.1 release gates pass may development begin on
+**v0.31.0 — Governed Learning Signal Integration / schema 64**.

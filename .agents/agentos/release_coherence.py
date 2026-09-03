@@ -79,6 +79,192 @@ def _contains_identity(text: str, *, version: str, release_name: str) -> bool:
     return bool(version and release_name and version in text and release_name in text)
 
 
+
+def _expected_compiled_policy(root: Path) -> dict[str, Any]:
+    """Reconstruct source policy without mutating generated output."""
+    base = _read_json(root / ".agents/config/governance.json")
+    policy_root = root / ".agents/config/policy"
+    fragments = sorted(policy_root.glob("*.json"))
+    if not fragments:
+        raise ValueError("no modular policy fragments found")
+    effective = base
+    for fragment in fragments:
+        effective = _deep_merge(effective, _read_json(fragment))
+    local = root / ".agents/config/governance.local.json"
+    if local.is_file():
+        effective = _deep_merge(effective, _read_json(local))
+    return effective
+
+
+def _schema_policy_findings(
+    policy: dict[str, Any],
+    *,
+    schema_version: int,
+    source_label: str,
+    source_path: str,
+    require_top_level_schema: bool,
+) -> list[dict[str, str]]:
+    findings: list[dict[str, str]] = []
+    if require_top_level_schema and policy.get("schema_version") != schema_version:
+        findings.append(_finding(
+            "effective_policy_schema_mismatch",
+            f"{source_label}.schema_version {policy.get('schema_version')!r} != runtime schema {schema_version}",
+            source_path,
+        ))
+    docs = policy.get("documentation_policy")
+    if not isinstance(docs, dict):
+        findings.append(_finding(
+            "schema_bootstrap_documentation_policy_missing",
+            f"{source_label}.documentation_policy must be an object",
+            source_path,
+        ))
+    elif docs.get("current_schema") != schema_version:
+        findings.append(_finding(
+            "schema_bootstrap_documentation_schema_mismatch",
+            f"{source_label}.documentation_policy.current_schema {docs.get('current_schema')!r} != runtime schema {schema_version}",
+            source_path,
+        ))
+    bootstrap = policy.get("schema_bootstrap_policy")
+    if not isinstance(bootstrap, dict):
+        findings.append(_finding(
+            "schema_bootstrap_policy_missing",
+            f"{source_label}.schema_bootstrap_policy must be an object",
+            source_path,
+        ))
+        return findings
+    baseline = bootstrap.get("bootstrap_schema")
+    if not isinstance(baseline, int):
+        findings.append(_finding(
+            "schema_bootstrap_baseline_invalid",
+            f"{source_label}.schema_bootstrap_policy.bootstrap_schema must be an integer",
+            source_path,
+        ))
+        return findings
+    if bootstrap.get("current_database_schema") != schema_version:
+        findings.append(_finding(
+            "schema_bootstrap_current_schema_mismatch",
+            f"{source_label}.schema_bootstrap_policy.current_database_schema {bootstrap.get('current_database_schema')!r} != runtime schema {schema_version}",
+            source_path,
+        ))
+    migrations = bootstrap.get("post_baseline_migrations_at_release")
+    if not isinstance(migrations, list) or not all(isinstance(item, int) for item in migrations):
+        findings.append(_finding(
+            "schema_bootstrap_migrations_invalid",
+            f"{source_label}.post_baseline_migrations_at_release must be an integer list",
+            source_path,
+        ))
+        return findings
+    expected = list(range(baseline + 1, schema_version + 1))
+    if len(migrations) != len(set(migrations)):
+        findings.append(_finding(
+            "schema_bootstrap_migration_duplicate",
+            f"{source_label}.post_baseline_migrations_at_release contains duplicates: {migrations!r}",
+            source_path,
+        ))
+    if migrations != sorted(migrations):
+        findings.append(_finding(
+            "schema_bootstrap_migration_out_of_order",
+            f"{source_label}.post_baseline_migrations_at_release is not strictly ordered: {migrations!r}",
+            source_path,
+        ))
+    above = [item for item in migrations if item > schema_version]
+    if above:
+        findings.append(_finding(
+            "schema_bootstrap_migration_above_current",
+            f"{source_label}.post_baseline_migrations_at_release contains migrations above current schema: {above!r}",
+            source_path,
+        ))
+    if migrations != expected:
+        findings.append(_finding(
+            "schema_bootstrap_migration_coverage_mismatch",
+            f"{source_label}.post_baseline_migrations_at_release must equal contiguous {expected!r}, got {migrations!r}",
+            source_path,
+        ))
+    return findings
+
+
+def check_schema_bootstrap_coherence(
+    root: Path | str,
+    *,
+    schema_version: int | None = None,
+) -> dict[str, Any]:
+    """Validate current-schema/bootstrap truth across runtime and generated policy."""
+    repo = Path(root).resolve()
+    findings: list[dict[str, str]] = []
+    if schema_version is None:
+        try:
+            from .schema_version import CURRENT_SCHEMA_VERSION as schema_version
+        except Exception as exc:  # pragma: no cover - defensive integration boundary
+            return {
+                "ok": False,
+                "schema": -1,
+                "findings": [_finding(
+                    "schema_version_unreadable",
+                    f"cannot resolve CURRENT_SCHEMA_VERSION: {exc}",
+                    ".agents/agentos/schema_version.py",
+                )],
+            }
+    schema_version = int(schema_version)
+    try:
+        runtime = _read_json(repo / ".agents/config/governance.json")
+        release = repo / ".agents/config/release_policy.json"
+        if release.is_file():
+            runtime = _deep_merge(runtime, _read_json(release))
+        findings.extend(_schema_policy_findings(
+            runtime,
+            schema_version=schema_version,
+            source_label="runtime_policy",
+            source_path=".agents/config/release_policy.json",
+            require_top_level_schema=False,
+        ))
+    except Exception as exc:
+        runtime = {}
+        findings.append(_finding(
+            "schema_bootstrap_runtime_policy_unreadable",
+            str(exc),
+            ".agents/config/release_policy.json",
+        ))
+    generated_path = repo / ".agents/config/generated/governance.effective.json"
+    try:
+        generated = _read_json(generated_path)
+        findings.extend(_schema_policy_findings(
+            generated,
+            schema_version=schema_version,
+            source_label="generated_policy",
+            source_path=".agents/config/generated/governance.effective.json",
+            require_top_level_schema=True,
+        ))
+    except Exception as exc:
+        generated = {}
+        findings.append(_finding(
+            "schema_bootstrap_generated_policy_unreadable",
+            str(exc),
+            ".agents/config/generated/governance.effective.json",
+        ))
+    try:
+        source_expected = _expected_compiled_policy(repo)
+        for section in ("schema_bootstrap_policy", "documentation_policy"):
+            if generated.get(section) != source_expected.get(section):
+                findings.append(_finding(
+                    "generated_policy_source_drift",
+                    f"generated {section} does not match current modular policy sources",
+                    ".agents/config/generated/governance.effective.json",
+                ))
+    except Exception as exc:
+        findings.append(_finding(
+            "schema_bootstrap_policy_sources_unreadable",
+            str(exc),
+            ".agents/config/policy",
+        ))
+    return {
+        "ok": not findings,
+        "schema": schema_version,
+        "expected_bootstrap_schema": 46,
+        "expected_post_baseline_migrations": list(range(47, schema_version + 1)),
+        "findings": findings,
+    }
+
+
 def check_release_metadata_coherence(
     root: Path | str,
     *,
@@ -334,11 +520,24 @@ def check_release_metadata_coherence(
                 )
             )
 
+    bootstrap_declared = (
+        isinstance(governance.get("schema_bootstrap_policy"), dict)
+        or (repo / ".agents/config/policy/10-bootstrap.json").is_file()
+    )
+    bootstrap_coherence = None
+    if bootstrap_declared:
+        bootstrap_coherence = check_schema_bootstrap_coherence(
+            repo,
+            schema_version=int(schema_version),
+        )
+        findings.extend(bootstrap_coherence.get("findings", []))
+        checks.append("schema_bootstrap_coherence")
     return {
         "ok": not findings,
         "version": version,
         "schema": schema_version,
         "release_name": release_name,
         "checks": checks,
+        "schema_bootstrap_coherence": bootstrap_coherence,
         "findings": findings,
     }

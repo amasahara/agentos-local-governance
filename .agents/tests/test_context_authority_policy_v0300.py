@@ -24,8 +24,11 @@ def test_schema_63_is_last_registered_migration() -> None:
 
 
 def test_release_policy_activates_context_authority() -> None:
-    policy = load_release_policy(_project_root())
-    assert policy["version"] == "0.30.0"
+    root = _project_root()
+    current = (root / "VERSION").read_text(encoding="utf-8").strip()
+    policy = load_release_policy(root)
+    assert policy["version"] == current
+    assert CURRENT_SCHEMA_VERSION >= 63
     section = policy["context_authority_policy"]
     assert section["database_schema"] == 63
     assert section["classification_basis"] == "source_origin_only"

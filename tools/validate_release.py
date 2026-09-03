@@ -27,7 +27,10 @@ def validate(root: Path, *, skip_manifest: bool = False) -> dict[str, object]:
     from agentos.db import SCHEMA_VERSION, connect
     from agentos.mcp_runtime import ALL_TOOLS, VERSION as MCP_VERSION
     from agentos.policy import load_policy
-    from agentos.release_coherence import check_release_metadata_coherence
+    from agentos.release_coherence import (
+        check_release_metadata_coherence,
+        check_schema_bootstrap_coherence,
+    )
     from agentos.release_integrity import check_release_integrity, docs_check_current
     from agentos.release_manifest import verify_manifest
 
@@ -42,6 +45,13 @@ def validate(root: Path, *, skip_manifest: bool = False) -> dict[str, object]:
     checks["policy_schema"] = int(
         (policy.get("documentation_policy") or {}).get("current_schema", -1)
     ) == int(SCHEMA_VERSION)
+    schema_bootstrap_coherence = check_schema_bootstrap_coherence(
+        root,
+        schema_version=int(SCHEMA_VERSION),
+    )
+    checks["schema_bootstrap_coherence"] = (
+        schema_bootstrap_coherence.get("ok") is True
+    )
     checks["cli_unique"] = len(commands) == len(set(commands))
     checks["mcp_unique"] = len(tools) == len(set(tools))
     checks["mcp_health"] = "agentos.mcp_health" in tools
@@ -92,6 +102,7 @@ def validate(root: Path, *, skip_manifest: bool = False) -> dict[str, object]:
         "checks": checks,
         "failed_checks": failed_checks,
         "release_metadata_coherence": coherence,
+        "schema_bootstrap_coherence": schema_bootstrap_coherence,
         "release_integrity": integrity,
         "docs_check": docs,
         "instruction_check": instructions,

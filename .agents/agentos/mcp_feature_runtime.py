@@ -26,6 +26,7 @@ from . import mcp_context_evaluation as context_evaluation
 from . import mcp_consolidation_cockpit as consolidation_cockpit
 from . import mcp_risk_tiered_batch_review as risk_tiered_batch_review
 from . import mcp_db_aware_context_projection as db_aware_projection
+from . import mcp_execution_provenance as execution_provenance
 
 FeatureHandler = Callable[[str, dict[str, Any], Path], dict[str, Any]]
 
@@ -51,6 +52,7 @@ MODERN_REGISTRATIONS: tuple[tuple[list[dict[str, Any]], FeatureHandler], ...] = 
     (consolidation_cockpit.TOOLS, consolidation_cockpit._local_call),
     (risk_tiered_batch_review.TOOLS, risk_tiered_batch_review._local_call),
     (db_aware_projection.TOOLS, db_aware_projection._local_call),
+    (execution_provenance.TOOLS, execution_provenance._local_call),
 )
 
 REGISTRATIONS = (*RUNTIME_NATIVE_REGISTRATIONS, *MODERN_REGISTRATIONS)

@@ -23,6 +23,7 @@ from .execution_provenance import (
     EXECUTION_REF_TYPES,
     execution_provenance_status,
     get_execution_provenance,
+    list_execution_provenance,
     register_execution_provenance,
 )
 
@@ -54,6 +55,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     item = sub.add_parser("execution-provenance-get")
     item.add_argument("--provenance-id", required=True)
+
+    item = sub.add_parser("execution-provenance-list")
+    item.add_argument("--task-id")
+    item.add_argument("--session-id")
+    item.add_argument("--provider-id")
+    item.add_argument("--model-id")
+    item.add_argument("--verification-class", choices=["declared", "runtime_bound"])
+    item.add_argument("--created-after")
+    item.add_argument("--created-before")
+    item.add_argument("--limit", type=int, default=50)
 
     sub.add_parser("execution-provenance-status")
     return parser
@@ -88,6 +99,18 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.command == "execution-provenance-get":
             value = get_execution_provenance(root, args.provenance_id)
+        elif args.command == "execution-provenance-list":
+            value = list_execution_provenance(
+                root,
+                task_id=args.task_id,
+                session_id=args.session_id,
+                provider_id=args.provider_id,
+                model_id=args.model_id,
+                verification_class=args.verification_class,
+                created_after=args.created_after,
+                created_before=args.created_before,
+                limit=args.limit,
+            )
         elif args.command == "execution-provenance-status":
             value = execution_provenance_status(root)
         else:

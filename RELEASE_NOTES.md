@@ -1,58 +1,46 @@
-# AgentOS Local Governance v0.32.0 — Execution Identity & Model Provenance
+# AgentOS Local Governance v0.32.1 — Runtime Coherence & Provenance Ergonomics
 
 Database schema: **65**
 
-v0.32.0 adds durable, privacy-safe execution identity and provider/model provenance. This is a provenance release, not a model-routing release.
+v0.32.1 hardens optional learning telemetry and adds privacy-minimal execution
+provenance inspection without changing registration authority.
 
-## Schema 65
+## Changes
 
-Schema 65 adds `execution_provenance` and `task_outcome_provenance_links`. The existing `task_outcomes` table is deliberately not altered because v0.31.x learning signals hash complete task-outcome rows; changing the historical shape could make valid evidence appear stale.
+- `knowledge_usage` writes are isolated by a SQLite savepoint and degrade safely.
+- New agent-plane `execution-provenance-list` command.
+- New read-only MCP tools:
+  - `agentos.execution_provenance_get`
+  - `agentos.execution_provenance_list`
+- MCP provenance uses a sanitized projection.
+- Provenance registration remains privileged and is not exposed over MCP.
+- Historical MCP feature-runtime counters are explicitly marked as activation
+  snapshots; live counts come from runtime catalog validation.
 
-## Privileged registration
-
-`execution-provenance-register` is control-plane-only. Normal agents receive read-only `execution-provenance-get` and `execution-provenance-status`.
-
-Supported reference classes are `async_job`, `governed_operation`, and `external_agent_run`. `runtime_bound` means a declaration is bound to an immutable local execution reference. It does not claim remote-provider cryptographic attestation.
-
-## Privacy-safe identity
-
-Persisted evidence can include bounded provider/model/model-revision/deployment/agent/runtime identifiers and endpoint class. Provider request IDs are stored only as SHA-256 hashes.
-
-v0.32.0 does not persist API keys, credentials, authorization headers, endpoint URLs, raw prompts, raw responses, or raw provider request IDs.
-
-## Context and outcome binding
-
-Every provenance record requires a current Context Authority evaluation and binds `context_revision`, `context_authority_hash`, `provenance_manifest_hash`, policy revision, and available architecture/plan hashes.
-
-New task outcomes may bind `execution_provenance_id`. AgentOS rejects task/session/agent/model/policy/context metadata that conflicts with canonical provenance and writes the outcome link in the separate schema-65 table.
-
-Legacy outcomes remain valid.
-
-## Learning effectiveness
-
-`provider_model_matching_required = true`.
-
-Strict comparative cohorts add provider/model/model revision and verification class to the v0.31.3 cohort dimensions. Legacy outcomes without schema-65 provenance are excluded from strict matched cohorts rather than invalidated. Analysis remains observational, not causal.
-
-## Authority and model selection
-
-`context_authority_affected = false`, `instruction_authority = false`, and `auto_model_provider_select = false`.
-
-Provider/model metadata cannot become Human Request, Governance Authority, Architecture Authority, policy authority, or skill authority.
-
-## Expected surfaces
+## Expected surface
 
 ```text
-CLI commands          = 367
-agent commands        = 269
-privileged commands   = 100
-MCP tools             = 132
+VERSION       = 0.32.1
+schema        = 65
+CLI           = 368
+agent         = 270
+privileged    = 100
+MCP           = 134
 ```
 
-No v0.32.0 MCP mutation module is added.
+## Non-claims
+
+v0.32.1 does not claim remote-provider cryptographic attestation, causal model
+effectiveness, automatic provider/model selection, instruction authority from
+execution provenance, MCP mutation authority, semantic correctness,
+prompt-injection elimination or general host isolation.
 
 ## Predecessor contracts preserved
 
+v0.32.1 preserves the bounded predecessor contracts and attestations carried
+forward by v0.32.0:
+
+- v0.32.0 — Execution Identity & Model Provenance
 - v0.31.3 — Learning Effectiveness & Drift
 - v0.31.2 — Closed-Loop Skill & Policy Improvement
 - v0.31.1 — Governed Memory Promotion & Context Binding
@@ -68,4 +56,9 @@ low_integrity_attested = true
 host_filesystem_isolation_attested = false
 ```
 
-v0.32.0 does not claim remote-provider cryptographic attestation, causal model effectiveness, autonomous provider/model selection, semantic correctness, prompt injection elimination, replacement of human review, or general host containment.
+These are bounded AgentOS-mediated enforcement claims, not general host
+containment claims.
+
+The release continues to make no causal model-effectiveness claim and does not
+claim remote-provider cryptographic attestation, semantic correctness, prompt injection elimination, replacement of human review, automatic provider/model
+selection, or general host isolation.

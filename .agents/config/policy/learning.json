@@ -38,6 +38,9 @@
     },
     "database_schema": 64,
     "degraded_safe": {
+      "knowledge_usage_failure_must_be_surfaced": true,
+      "knowledge_usage_failure_must_not_fabricate_usage": true,
+      "knowledge_usage_savepoint_required": true,
       "learning_failure_must_not_weaken_governance": true,
       "ordinary_governed_execution_may_continue_without_learning": true
     },

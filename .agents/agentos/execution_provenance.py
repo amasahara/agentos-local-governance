@@ -665,6 +665,143 @@ def get_execution_provenance(
     }
 
 
+
+MCP_SAFE_FIELDS = (
+    "provenance_id",
+    "provenance_version",
+    "task_id",
+    "session_id",
+    "execution_ref_type",
+    "execution_ref_hash",
+    "provider_id",
+    "model_id",
+    "model_revision",
+    "agent_id",
+    "runtime_id",
+    "runtime_version",
+    "endpoint_class",
+    "source_class",
+    "verification_class",
+    "context_revision",
+    "context_authority_hash",
+    "provenance_manifest_hash",
+    "architecture_baseline_hash",
+    "plan_hash",
+    "policy_revision",
+    "declaration_hash",
+    "binding_hash",
+    "created_at",
+)
+
+
+def _mcp_safe_projection(row: dict[str, Any]) -> dict[str, Any]:
+    """Return the minimum execution-evidence projection safe for MCP."""
+    projected = {
+        key: row.get(key)
+        for key in MCP_SAFE_FIELDS
+        if key in row
+    }
+    projected.update(
+        {
+            "evidence_class": "execution_provenance",
+            "instruction_authority": False,
+            "context_authority_affected": False,
+            "remote_provider_cryptographic_attestation": False,
+            "mutable_via_mcp": False,
+        }
+    )
+    return projected
+
+
+def get_execution_provenance_for_mcp(
+    root: Path,
+    provenance_id: str,
+) -> dict[str, Any]:
+    """Return one sanitized read-only execution-provenance record for MCP."""
+    _policy(root)
+    with connect_read_only(root) as c:
+        row = c.execute(
+            "SELECT * FROM execution_provenance WHERE provenance_id=?",
+            (str(provenance_id),),
+        ).fetchone()
+    if not row:
+        raise ExecutionProvenanceError("execution_provenance_missing")
+    return {
+        "ok": True,
+        "provenance": _mcp_safe_projection(dict(row)),
+        "sanitized_projection": True,
+        "mutable_via_mcp": False,
+    }
+
+
+def list_execution_provenance(
+    root: Path,
+    *,
+    task_id: str | None = None,
+    session_id: str | None = None,
+    provider_id: str | None = None,
+    model_id: str | None = None,
+    verification_class: str | None = None,
+    created_after: str | None = None,
+    created_before: str | None = None,
+    limit: int = 50,
+) -> dict[str, Any]:
+    """List bounded sanitized execution provenance for CLI/MCP inspection."""
+    _policy(root)
+    bounded_limit = max(1, min(int(limit), 200))
+    clauses = ["1=1"]
+    params: list[Any] = []
+
+    for field, value in (
+        ("task_id", task_id),
+        ("session_id", session_id),
+        ("provider_id", provider_id),
+        ("model_id", model_id),
+    ):
+        if value:
+            safe = _safe_label(value, field=field, required=True)
+            clauses.append(field + "=?")
+            params.append(safe)
+
+    if verification_class:
+        value = str(verification_class).strip()
+        if value not in VERIFICATION_CLASSES:
+            raise ExecutionProvenanceError("verification_class_invalid")
+        clauses.append("verification_class=?")
+        params.append(value)
+
+    if created_after:
+        clauses.append("created_at>=?")
+        params.append(str(created_after).strip())
+    if created_before:
+        clauses.append("created_at<=?")
+        params.append(str(created_before).strip())
+
+    params.append(bounded_limit)
+    sql = (
+        "SELECT * FROM execution_provenance WHERE "
+        + " AND ".join(clauses)
+        + " ORDER BY created_at DESC, provenance_id DESC LIMIT ?"
+    )
+    with connect_read_only(root) as c:
+        rows = c.execute(sql, tuple(params)).fetchall()
+
+    return {
+        "ok": True,
+        "provenance": [
+            _mcp_safe_projection(dict(row))
+            for row in rows
+        ],
+        "count": len(rows),
+        "limit": bounded_limit,
+        "sanitized_projection": True,
+        "instruction_authority": False,
+        "context_authority_affected": False,
+        "remote_provider_cryptographic_attestation": False,
+        "mutable_via_mcp": False,
+    }
+
+
 def execution_provenance_status(root: Path) -> dict[str, Any]:
     """Return schema-65 execution provenance counts and bounded non-claims."""
     _policy(root)

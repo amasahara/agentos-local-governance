@@ -764,16 +764,16 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md"
+      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
     ],
-    "current_release_name": "Execution Identity & Model Provenance",
+    "current_release_name": "Runtime Coherence & Provenance Ergonomics",
     "current_schema": 65,
     "current_schema_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md"
+      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
     ],
     "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
     "current_version_files": [
@@ -781,7 +781,7 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md"
+      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -793,7 +793,7 @@
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
       ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
-      ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md"
+      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
     ]
   },
   "drift_policy": {
@@ -875,7 +875,16 @@
     "external_declaration_supported": true,
     "instruction_authority": false,
     "learning_effectiveness_provider_model_matching_required": true,
+    "mcp_execution_ref_id_exposed": false,
     "mcp_mutation_allowed": false,
+    "mcp_provider_request_id_hash_exposed": false,
+    "mcp_read_only": true,
+    "mcp_read_tools": [
+      "agentos.execution_provenance_get",
+      "agentos.execution_provenance_list"
+    ],
+    "mcp_recorded_by_exposed": false,
+    "mcp_safe_projection_required": true,
     "model_required": true,
     "provenance_version": 1,
     "provider_request_id_hash_only": true,
@@ -1050,6 +1059,9 @@
     },
     "database_schema": 64,
     "degraded_safe": {
+      "knowledge_usage_failure_must_be_surfaced": true,
+      "knowledge_usage_failure_must_not_fabricate_usage": true,
+      "knowledge_usage_savepoint_required": true,
       "learning_failure_must_not_weaken_governance": true,
       "ordinary_governed_execution_may_continue_without_learning": true
     },
@@ -1322,10 +1334,13 @@
   "mcp_feature_runtime_policy": {
     "active_runtime": "mcp_feature_runtime_v1",
     "core_tool_count": 14,
+    "current_catalog_count_source": "runtime_catalog",
+    "current_catalog_release_validation_required": true,
     "database_schema": 49,
     "extension_mutation_tools_exposed_over_mcp": false,
     "feature_mutation_authority_changed": false,
     "feature_tool_count": 63,
+    "feature_tool_count_semantics": "historical_activation_snapshot_v0243",
     "legacy_gateway_handler_import_allowed": false,
     "legacy_gateway_modules_active": false,
     "legacy_gateway_subprocess_forwarding_allowed": false,
@@ -1334,6 +1349,7 @@
     "schema_migration_required": false,
     "source_database_write_authority_changed": false,
     "target_database_write_authority_changed": false,
+    "total_tool_count_semantics": "historical_activation_snapshot_v0243",
     "total_tool_count_with_health": 78,
     "trusted_core_enforcement_transport": "gateway_client_to_gatewayd",
     "trusted_core_enforcement_transport_changed": false,
@@ -1633,7 +1649,7 @@
       ".agents/docs/EXISTING_PROJECT.md",
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
-      ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md"
+      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
     ],
     "current_docs_must_match_release": true,
     "identity_sources": [
@@ -1648,7 +1664,7 @@
       "governed_project"
     ],
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
-    "version": "0.32.0"
+    "version": "0.32.1"
   },
   "repository_policy": {
     "application_root_metadata_owned_by_agentos": false,
@@ -2048,7 +2064,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.32.0",
+  "version": "0.32.1",
   "windows_physical_isolation_policy": {
     "activation_complete": true,
     "activation_version": "0.29.5",

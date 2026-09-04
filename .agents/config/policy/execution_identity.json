@@ -24,7 +24,16 @@
     "external_declaration_supported": true,
     "instruction_authority": false,
     "learning_effectiveness_provider_model_matching_required": true,
+    "mcp_execution_ref_id_exposed": false,
     "mcp_mutation_allowed": false,
+    "mcp_provider_request_id_hash_exposed": false,
+    "mcp_read_only": true,
+    "mcp_read_tools": [
+      "agentos.execution_provenance_get",
+      "agentos.execution_provenance_list"
+    ],
+    "mcp_recorded_by_exposed": false,
+    "mcp_safe_projection_required": true,
     "model_required": true,
     "provenance_version": 1,
     "provider_request_id_hash_only": true,

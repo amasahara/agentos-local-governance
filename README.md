@@ -117,16 +117,17 @@ Trước khi gửi thay đổi:
 Các thay đổi governance phải giữ `AGENTS.md`, structured policy, runtime, tests, documentation, changelog và release identity nhất quán.
 
 ## Bản phát hành hiện hành
-**v0.32.0 — Execution Identity & Model Provenance** · schema **65**
+**v0.32.1 — Runtime Coherence & Provenance Ergonomics** · schema **65**
 
-v0.32.0 thêm execution provenance bền vững, hash-bound và privacy-safe để gắn task/session/execution reference với provider/model/agent/runtime identity.
+v0.32.1 giữ nguyên schema 65, harden `knowledge_usage` bằng SQLite savepoint,
+thêm `execution-provenance-list`, và expose hai MCP read-only
+`agentos.execution_provenance_get` / `agentos.execution_provenance_list` qua
+sanitized projection.
 
-Schema 65 dùng `execution_provenance` và bảng linkage riêng cho task outcome; không ALTER `task_outcomes`, nhằm giữ ổn định source hash của learning signals v0.31.x.
+Registration vẫn privileged-only; không MCP mutation, không instruction
+authority, không auto chọn provider/model và không claim remote cryptographic
+attestation.
 
-`execution-provenance-register` thuộc privileged control plane; agent chỉ đọc `get/status`. `runtime_bound` không phải remote-provider cryptographic attestation. Provider request ID chỉ lưu SHA-256; không lưu credential, endpoint URL, raw prompt hay raw response.
+Surface dự kiến: CLI 368 · agent 270 · privileged 100 · MCP 134.
 
-Learning effectiveness nay yêu cầu provider/model matching cho provenanced outcome. Legacy outcome vẫn hợp lệ nhưng không vào strict v0.32 matched cohort.
-
-Không auto chọn provider/model, không thay đổi Context Authority, `instruction_authority=false`, và MCP vẫn 132 tools.
-
-Release giữ nguyên v0.31.3 Learning Effectiveness & Drift, v0.31.2 Closed-Loop Skill & Policy Improvement và predecessor **v0.29.5 — Native Physical Isolation Extensions**.
+Release giữ nguyên các predecessor contracts, bao gồm **v0.29.5 — Native Physical Isolation Extensions**; các bounded attestation/non-claims của các release trước không bị mở rộng.

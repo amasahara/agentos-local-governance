@@ -212,6 +212,8 @@ RELEASE_FILES = (
     ".agents/config/policy/execution_identity.json",
     ".agents/tests/test_execution_identity_model_provenance_v0320.py",
     ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md",
+    ".agents/tests/test_runtime_coherence_provenance_ergonomics_v0321.py",
+    ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md",
     ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
 )
 EXTENSION_FILES = (
@@ -255,6 +257,7 @@ EXTENSION_FILES = (
     ".agents/agentos/db_aware_context_projection.py",
     ".agents/agentos/db_aware_context_projection_cli.py",
     ".agents/agentos/mcp_db_aware_context_projection.py",
+    ".agents/agentos/mcp_execution_provenance.py",
     ".agents/agentos/mcp_feature_handlers.py",
     ".agents/agentos/schema_bootstrap.py",
     ".agents/agentos/architecture_contract.py",
@@ -1864,7 +1867,7 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
         )
         if (
             len(CORE_TOOL_NAMES) != 14
-            or len(FEATURE_TOOL_NAMES) != 63
+            or len(FEATURE_TOOL_NAMES) != 65
             or len(V0252_TOOL_NAMES) != 6
             or len(V0253_TOOL_NAMES) != 4
             or len(V0254_TOOL_NAMES) != 3
@@ -1880,11 +1883,11 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
             or len(V0280_TOOL_NAMES) != 3
             or len(V0300_TOOL_NAMES) != 4
             or len(V0310_TOOL_NAMES) != 4
-            or len(ALL_TOOLS) != 132
+            or len(ALL_TOOLS) != 134
         ):
             findings.append(_finding(
                 "mcp_tool_surface_changed",
-                f"expected 14 core + 63 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + 4 v0.25.5 + 3 v0.26.0 + 3 v0.26.1 + 3 v0.26.2 + 3 v0.26.3 + 3 v0.27.0 + 3 v0.27.1 + 3 v0.27.2 + 4 v0.27.3 + 3 v0.28.0 + 1 v0.29.0 + 4 v0.30.0 + 4 v0.31.0 + health = 132 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} + {len(V0255_TOOL_NAMES)} + {len(V0260_TOOL_NAMES)} + {len(V0261_TOOL_NAMES)} + {len(V0262_TOOL_NAMES)} + {len(V0263_TOOL_NAMES)} + {len(V0270_TOOL_NAMES)} + {len(V0271_TOOL_NAMES)} + {len(V0272_TOOL_NAMES)} + {len(V0273_TOOL_NAMES)} + {len(V0280_TOOL_NAMES)} + {len(V0300_TOOL_NAMES)} + {len(V0310_TOOL_NAMES)} / {len(ALL_TOOLS)}",
+                f"expected 14 core + 65 feature + 6 v0.25.2 + 4 v0.25.3 + 3 v0.25.4 + 4 v0.25.5 + 3 v0.26.0 + 3 v0.26.1 + 3 v0.26.2 + 3 v0.26.3 + 3 v0.27.0 + 3 v0.27.1 + 3 v0.27.2 + 4 v0.27.3 + 3 v0.28.0 + 1 v0.29.0 + 4 v0.30.0 + 4 v0.31.0 + health = 134 tools, got {len(CORE_TOOL_NAMES)} + {len(FEATURE_TOOL_NAMES)} + {len(V0252_TOOL_NAMES)} + {len(V0253_TOOL_NAMES)} + {len(V0254_TOOL_NAMES)} + {len(V0255_TOOL_NAMES)} + {len(V0260_TOOL_NAMES)} + {len(V0261_TOOL_NAMES)} + {len(V0262_TOOL_NAMES)} + {len(V0263_TOOL_NAMES)} + {len(V0270_TOOL_NAMES)} + {len(V0271_TOOL_NAMES)} + {len(V0272_TOOL_NAMES)} + {len(V0273_TOOL_NAMES)} + {len(V0280_TOOL_NAMES)} + {len(V0300_TOOL_NAMES)} + {len(V0310_TOOL_NAMES)} / {len(ALL_TOOLS)}",
                 ".agents/agentos/mcp_runtime.py",
             ))
     except Exception as exc:

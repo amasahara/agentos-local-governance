@@ -92,16 +92,17 @@ State the problem and acceptance criteria, place changes by responsibility and l
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
 
 ## Current release
-**v0.32.0 — Execution Identity & Model Provenance** · schema **65**
+**v0.32.1 — Runtime Coherence & Provenance Ergonomics** · schema **65**
 
-v0.32.0 adds durable, hash-bound and privacy-safe execution provenance linking task/session/execution references to provider/model/agent/runtime identity.
+v0.32.1 keeps schema 65, hardens `knowledge_usage` with a SQLite savepoint,
+adds `execution-provenance-list`, and exposes two read-only MCP tools
+`agentos.execution_provenance_get` / `agentos.execution_provenance_list`
+through a sanitized projection.
 
-Schema 65 uses `execution_provenance` plus a separate task-outcome linkage table; it does not ALTER `task_outcomes`, preserving v0.31.x learning-signal source hashes.
+Registration remains privileged-only; there is no MCP mutation, instruction
+authority, automatic provider/model selection, or remote cryptographic
+attestation claim.
 
-`execution-provenance-register` is privileged control-plane-only; agents receive read-only `get/status`. `runtime_bound` is not remote-provider cryptographic attestation. Provider request IDs are SHA-256-only; credentials, endpoint URLs, raw prompts and raw responses are not persisted.
+Expected surface: CLI 368 · agent 270 · privileged 100 · MCP 134.
 
-Learning effectiveness now requires provider/model matching for provenanced outcomes. Legacy outcomes remain valid but are excluded from strict v0.32 matched cohorts.
-
-There is no automatic provider/model selection, no Context Authority change, no instruction authority, and MCP remains at 132 tools.
-
-The release preserves v0.31.3 Learning Effectiveness & Drift, v0.31.2 Closed-Loop Skill & Policy Improvement, and **v0.29.5 — Native Physical Isolation Extensions**.
+This release preserves predecessor contracts, including **v0.29.5 — Native Physical Isolation Extensions**; bounded predecessor attestations and non-claims are not broadened.

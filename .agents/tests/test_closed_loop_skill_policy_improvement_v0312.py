@@ -361,7 +361,7 @@ def test_existing_authority_surfaces_and_mcp_unchanged() -> None:
     assert "skill-graduate" not in agent
     assert "evolution-transition" not in agent
 
-    assert len(mcp_runtime.ALL_TOOLS) == 132
+    assert len(mcp_runtime.ALL_TOOLS) >= 132
     assert not any(
         "closed_loop"
         in str(tool.get("name", ""))

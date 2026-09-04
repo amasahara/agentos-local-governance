@@ -57,7 +57,8 @@ def test_public_mcp_tool_surface_is_preserved() -> None:
     names = [item["name"] for item in ALL_TOOLS]
     assert len(names) == len(set(names))
     assert len(CORE_TOOL_NAMES) == 14
-    assert len(FEATURE_TOOL_NAMES) == 63
+    # Historical v0.24.3 feature-tool floor; successor releases may add read-only feature tools.
+    assert len(FEATURE_TOOL_NAMES) >= 63
     from agentos.mcp_runtime import V0252_TOOL_NAMES
     assert len(V0252_TOOL_NAMES) == 6
     assert len(ALL_TOOLS) >= 84  # historical v0.24.3 public surface is a monotonic floor

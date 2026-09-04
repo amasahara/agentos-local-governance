@@ -1,3 +1,12 @@
+## v0.32.1 — Runtime Coherence & Provenance Ergonomics
+
+- Keep schema 65; no migration 66.
+- Degrade safely on optional knowledge-usage telemetry failure.
+- Add execution-provenance-list on the agent plane.
+- Add two sanitized read-only execution-provenance MCP tools.
+- Keep provenance registration privileged and absent from MCP.
+- Clarify historical MCP feature-runtime counter semantics.
+
 ## v0.32.0 — Execution Identity & Model Provenance
 
 - Schema 65 durable execution/model provenance with separate outcome linkage.

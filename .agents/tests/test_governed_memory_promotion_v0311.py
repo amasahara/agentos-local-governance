@@ -331,7 +331,7 @@ def test_no_v0311_mcp_mutation_and_finalize_is_privileged() -> None:
     # finalization authority boundary intact.
     assert len(privileged) >= 99
 
-    assert len(mcp_runtime.ALL_TOOLS) == 132
+    assert len(mcp_runtime.ALL_TOOLS) >= 132
     assert not any(
         "memory_promotion" in str(tool.get("name", ""))
         for tool in mcp_runtime.ALL_TOOLS

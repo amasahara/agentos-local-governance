@@ -181,13 +181,28 @@ def build_context_pack(root: Path, task_id: str, max_lines: int = 500, mode: str
                 omitted_knowledge.append({"kind":item["kind"],"id":item["id"],"reason":"global_budget_exceeded","relevance_score":item.get("score")})
     manifest={"task_id":task_id,"request":task["request"],"approved_scope":task["approved_scope"],"compaction_mode":mode,"max_lines":global_lines,"max_approx_tokens":token_budget,"line_count":used_lines,"approx_tokens":used_tokens,"sources":sources,"knowledge_sources":knowledge,"omitted_knowledge":omitted_knowledge,"knowledge_candidates":len(knowledge)+len(omitted_knowledge),"included_knowledge":len(knowledge),"knowledge_fallback_used":fallback_used,"knowledge_merge_error":merge_error,"omitted_files":omitted_files,"omitted_symbols":omitted_symbols,"total_candidate_files":len(ranked),"included_files":len(sources),"project_findings":findings}
     digest=hashlib.sha256(json.dumps(manifest,sort_keys=True,separators=(",",":")).encode()).hexdigest(); manifest["content_hash"]=digest
+    learning_usage_recorded=0; learning_usage_error=None
     with connect(root) as c:
         rev=c.execute("SELECT COALESCE(MAX(revision),0)+1 AS n FROM context_packs WHERE task_id=?",(task_id,)).fetchone()["n"]
         c.execute("UPDATE context_packs SET status='superseded' WHERE task_id=? AND status='active'",(task_id,))
         c.execute("INSERT INTO context_packs(task_id,revision,content_hash,manifest_json,status) VALUES(?,?,?,?, 'active')",(task_id,rev,digest,json.dumps(manifest,sort_keys=True)))
         c.execute("INSERT INTO context_knowledge_events(task_id,context_revision,candidate_count,included_count,omitted_count,fallback_used,manifest_hash) VALUES(?,?,?,?,?,?,?)",(task_id,rev,manifest["knowledge_candidates"],manifest["included_knowledge"],len(manifest["omitted_knowledge"]),int(fallback_used),digest))
-        record_knowledge_usage_rows(c, task_id=task_id, context_revision=int(rev), context_pack_hash=digest, knowledge=knowledge)
-    return {**manifest,"revision":rev,"status":"active"}
+        c.execute("SAVEPOINT context_learning_usage")
+        try:
+            learning_usage_recorded=record_knowledge_usage_rows(c, task_id=task_id, context_revision=int(rev), context_pack_hash=digest, knowledge=knowledge)
+            c.execute("RELEASE SAVEPOINT context_learning_usage")
+        except Exception as exc:
+            c.execute("ROLLBACK TO SAVEPOINT context_learning_usage")
+            c.execute("RELEASE SAVEPOINT context_learning_usage")
+            learning_usage_error=f"{type(exc).__name__}:{exc}"
+    return {
+        **manifest,
+        "revision":rev,
+        "status":"active",
+        "learning_usage_recorded":int(learning_usage_recorded),
+        "learning_usage_degraded":learning_usage_error is not None,
+        "learning_usage_error":learning_usage_error,
+    }
 
 
 def context_status(root: Path, task_id: str) -> dict[str, Any]:

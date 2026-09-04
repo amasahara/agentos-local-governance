@@ -128,16 +128,16 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md"
+      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
     ],
-    "current_release_name": "Execution Identity & Model Provenance",
+    "current_release_name": "Runtime Coherence & Provenance Ergonomics",
     "current_schema": 65,
     "current_schema_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md"
+      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
     ],
     "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
     "current_version_files": [
@@ -145,7 +145,7 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md"
+      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -157,7 +157,7 @@
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
       ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
-      ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md"
+      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
     ]
   },
   "execution_identity_policy": {
@@ -185,7 +185,16 @@
     "external_declaration_supported": true,
     "instruction_authority": false,
     "learning_effectiveness_provider_model_matching_required": true,
+    "mcp_execution_ref_id_exposed": false,
     "mcp_mutation_allowed": false,
+    "mcp_provider_request_id_hash_exposed": false,
+    "mcp_read_only": true,
+    "mcp_read_tools": [
+      "agentos.execution_provenance_get",
+      "agentos.execution_provenance_list"
+    ],
+    "mcp_recorded_by_exposed": false,
+    "mcp_safe_projection_required": true,
     "model_required": true,
     "provenance_version": 1,
     "provider_request_id_hash_only": true,
@@ -241,6 +250,9 @@
     },
     "database_schema": 64,
     "degraded_safe": {
+      "knowledge_usage_failure_must_be_surfaced": true,
+      "knowledge_usage_failure_must_not_fabricate_usage": true,
+      "knowledge_usage_savepoint_required": true,
       "learning_failure_must_not_weaken_governance": true,
       "ordinary_governed_execution_may_continue_without_learning": true
     },
@@ -661,7 +673,7 @@
     "updater_scripts_used": false,
     "workflow_state_preserved": true
   },
-  "version": "0.32.0",
+  "version": "0.32.1",
   "web_control_plane_policy": {
     "architecture_approval_authority": false,
     "command_center_read_model_only": true,

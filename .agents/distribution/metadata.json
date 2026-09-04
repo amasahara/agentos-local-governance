@@ -1,6 +1,6 @@
 {
   "agent_plane_launcher": ".agents/bin/agentos",
-  "agentos_version": "0.32.0",
+  "agentos_version": "0.32.1",
   "copies_application_readme": false,
   "copies_application_version": false,
   "format": 1,

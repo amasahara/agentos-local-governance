@@ -1,3 +1,12 @@
+## v0.31.2 — Closed-Loop Skill & Policy Improvement
+
+- Schema remains 64; no migration 65.
+- Reuses human-approved procedural memory for non-active skill candidates.
+- Revalidates learning evidence before closed-loop skill graduation.
+- Uses repeated observational adverse evaluations for policy readiness.
+- Requires an explicit policy patch; may simulate but never auto-activate policy.
+- MCP remains read-only at 132 tools and authority classes are unchanged.
+
 ## v0.31.1 — Governed Memory Promotion & Context Binding
 
 - Schema remains 64; no migration 65.

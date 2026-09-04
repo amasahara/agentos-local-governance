@@ -1,5 +1,32 @@
 {
   "governed_learning_policy": {
+    "closed_loop": {
+      "adverse_evaluation_statuses": [
+        "negative",
+        "mixed"
+      ],
+      "architecture_baseline_revalidation_required": true,
+      "automatic_architecture_mutation": false,
+      "automatic_policy_activation": false,
+      "automatic_policy_proposal_creation": false,
+      "automatic_policy_simulation_after_explicit_draft": true,
+      "automatic_policy_transition": false,
+      "automatic_skill_candidate_creation": true,
+      "automatic_skill_graduation": false,
+      "enabled": true,
+      "evaluation_window_days": 30,
+      "human_policy_transition_required": true,
+      "human_skill_graduation_required": true,
+      "mcp_mutation_allowed": false,
+      "minimum_adverse_evaluations": 2,
+      "minimum_distinct_evaluation_tasks": 2,
+      "minimum_negative_evaluations": 1,
+      "policy_activation_via_existing_evolution_only": true,
+      "policy_patch_must_be_explicit": true,
+      "skill_candidate_requires_learning_links": true,
+      "source_signal_revalidation_required": true,
+      "version": 1
+    },
     "context": {
       "context_authority_hash_may_include_learning_evidence": false,
       "learning_derived_authority_class": "none",

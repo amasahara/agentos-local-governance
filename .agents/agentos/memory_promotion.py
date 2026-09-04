@@ -571,6 +571,18 @@ def finalize_memory_promotion_candidate(
         )
         if int(cur.rowcount) != 1:
             raise MemoryPromotionError("memory_promotion_activation_race")
+    closed_loop_skill_candidate = None
+    closed_loop_skill_candidate_error = None
+    try:
+        from .closed_loop_improvement import create_skill_candidate_from_memory
+        closed_loop_skill_candidate = create_skill_candidate_from_memory(
+            root,
+            int(memory_id),
+        )
+    except Exception as exc:
+        # Candidate creation is non-active/degraded-safe; memory activation remains authoritative.
+        closed_loop_skill_candidate_error = f"{type(exc).__name__}:{exc}"
+
     return {
         "ok": True,
         "memory_id": int(memory_id),
@@ -579,6 +591,8 @@ def finalize_memory_promotion_candidate(
         "human_confirmed": True,
         "verified_distinct_task_count": len(tasks),
         "architecture_baseline_hash": architecture_hash,
+        "closed_loop_skill_candidate": closed_loop_skill_candidate,
+        "closed_loop_skill_candidate_error": closed_loop_skill_candidate_error,
         "trust_class": "project_evidence",
         "authority_class": "none",
         "instruction_authority": False,

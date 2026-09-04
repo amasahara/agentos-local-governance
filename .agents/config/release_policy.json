@@ -128,16 +128,16 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md"
+      ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md"
     ],
-    "current_release_name": "Governed Memory Promotion & Context Binding",
+    "current_release_name": "Closed-Loop Skill & Policy Improvement",
     "current_schema": 64,
     "current_schema_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md"
+      ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md"
     ],
     "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
     "current_version_files": [
@@ -145,7 +145,7 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md"
+      ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -157,10 +157,37 @@
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
       ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
-      ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md"
+      ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md"
     ]
   },
   "governed_learning_policy": {
+    "closed_loop": {
+      "adverse_evaluation_statuses": [
+        "negative",
+        "mixed"
+      ],
+      "architecture_baseline_revalidation_required": true,
+      "automatic_architecture_mutation": false,
+      "automatic_policy_activation": false,
+      "automatic_policy_proposal_creation": false,
+      "automatic_policy_simulation_after_explicit_draft": true,
+      "automatic_policy_transition": false,
+      "automatic_skill_candidate_creation": true,
+      "automatic_skill_graduation": false,
+      "enabled": true,
+      "evaluation_window_days": 30,
+      "human_policy_transition_required": true,
+      "human_skill_graduation_required": true,
+      "mcp_mutation_allowed": false,
+      "minimum_adverse_evaluations": 2,
+      "minimum_distinct_evaluation_tasks": 2,
+      "minimum_negative_evaluations": 1,
+      "policy_activation_via_existing_evolution_only": true,
+      "policy_patch_must_be_explicit": true,
+      "skill_candidate_requires_learning_links": true,
+      "source_signal_revalidation_required": true,
+      "version": 1
+    },
     "context": {
       "context_authority_hash_may_include_learning_evidence": false,
       "learning_derived_authority_class": "none",
@@ -548,7 +575,7 @@
       63,
       64
     ],
-    "schema_change": "no schema change; v0.31.1 reuses project_memory and learning_signal_links",
+    "schema_change": "no schema change; v0.31.2 reuses promoted_skills, skill_evaluation_runs, evolution_proposals, and learning_signal_links",
     "schema_fingerprint_required": true,
     "schema_migration_markers_preserved": true,
     "source_database_write_authority_changed": false,
@@ -568,7 +595,7 @@
     "updater_scripts_used": false,
     "workflow_state_preserved": true
   },
-  "version": "0.31.1",
+  "version": "0.31.2",
   "web_control_plane_policy": {
     "architecture_approval_authority": false,
     "command_center_read_model_only": true,

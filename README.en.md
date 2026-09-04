@@ -92,19 +92,20 @@ State the problem and acceptance criteria, place changes by responsibility and l
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
 
 ## Current release
-**v0.31.1 — Governed Memory Promotion & Context Binding** · schema **64**
+**v0.31.2 — Closed-Loop Skill & Policy Improvement** · schema **64**
 
-v0.31.1 turns recurring findings verified across distinct tasks into
-`project_memory(status='candidate')` using the existing learning-link and memory
-subsystems. Candidates are not retrieved into context until an explicit Human
-Decision is confirmed and the control plane finalizes the lifecycle transition.
+v0.31.2 closes the governed loop from human-approved active procedural memory to
+non-active skill candidates, then uses observational skill evaluations as
+evidence for policy-improvement proposals.
 
-Promoted memory remains `project_evidence`, with `authority_class=none` and
-`instruction_authority=false`. There is no automatic memory activation, skill
-graduation, policy activation, Architecture Authority mutation, or learning MCP
-mutation.
+Skill candidates still require human `skill-graduate`. A policy patch must be
+supplied explicitly by the caller; AgentOS may create the draft and run the
+deterministic simulation but cannot automatically review, shadow, canary,
+activate policy, or mutate Architecture Authority.
 
-v0.31.1 preserves v0.31.0 Governed Learning Signal Integration, v0.30.1 Release
-& Schema Metadata Coherence, v0.30.0 Context Authority & Untrusted Provenance,
-and the existing bounded Windows enforcement contracts.
-The release also explicitly preserves the predecessor contract **v0.29.5 — Native Physical Isolation Extensions** and its bounded Windows-isolation non-claims.
+Learning evidence remains `project_evidence`, with `authority_class=none` and
+`instruction_authority=false`. MCP remains at 132 tools with no learning mutation.
+
+The release preserves v0.31.1 Governed Memory Promotion & Context Binding,
+v0.31.0 Governed Learning Signal Integration, v0.30.0 Context Authority &
+Untrusted Provenance, and **v0.29.5 — Native Physical Isolation Extensions**.

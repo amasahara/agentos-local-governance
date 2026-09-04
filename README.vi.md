@@ -104,18 +104,20 @@ Xem hướng dẫn theo hành trình:
 Lịch sử phiên bản thuộc [CHANGELOG.md](CHANGELOG.md), Git history, tags và relea
 
 ## Bản phát hành hiện hành
-**v0.31.1 — Governed Memory Promotion & Context Binding** · schema **64**
+**v0.31.2 — Closed-Loop Skill & Policy Improvement** · schema **64**
 
-v0.31.1 đưa recurring finding đã được xác minh qua nhiều task vào chính
-`project_memory` dưới dạng `status='candidate'`. Candidate không được retrieval
-vào context cho tới khi có Human Decision xác nhận và control-plane finalize.
+v0.31.2 nối vòng học có quản trị từ active procedural memory đã được con người
+duyệt sang non-active skill candidate, sau đó dùng observational skill evaluation
+làm evidence cho policy-improvement proposal.
 
-Promotion vẫn là `project_evidence`, `authority_class=none`,
-`instruction_authority=false`. Không có auto memory activation, auto skill
-graduation, auto policy activation, Architecture Authority mutation hay MCP
-learning mutation.
+Skill candidate vẫn phải qua human `skill-graduate`. Policy patch phải được
+caller cung cấp explicit; AgentOS chỉ có thể tạo draft và chạy deterministic
+simulation, không tự review, shadow, canary, activate policy hay thay đổi
+Architecture Authority.
 
-v0.31.1 giữ nguyên v0.31.0 Governed Learning Signal Integration, v0.30.1 Release
-& Schema Metadata Coherence, v0.30.0 Context Authority & Untrusted Provenance và
-các predecessor Windows enforcement contracts.
-Release cũng tiếp tục bảo tồn predecessor contract **v0.29.5 — Native Physical Isolation Extensions** và các non-claim Windows isolation đã được giới hạn từ các node trước.
+Learning evidence vẫn là `project_evidence`, `authority_class=none`,
+`instruction_authority=false`. MCP vẫn 132 tools và không có learning mutation.
+
+Release giữ nguyên v0.31.1 Governed Memory Promotion & Context Binding,
+v0.31.0 Governed Learning Signal Integration, v0.30.0 Context Authority &
+Untrusted Provenance và predecessor **v0.29.5 — Native Physical Isolation Extensions**.

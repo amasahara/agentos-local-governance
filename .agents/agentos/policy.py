@@ -1047,6 +1047,42 @@ def _validate_governed_learning_policy_v0310(policy: dict[str, Any], version: tu
             raise RuntimeError("governed memory active status is invalid")
         if promotion.get("rejected_status") != "rejected":
             raise RuntimeError("governed memory rejected status is invalid")
+    if version >= (0, 31, 2):
+        closed_loop = section.get("closed_loop") or {}
+        for key in (
+            "enabled",
+            "automatic_skill_candidate_creation",
+            "policy_patch_must_be_explicit",
+            "automatic_policy_simulation_after_explicit_draft",
+            "skill_candidate_requires_learning_links",
+            "source_signal_revalidation_required",
+            "architecture_baseline_revalidation_required",
+            "human_skill_graduation_required",
+            "human_policy_transition_required",
+            "policy_activation_via_existing_evolution_only",
+        ):
+            if closed_loop.get(key) is not True:
+                raise RuntimeError("closed-loop required invariant disabled:" + key)
+        for key in (
+            "automatic_skill_graduation",
+            "automatic_policy_proposal_creation",
+            "automatic_policy_transition",
+            "automatic_policy_activation",
+            "automatic_architecture_mutation",
+            "mcp_mutation_allowed",
+        ):
+            if closed_loop.get(key) is not False:
+                raise RuntimeError("closed-loop authority invariant violated:" + key)
+        for key in (
+            "minimum_adverse_evaluations",
+            "minimum_negative_evaluations",
+            "minimum_distinct_evaluation_tasks",
+            "evaluation_window_days",
+        ):
+            if int(closed_loop.get(key, 0)) <= 0:
+                raise RuntimeError("closed-loop threshold invalid:" + key)
+        if set(closed_loop.get("adverse_evaluation_statuses", [])) != {"negative", "mixed"}:
+            raise RuntimeError("closed-loop adverse evaluation registry is invalid")
     context = section.get("context") or {}
     if context.get("learning_signals_directly_injected") is not False:
         raise RuntimeError("raw learning signals must not be injected into context")

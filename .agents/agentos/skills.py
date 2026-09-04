@@ -81,6 +81,10 @@ def graduate_skill(root: Path, skill_id: int, approved_by: str, note: str) -> di
     """Graduate a candidate skill after explicit human approval."""
     if not _human(approved_by): raise RuntimeError("skill graduation requires a human identity")
     if not note.strip(): raise RuntimeError("approval note is required")
+    from .closed_loop_improvement import validate_closed_loop_skill_candidate
+    closed_loop_validation=validate_closed_loop_skill_candidate(root,skill_id)
+    if closed_loop_validation.get("applies") and closed_loop_validation.get("ok") is not True:
+        raise RuntimeError("closed_loop_skill_candidate_not_current")
     contract_validation=validate_skill_contract(root,skill_id)
     if contract_validation.get("ok") is not True:
         raise RuntimeError(f"skill_contract_v2_not_ready:{contract_validation.get('status')}")

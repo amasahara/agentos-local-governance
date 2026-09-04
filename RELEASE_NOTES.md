@@ -1,37 +1,70 @@
-# AgentOS Local Governance v0.31.1 — Governed Memory Promotion & Context Binding
+# AgentOS Local Governance v0.31.2 — Closed-Loop Skill & Policy Improvement
 
 Database schema: **64**
 
-v0.31.1 turns repeated, verified project findings into reusable project-memory
-candidates through the existing `project_memory`, learning-link, Human Decision,
-and context retrieval paths.
+v0.31.2 closes the governed learning loop from human-approved project memory to
+reusable skill candidates and evidence-backed policy improvement proposals while
+preserving existing authority boundaries.
 
-No migration 65 and no parallel lesson or feedback subsystem are introduced.
+No migration 65 and no parallel feedback, lesson, skill, or policy subsystem are
+introduced.
 
-## Governed promotion
+## Closed-loop skill improvement
 
-Default eligibility requires:
+Human-approved active procedural memory may produce a non-active Governed Skill
+Contract v2 candidate when its original learning evidence remains current.
 
-- at least 3 occurrences;
-- at least 2 distinct verified tasks;
-- evidence within a 30-day working window;
-- current source-hash revalidation;
-- active Architecture Authority baseline match;
-- 7-day promotion cooldown after rejected/stale candidates.
+Candidate creation requires current learning links, current source hashes,
+verified cross-task eligibility, the active Architecture Authority baseline, the
+existing skill confidence threshold, and the existing distinct verified-task
+threshold.
 
-Automatic behavior may flag/create only `project_memory(status='candidate')`.
-Existing retrieval selects active memory, so candidates are not injected into
-future context.
+Candidate creation does not graduate the skill. Existing human-controlled
+`skill-graduate` remains the graduation path, and closed-loop candidates
+revalidate linked learning evidence immediately before graduation.
 
-Activation requires an explicit resolved Human Decision and the privileged
-`memory-promotion-finalize` command. Approval revalidates source hashes,
-distinct-task eligibility, occurrence threshold, candidate/link identity, and
-the active architecture baseline. Rejection produces `status='rejected'`.
+## Closed-loop policy improvement
+
+Observational skill evaluations can establish readiness for a policy-improvement
+proposal. The default gate requires within 30 days:
+
+- at least 2 adverse evaluations;
+- at least 1 negative evaluation;
+- at least 2 distinct evaluation tasks;
+- current task-outcome learning signals;
+- current source hashes;
+- current architecture-baseline binding;
+- an existing evaluation baseline.
+
+Only `mixed` and `negative` count as adverse evidence.
+
+AgentOS does not synthesize policy authority from learning evidence. A proposal
+is created only when a caller explicitly supplies the concrete policy patch,
+expected benefit, risks, rollback plan, title, and creator identity.
+
+The closed loop may automatically run the existing deterministic simulation
+after that explicit draft is created. It may not automatically review,
+transition, activate, roll back, or mutate Architecture Authority.
+
+The existing proposal lifecycle remains:
+
+```text
+draft → simulated → reviewed → shadow → canary → active → rolled_back
+```
+
+`evolution-transition` remains a control-plane command.
+
+## Learning linkage and schema
+
+Schema-64 `learning_signal_links` already reserves `skill_candidate` and
+`evolution_proposal`. v0.31.2 therefore keeps schema 64 and reuses
+`project_memory`, `promoted_skills`, `skill_contracts`, `skill_evaluation_runs`,
+`evolution_proposals`, `evolution_stage_events`, `learning_signals`, and
+`learning_signal_links`.
 
 ## Context Authority
 
-Activated promoted memory continues to use existing `knowledge_memory`
-provenance:
+Learning-derived memory, skill evidence, and proposal evidence remain:
 
 ```text
 trust_class           = project_evidence
@@ -39,49 +72,49 @@ authority_class       = none
 instruction_authority = false
 ```
 
-Human approval authorizes only the lifecycle state transition. It does not turn
-memory content into human-request or governance authority. Learning-derived
-evidence may change `provenance_manifest_hash` when included, but cannot by
-itself change `context_authority_hash`.
+Human actions authorize lifecycle transitions only and do not convert evidence
+into instruction authority.
 
-## MCP and automation boundary
+## Command and MCP surfaces
 
-v0.31.1 adds no MCP tool. The validated MCP surface remains 132 tools and the
-v0.31.0 learning MCP surface remains read-only.
+v0.31.2 adds four agent-plane orchestration/readiness commands and no privileged
+command.
 
-There is no automatic memory activation, skill graduation, policy activation, or
-Architecture Authority mutation.
+Expected release surface:
 
-Candidate observation/flagging is degraded-safe. Activation remains fail-closed
-for missing human approval, stale evidence, eligibility regression, architecture
-drift, or candidate identity mismatch.
+```text
+CLI commands          = 360
+agent commands        = 263
+privileged commands   = 99
+MCP tools             = 132
+```
 
-## Predecessor contracts
+No MCP tool is added; governed-learning MCP remains read-only.
 
-v0.31.1 preserves:
+There is no automatic skill graduation, policy-patch synthesis, policy
+transition, policy activation, or Architecture Authority mutation.
+
+## Predecessor contracts preserved
+
+v0.31.2 preserves:
+- v0.31.1 — Governed Memory Promotion & Context Binding
 - v0.31.0 — Governed Learning Signal Integration
 - v0.30.1 — Release & Schema Metadata Coherence
 - v0.30.0 — Context Authority & Untrusted Provenance
 - v0.29.5 — Native Physical Isolation Extensions
 - v0.29.4 Restricted Token
 
-### Preserved Windows predecessor attestation markers
-
-The bounded predecessor contracts remain unchanged:
-
 ```text
-v0.29.4 Restricted Token
 restricted_token_attested = true
-v0.29.5 — Native Physical Isolation Extensions
 low_integrity_attested = true
 host_filesystem_isolation_attested = false
 ```
 
-These markers are scoped release attestations and are not a claim of general
-host filesystem isolation.
+These are bounded predecessor attestations and not a claim of general host
+filesystem isolation.
 
-This release does not claim prompt injection elimination, semantic correctness,
-causal learning effectiveness, human-review replacement, or general host
-containment.
+This release does not claim prompt injection elimination, autonomous policy
+synthesis, semantic correctness, causal learning effectiveness, replacement of
+human review, or general host containment.
 
-Next node: **v0.31.2 — Closed-Loop Skill & Policy Improvement**.
+Next node: **v0.31.3 — Learning Effectiveness & Drift**.

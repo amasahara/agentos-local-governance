@@ -87,16 +87,16 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md"
+      ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md"
     ],
-    "current_release_name": "Governed Memory Promotion & Context Binding",
+    "current_release_name": "Closed-Loop Skill & Policy Improvement",
     "current_schema": 64,
     "current_schema_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md"
+      ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md"
     ],
     "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
     "current_version_files": [
@@ -104,7 +104,7 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md"
+      ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -116,7 +116,7 @@
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
       ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
-      ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md"
+      ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md"
     ]
   },
   "privileged_control_plane_policy": {
@@ -165,7 +165,7 @@
       ".agents/docs/EXISTING_PROJECT.md",
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
-      ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md"
+      ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md"
     ],
     "current_docs_must_match_release": true,
     "identity_sources": [
@@ -180,7 +180,7 @@
       "governed_project"
     ],
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
-    "version": "0.31.1"
+    "version": "0.31.2"
   },
   "sandbox_workspace_runtime_profile_policy": {
     "async_credential_boundary_attested": true,

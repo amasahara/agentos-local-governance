@@ -128,16 +128,16 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/LEARNING_EFFECTIVENESS_DRIFT_V0313.md"
+      ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md"
     ],
-    "current_release_name": "Learning Effectiveness & Drift",
-    "current_schema": 64,
+    "current_release_name": "Execution Identity & Model Provenance",
+    "current_schema": 65,
     "current_schema_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/LEARNING_EFFECTIVENESS_DRIFT_V0313.md"
+      ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md"
     ],
     "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
     "current_version_files": [
@@ -145,7 +145,7 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/LEARNING_EFFECTIVENESS_DRIFT_V0313.md"
+      ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -157,7 +157,49 @@
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
       ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
-      ".agents/docs/LEARNING_EFFECTIVENESS_DRIFT_V0313.md"
+      ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md"
+    ]
+  },
+  "execution_identity_policy": {
+    "agent_id_required": true,
+    "agent_plane_registration_allowed": false,
+    "automatic_model_provider_selection": false,
+    "context_authority_affected": false,
+    "context_hash_binding_required": true,
+    "credential_or_secret_persistence_allowed": false,
+    "database_schema": 65,
+    "enabled": true,
+    "endpoint_classes": [
+      "local",
+      "managed_service",
+      "remote_api",
+      "unknown"
+    ],
+    "endpoint_url_persistence_allowed": false,
+    "execution_ref_types": [
+      "async_job",
+      "external_agent_run",
+      "governed_operation"
+    ],
+    "execution_reference_required": true,
+    "external_declaration_supported": true,
+    "instruction_authority": false,
+    "learning_effectiveness_provider_model_matching_required": true,
+    "mcp_mutation_allowed": false,
+    "model_required": true,
+    "provenance_version": 1,
+    "provider_request_id_hash_only": true,
+    "provider_required": true,
+    "raw_prompt_persistence_allowed": false,
+    "raw_response_persistence_allowed": false,
+    "recorded_by_required": true,
+    "remote_provider_cryptographic_attestation_claimed": false,
+    "runtime_bound_verification_supported": true,
+    "scope": "agentos_execution_identity_and_model_provenance",
+    "separate_outcome_link_required": true,
+    "verification_classes": [
+      "declared",
+      "runtime_bound"
     ]
   },
   "governed_learning_policy": {
@@ -219,7 +261,7 @@
       "minimum_distinct_tasks": 5,
       "minimum_effect_size": 0.1,
       "minimum_treatment_tasks": 5,
-      "provider_model_matching_required": false,
+      "provider_model_matching_required": true,
       "review_options": [
         "retain",
         "revise",
@@ -561,7 +603,7 @@
     "bootstrap_artifact_metadata": ".agents/schema/bootstrap_v46.json",
     "bootstrap_artifact_sql": ".agents/schema/bootstrap_v46.sql",
     "bootstrap_schema": 46,
-    "current_database_schema": 64,
+    "current_database_schema": 65,
     "existing_database_mode": "incremental_from_recorded_version",
     "fresh_database_mode": "bootstrap_then_incremental",
     "fresh_replay_migrations_1_to_46": false,
@@ -596,9 +638,10 @@
       61,
       62,
       63,
-      64
+      64,
+      65
     ],
-    "schema_change": "no schema change; v0.31.3 computes comparative effectiveness and drift from existing schema-64 usage/outcome/architecture evidence",
+    "schema_change": "schema 65 adds execution_provenance and task_outcome_provenance_links; task_outcomes remains unchanged to preserve historical learning-source hashes",
     "schema_fingerprint_required": true,
     "schema_migration_markers_preserved": true,
     "source_database_write_authority_changed": false,
@@ -618,7 +661,7 @@
     "updater_scripts_used": false,
     "workflow_state_preserved": true
   },
-  "version": "0.31.3",
+  "version": "0.32.0",
   "web_control_plane_policy": {
     "architecture_approval_authority": false,
     "command_center_read_model_only": true,

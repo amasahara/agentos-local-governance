@@ -34,7 +34,7 @@
     "bootstrap_artifact_metadata": ".agents/schema/bootstrap_v46.json",
     "bootstrap_artifact_sql": ".agents/schema/bootstrap_v46.sql",
     "bootstrap_schema": 46,
-    "current_database_schema": 64,
+    "current_database_schema": 65,
     "existing_database_mode": "incremental_from_recorded_version",
     "fresh_database_mode": "bootstrap_then_incremental",
     "fresh_replay_migrations_1_to_46": false,
@@ -69,9 +69,10 @@
       61,
       62,
       63,
-      64
+      64,
+      65
     ],
-    "schema_change": "schema 64 governed learning linkage",
+    "schema_change": "schema 65 adds execution_provenance and task_outcome_provenance_links; task_outcomes remains structurally unchanged to preserve historical learning-source hashes",
     "schema_fingerprint_required": true,
     "schema_migration_markers_preserved": true,
     "source_database_write_authority_changed": false,

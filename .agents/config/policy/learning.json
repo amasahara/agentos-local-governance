@@ -58,7 +58,7 @@
       "minimum_distinct_tasks": 5,
       "minimum_effect_size": 0.1,
       "minimum_treatment_tasks": 5,
-      "provider_model_matching_required": false,
+      "provider_model_matching_required": true,
       "review_options": [
         "retain",
         "revise",

@@ -104,23 +104,16 @@ Xem hướng dẫn theo hành trình:
 Lịch sử phiên bản thuộc [CHANGELOG.md](CHANGELOG.md), Git history, tags và relea
 
 ## Bản phát hành hiện hành
-**v0.31.3 — Learning Effectiveness & Drift** · schema **64**
+**v0.32.0 — Execution Identity & Model Provenance** · schema **65**
 
-v0.31.3 đo comparative/observational effectiveness dựa trên `knowledge_usage`
-thực tế và task outcomes, đồng thời phân biệt `current`,
-`review_required_architecture_change`, `stale`, và `scope_unresolved`.
+v0.32.0 thêm execution provenance bền vững, hash-bound và privacy-safe để gắn task/session/execution reference với provider/model/agent/runtime identity.
 
-Baseline kiến trúc thay đổi không tự động làm memory/skill stale. Skill Contract
-v2 được so theo required Architecture sections; memory/finding thiếu section-level
-binding chỉ tạo review warning khi không thể chứng minh applicability.
+Schema 65 dùng `execution_provenance` và bảng linkage riêng cho task outcome; không ALTER `task_outcomes`, nhằm giữ ổn định source hash của learning signals v0.31.x.
 
-Không có auto-deactivate/supersede, auto skill graduation, policy activation hay
-Architecture Authority mutation. Review dùng Human Decision hiện có và
-`decision-resolve` vẫn thuộc privileged control plane.
+`execution-provenance-register` thuộc privileged control plane; agent chỉ đọc `get/status`. `runtime_bound` không phải remote-provider cryptographic attestation. Provider request ID chỉ lưu SHA-256; không lưu credential, endpoint URL, raw prompt hay raw response.
 
-Learning evidence vẫn là `project_evidence`, `authority_class=none`,
-`instruction_authority=false`; MCP vẫn 132 tools.
+Learning effectiveness nay yêu cầu provider/model matching cho provenanced outcome. Legacy outcome vẫn hợp lệ nhưng không vào strict v0.32 matched cohort.
 
-Release giữ nguyên v0.31.2 Closed-Loop Skill & Policy Improvement,
-v0.31.1 Governed Memory Promotion & Context Binding và predecessor
-**v0.29.5 — Native Physical Isolation Extensions**.
+Không auto chọn provider/model, không thay đổi Context Authority, `instruction_authority=false`, và MCP vẫn 132 tools.
+
+Release giữ nguyên v0.31.3 Learning Effectiveness & Drift, v0.31.2 Closed-Loop Skill & Policy Improvement và predecessor **v0.29.5 — Native Physical Isolation Extensions**.

@@ -15,7 +15,8 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_schema_stays_64_and_reuses_reserved_relations() -> None:
-    assert CURRENT_SCHEMA_VERSION == 64
+    # Historical v0.31.2 floor. Successors may add later migrations.
+    assert CURRENT_SCHEMA_VERSION >= 64
     learning = (
         ROOT
         / ".agents/agentos/learning_signals.py"
@@ -25,7 +26,7 @@ def test_schema_stays_64_and_reuses_reserved_relations() -> None:
     db_source = (
         ROOT / ".agents/agentos/db.py"
     ).read_text(encoding="utf-8")
-    assert "migration_65" not in db_source
+    assert "from .learning_signals import migration_64" in db_source
 
 
 def test_policy_preserves_closed_loop_authority_boundary() -> None:

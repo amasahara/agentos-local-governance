@@ -49,6 +49,7 @@ FEATURE_CLI_MODULES = (
     "memory_promotion_cli",
     "closed_loop_improvement_cli",
     "learning_effectiveness_cli",
+    "execution_provenance_cli",
     "adaptive_budget_cli",
     "context_evaluation_cli",
     "consolidation_cockpit_cli",
@@ -103,6 +104,7 @@ PRIVILEGED_COMMANDS = {
     "architecture-proposal-review", "architecture-proposal-approve", "architecture-proposal-reject", "architecture-proposal-bind-baseline",
     "decision-resolve",
     "memory-promotion-finalize",
+    "execution-provenance-register",
 }
 
 

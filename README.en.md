@@ -92,24 +92,16 @@ State the problem and acceptance criteria, place changes by responsibility and l
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
 
 ## Current release
-**v0.31.3 — Learning Effectiveness & Drift** · schema **64**
+**v0.32.0 — Execution Identity & Model Provenance** · schema **65**
 
-v0.31.3 measures comparative/observational effectiveness from actual
-`knowledge_usage` and task outcomes, while distinguishing `current`,
-`review_required_architecture_change`, `stale`, and `scope_unresolved`.
+v0.32.0 adds durable, hash-bound and privacy-safe execution provenance linking task/session/execution references to provider/model/agent/runtime identity.
 
-An Architecture Baseline change does not automatically stale memory or skills.
-Skill Contract v2 is compared through required Architecture sections; memory or
-finding evidence without section-level binding receives a review warning when
-applicability cannot be proven.
+Schema 65 uses `execution_provenance` plus a separate task-outcome linkage table; it does not ALTER `task_outcomes`, preserving v0.31.x learning-signal source hashes.
 
-There is no automatic deactivation/supersede, skill graduation, policy activation,
-or Architecture Authority mutation. Review reuses Human Decision and
-`decision-resolve` remains privileged control-plane authority.
+`execution-provenance-register` is privileged control-plane-only; agents receive read-only `get/status`. `runtime_bound` is not remote-provider cryptographic attestation. Provider request IDs are SHA-256-only; credentials, endpoint URLs, raw prompts and raw responses are not persisted.
 
-Learning evidence remains `project_evidence`, `authority_class=none`, and
-`instruction_authority=false`; MCP remains at 132 tools.
+Learning effectiveness now requires provider/model matching for provenanced outcomes. Legacy outcomes remain valid but are excluded from strict v0.32 matched cohorts.
 
-The release preserves v0.31.2 Closed-Loop Skill & Policy Improvement,
-v0.31.1 Governed Memory Promotion & Context Binding, and
-**v0.29.5 — Native Physical Isolation Extensions**.
+There is no automatic provider/model selection, no Context Authority change, no instruction authority, and MCP remains at 132 tools.
+
+The release preserves v0.31.3 Learning Effectiveness & Drift, v0.31.2 Closed-Loop Skill & Policy Improvement, and **v0.29.5 — Native Physical Isolation Extensions**.

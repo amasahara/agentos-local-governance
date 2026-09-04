@@ -1,108 +1,59 @@
-# AgentOS Local Governance v0.31.3 — Learning Effectiveness & Drift
+# AgentOS Local Governance v0.32.0 — Execution Identity & Model Provenance
 
-Database schema: **64**
+Database schema: **65**
 
-v0.31.3 measures comparative/observational effectiveness of actually-used
-project knowledge and detects architecture/scope drift without creating a new
-learning lifecycle or granting automated lifecycle authority.
+v0.32.0 adds durable, privacy-safe execution identity and provider/model provenance. This is a provenance release, not a model-routing release.
 
-No migration 65 is introduced. Existing schema-64 `knowledge_usage` records
-actual context inclusion, while existing task outcomes, learning signals, Skill
-Contract v2, Architecture Baselines, and Human Decision state provide the
-evidence needed for this node.
+## Schema 65
 
-## Comparative effectiveness
+Schema 65 adds `execution_provenance` and `task_outcome_provenance_links`. The existing `task_outcomes` table is deliberately not altered because v0.31.x learning signals hash complete task-outcome rows; changing the historical shape could make valid evidence appear stale.
 
-Treatment tasks are tasks where the exact knowledge artifact/version was
-actually included in context.
+## Privileged registration
 
-Control tasks are deterministic non-inclusion tasks matched on available:
+`execution-provenance-register` is control-plane-only. Normal agents receive read-only `execution-provenance-get` and `execution-provenance-status`.
 
-```text
-task_category
-policy_revision
-retrieval_backend
-architecture_baseline_hash
-```
+Supported reference classes are `async_job`, `governed_operation`, and `external_agent_run`. `runtime_bound` means a declaration is bound to an immutable local execution reference. It does not claim remote-provider cryptographic attestation.
 
-Results report success rates, Wilson confidence intervals, effect size, z-test
-and p-value where valid, plus small-sample warnings.
+## Privacy-safe identity
 
-Possible verdicts are:
+Persisted evidence can include bounded provider/model/model-revision/deployment/agent/runtime identifiers and endpoint class. Provider request IDs are stored only as SHA-256 hashes.
 
-```text
-insufficient_evidence
-possibly_ineffective
-comparatively_better
-no_clear_difference
-```
+v0.32.0 does not persist API keys, credentials, authorization headers, endpoint URLs, raw prompts, raw responses, or raw provider request IDs.
 
-The result is explicitly observational, not causal. Provider/model provenance is
-not treated as complete before v0.32.0.
+## Context and outcome binding
 
-## Drift
+Every provenance record requires a current Context Authority evaluation and binds `context_revision`, `context_authority_hash`, `provenance_manifest_hash`, policy revision, and available architecture/plan hashes.
 
-Drift states are:
+New task outcomes may bind `execution_provenance_id`. AgentOS rejects task/session/agent/model/policy/context metadata that conflicts with canonical provenance and writes the outcome link in the separate schema-65 table.
+
+Legacy outcomes remain valid.
+
+## Learning effectiveness
+
+`provider_model_matching_required = true`.
+
+Strict comparative cohorts add provider/model/model revision and verification class to the v0.31.3 cohort dimensions. Legacy outcomes without schema-65 provenance are excluded from strict matched cohorts rather than invalidated. Analysis remains observational, not causal.
+
+## Authority and model selection
+
+`context_authority_affected = false`, `instruction_authority = false`, and `auto_model_provider_select = false`.
+
+Provider/model metadata cannot become Human Request, Governance Authority, Architecture Authority, policy authority, or skill authority.
+
+## Expected surfaces
 
 ```text
-current
-review_required_architecture_change
-stale
-scope_unresolved
-```
-
-An Architecture Baseline change alone never automatically makes knowledge stale.
-
-Skill Contract v2 can use `required_architecture_sections` and declared scopes to
-distinguish unrelated section changes from relevant review requirements. Memory
-and finding evidence without precise section binding receive a review warning
-rather than an unsupported stale verdict when their pinned baseline changes.
-
-## Human review only
-
-Automated results cannot deactivate, supersede, revise, graduate, activate
-policy, or mutate Architecture Authority.
-
-An explicit `learning-effectiveness-review-request` binds the current assessment
-hash into the existing Human Decision lifecycle. Existing privileged
-`decision-resolve` remains the review-resolution authority path.
-
-Review options are:
-
-```text
-retain
-revise
-supersede
-deactivate
-```
-
-Resolution is audited but does not silently mutate the reviewed artifact.
-
-## Authority and MCP
-
-Effectiveness/drift evidence remains:
-
-```text
-trust_class           = project_evidence
-authority_class       = none
-instruction_authority = false
-```
-
-v0.31.3 adds no MCP tool. MCP remains 132 tools and governed-learning MCP remains
-read-only.
-
-Expected CLI surface:
-
-```text
-CLI commands          = 364
-agent commands        = 267
-privileged commands   = 99
+CLI commands          = 367
+agent commands        = 269
+privileged commands   = 100
 MCP tools             = 132
 ```
 
+No v0.32.0 MCP mutation module is added.
+
 ## Predecessor contracts preserved
 
-v0.31.3 preserves:
+- v0.31.3 — Learning Effectiveness & Drift
 - v0.31.2 — Closed-Loop Skill & Policy Improvement
 - v0.31.1 — Governed Memory Promotion & Context Binding
 - v0.31.0 — Governed Learning Signal Integration
@@ -117,11 +68,4 @@ low_integrity_attested = true
 host_filesystem_isolation_attested = false
 ```
 
-These are bounded predecessor attestations and not claims of general host
-filesystem isolation.
-
-This release does not claim causal learning effectiveness, autonomous knowledge
-correction/deactivation, semantic correctness, prompt injection elimination,
-human-review replacement, or general host containment.
-
-Next node: **v0.32.0 — Execution Identity & Model Provenance**.
+v0.32.0 does not claim remote-provider cryptographic attestation, causal model effectiveness, autonomous provider/model selection, semantic correctness, prompt injection elimination, replacement of human review, or general host containment.

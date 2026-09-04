@@ -63,6 +63,7 @@ def _policy(root: Path) -> dict[str, Any]:
         "architecture_match_required",
         "human_review_required_for_state_change",
         "explicit_review_request_required",
+        "provider_model_matching_required",
     )
     for key in required_true:
         if cfg.get(key) is not True:
@@ -76,7 +77,6 @@ def _policy(root: Path) -> dict[str, Any]:
         "automatic_supersede_allowed",
         "automatic_stale_status_mutation",
         "causal_effectiveness_claim_allowed",
-        "provider_model_matching_required",
         "mcp_mutation_allowed",
     )
     for key in required_false:
@@ -268,12 +268,19 @@ def _latest_outcomes(
         rows = c.execute(
             """
             SELECT o.*,
-                   ls.architecture_baseline_hash
+                   ls.architecture_baseline_hash,
+                   ep.provenance_id AS execution_provenance_id,
+                   ep.provider_id,
+                   ep.model_id AS provenance_model_id,
+                   ep.model_revision,
+                   ep.verification_class
             FROM task_outcomes o
             LEFT JOIN learning_signals ls
               ON ls.task_id=o.task_id
              AND ls.source_type='task_outcome'
              AND ls.source_id=CAST(o.id AS TEXT)
+            LEFT JOIN task_outcome_provenance_links opl ON opl.outcome_id=o.id
+            LEFT JOIN execution_provenance ep ON ep.provenance_id=opl.provenance_id
             WHERE o.created_at >= datetime('now', ?)
               AND o.id=(
                   SELECT MAX(o2.id)
@@ -291,12 +298,16 @@ def _latest_outcomes(
     return [dict(row) for row in rows]
 
 
-def _cohort_key(row: dict[str, Any]) -> tuple[str, str, str, str]:
+def _cohort_key(row: dict[str, Any]) -> tuple[str, str, str, str, str, str, str, str]:
     return (
         str(row.get("task_category") or ""),
         str(row.get("policy_revision") or ""),
         str(row.get("retrieval_backend") or ""),
         str(row.get("architecture_baseline_hash") or ""),
+        str(row.get("provider_id") or ""),
+        str(row.get("provenance_model_id") or ""),
+        str(row.get("model_revision") or ""),
+        str(row.get("verification_class") or ""),
     )
 
 
@@ -371,9 +382,15 @@ def comparative_effectiveness(
     }
 
     outcomes = _latest_outcomes(root, window_days)
+    provenanced_outcomes = [
+        row for row in outcomes
+        if str(row.get("execution_provenance_id") or "")
+        and str(row.get("provider_id") or "")
+        and str(row.get("provenance_model_id") or "")
+    ]
     treatment = [
         row
-        for row in outcomes
+        for row in provenanced_outcomes
         if str(row["task_id"]) in treatment_task_ids
         and str(row.get("architecture_baseline_hash") or "")
     ]
@@ -383,7 +400,7 @@ def comparative_effectiveness(
     }
     control = [
         row
-        for row in outcomes
+        for row in provenanced_outcomes
         if str(row["task_id"]) not in any_usage_task_ids
         and str(row.get("architecture_baseline_hash") or "")
         and _cohort_key(row) in treatment_keys
@@ -414,14 +431,16 @@ def comparative_effectiveness(
 
     limitations = [
         "observational_comparison_not_causal",
-        "provider_model_provenance_incomplete_before_v0.32.0",
-        "controls_exact_match_available_task_category_policy_retrieval_architecture",
+        "provider_model_provenance_required_v0320",
+        "legacy_outcome_without_execution_provenance_excluded",
+        "runtime_bound_does_not_prove_remote_provider_attestation",
+        "controls_exact_match_task_category_policy_retrieval_architecture_provider_model",
     ]
     if latest_hash is None:
         limitations.append("artifact_not_observed_in_context_window")
     if len(treatment) < len(treatment_task_ids):
         limitations.append(
-            "treatment_rows_without_architecture_bound_outcome_excluded"
+            "treatment_rows_without_provenance_or_architecture_binding_excluded"
         )
 
     return {
@@ -443,6 +462,10 @@ def comparative_effectiveness(
             "policy_revision",
             "retrieval_backend",
             "architecture_baseline_hash",
+            "provider_id",
+            "model_id",
+            "model_revision",
+            "verification_class",
         ],
         "limitations": limitations,
         "comparative_not_causal": True,

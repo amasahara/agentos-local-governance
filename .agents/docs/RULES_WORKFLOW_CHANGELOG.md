@@ -1,3 +1,11 @@
+## v0.32.0 — Execution Identity & Model Provenance
+
+- Schema 65 durable execution/model provenance with separate outcome linkage.
+- Privileged provenance registration; read-only agent inspection.
+- Provider request IDs are hash-only; no credentials/endpoints/raw prompt-response persistence.
+- Provider/model-matched observational effectiveness; no automatic model selection.
+- MCP remains 132 tools.
+
 ## v0.31.3 — Learning Effectiveness & Drift
 
 - Schema remains 64; no migration 65.

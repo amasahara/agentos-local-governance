@@ -22,9 +22,10 @@ def verify(root: Path, tid="T1"):
     return rid
 
 def test_schema64(tmp_path):
+    # Historical v0.31.0 schema floor. Successors may append later migrations.
     task(tmp_path)
     with connect(tmp_path) as c:
-        assert c.execute("SELECT MAX(version) AS v FROM schema_migrations").fetchone()["v"]==64
+        assert c.execute("SELECT MAX(version) AS v FROM schema_migrations").fetchone()["v"]>=64
         tables={r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"learning_signals","learning_signal_links","knowledge_usage"}<=tables
 

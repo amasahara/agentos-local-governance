@@ -1,0 +1,44 @@
+{
+  "execution_identity_policy": {
+    "agent_id_required": true,
+    "agent_plane_registration_allowed": false,
+    "automatic_model_provider_selection": false,
+    "context_authority_affected": false,
+    "context_hash_binding_required": true,
+    "credential_or_secret_persistence_allowed": false,
+    "database_schema": 65,
+    "enabled": true,
+    "endpoint_classes": [
+      "local",
+      "managed_service",
+      "remote_api",
+      "unknown"
+    ],
+    "endpoint_url_persistence_allowed": false,
+    "execution_ref_types": [
+      "async_job",
+      "external_agent_run",
+      "governed_operation"
+    ],
+    "execution_reference_required": true,
+    "external_declaration_supported": true,
+    "instruction_authority": false,
+    "learning_effectiveness_provider_model_matching_required": true,
+    "mcp_mutation_allowed": false,
+    "model_required": true,
+    "provenance_version": 1,
+    "provider_request_id_hash_only": true,
+    "provider_required": true,
+    "raw_prompt_persistence_allowed": false,
+    "raw_response_persistence_allowed": false,
+    "recorded_by_required": true,
+    "remote_provider_cryptographic_attestation_claimed": false,
+    "runtime_bound_verification_supported": true,
+    "scope": "agentos_execution_identity_and_model_provenance",
+    "separate_outcome_link_required": true,
+    "verification_classes": [
+      "declared",
+      "runtime_bound"
+    ]
+  }
+}

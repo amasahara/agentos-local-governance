@@ -20,7 +20,7 @@ from .db import connect
 
 CLAIM_TYPES = {"business_logic", "security", "data_behavior", "destructive_effect", "governance", "other"}
 RISK_LEVELS = {"low", "medium", "high"}
-SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy", "governed_skill_contract_policy", "architecture_aware_skill_selection_policy", "privileged_control_plane_policy", "sandbox_workspace_runtime_profile_policy", "context_authority_policy", "governed_learning_policy"}
+SENSITIVE_SECTIONS = {"claim_policy", "filesystem_policy", "tool_policy", "workflow_policy", "drift_policy", "instruction_policy", "task_context_policy", "project_identity_policy", "primary_project_selection_policy", "primary_project_consolidation_policy", "database_boundary_policy", "schema_mapping_policy", "read_only_extraction_policy", "controlled_target_insert_policy", "identity_resolution_policy", "reconciliation_recovery_policy", "governance_enforcement_policy", "unified_runtime_policy", "context_transport_policy", "adaptive_token_budget_policy", "architecture_contract_policy", "human_clarification_policy", "governed_skill_contract_policy", "architecture_aware_skill_selection_policy", "privileged_control_plane_policy", "sandbox_workspace_runtime_profile_policy", "context_authority_policy", "governed_learning_policy", "execution_identity_policy"}
 SAFE_OVERRIDE_KEYS = {"source_root", "test_path", "encoding", "runtime_paths"}
 
 
@@ -1122,7 +1122,6 @@ def _validate_governed_learning_policy_v0310(policy: dict[str, Any], version: tu
             "automatic_supersede_allowed",
             "automatic_stale_status_mutation",
             "causal_effectiveness_claim_allowed",
-            "provider_model_matching_required",
             "mcp_mutation_allowed",
         ):
             if effectiveness.get(key) is not False:
@@ -1142,6 +1141,11 @@ def _validate_governed_learning_policy_v0310(policy: dict[str, Any], version: tu
             raise RuntimeError("learning effectiveness effect size invalid")
         if effectiveness.get("review_options") != ["retain", "revise", "supersede", "deactivate"]:
             raise RuntimeError("learning effectiveness review options invalid")
+        if version >= (0, 32, 0):
+            if effectiveness.get("provider_model_matching_required") is not True:
+                raise RuntimeError("provider/model matching is required in v0.32.0")
+        elif effectiveness.get("provider_model_matching_required") is not False:
+            raise RuntimeError("provider/model matching must remain disabled before v0.32.0")
     mcp = section.get("mcp") or {}
     if mcp.get("mutation_allowed") is not False or mcp.get("read_only") is not True:
         raise RuntimeError("governed learning MCP must remain read-only")
@@ -1153,6 +1157,43 @@ def _validate_governed_learning_policy_v0310(policy: dict[str, Any], version: tu
     }
     if set(mcp.get("tools", [])) != expected_tools:
         raise RuntimeError("governed learning MCP read surface is invalid")
+
+def _validate_execution_identity_policy_v0320(policy: dict[str, Any], version: tuple[int, ...]) -> None:
+    """Fail closed on schema-65 execution/model provenance invariants."""
+    if version < (0, 32, 0):
+        return
+    section = policy.get("execution_identity_policy")
+    if not isinstance(section, dict) or section.get("enabled") is not True:
+        raise RuntimeError("execution identity policy is required")
+    for key in (
+        "provider_required","model_required","agent_id_required","recorded_by_required",
+        "execution_reference_required","runtime_bound_verification_supported",
+        "external_declaration_supported","context_hash_binding_required",
+        "provider_request_id_hash_only","separate_outcome_link_required",
+        "learning_effectiveness_provider_model_matching_required",
+    ):
+        if section.get(key) is not True:
+            raise RuntimeError("execution identity invariant disabled:" + key)
+    for key in (
+        "remote_provider_cryptographic_attestation_claimed",
+        "endpoint_url_persistence_allowed","credential_or_secret_persistence_allowed",
+        "raw_prompt_persistence_allowed","raw_response_persistence_allowed",
+        "context_authority_affected","instruction_authority",
+        "automatic_model_provider_selection","agent_plane_registration_allowed",
+        "mcp_mutation_allowed",
+    ):
+        if section.get(key) is not False:
+            raise RuntimeError("execution identity nonclaim/authority invariant violated:" + key)
+    if int(section.get("provenance_version", 0)) != 1:
+        raise RuntimeError("execution provenance version invalid")
+    if int(section.get("database_schema", 0)) != 65:
+        raise RuntimeError("execution provenance schema invalid")
+    if set(section.get("execution_ref_types", [])) != {"async_job","governed_operation","external_agent_run"}:
+        raise RuntimeError("execution provenance reference registry invalid")
+    if set(section.get("endpoint_classes", [])) != {"local","remote_api","managed_service","unknown"}:
+        raise RuntimeError("execution provenance endpoint registry invalid")
+    if set(section.get("verification_classes", [])) != {"declared","runtime_bound"}:
+        raise RuntimeError("execution provenance verification registry invalid")
 
 def validate_policy(policy: dict[str, Any]) -> None:
     """Fail closed while preserving historical policy contracts by release version."""
@@ -1183,6 +1224,7 @@ def validate_policy(policy: dict[str, Any]) -> None:
         policy,
         version,
     )
+    _validate_execution_identity_policy_v0320(policy, version)
     if version >= (0, 27, 0):
         required.add("governed_skill_contract_policy")
     if version >= (0, 27, 1):
@@ -1200,6 +1242,8 @@ def validate_policy(policy: dict[str, Any]) -> None:
         required.add("context_authority_policy")
     if version >= (0, 31, 0):
         required.add("governed_learning_policy")
+    if version >= (0, 32, 0):
+        required.add("execution_identity_policy")
     missing = sorted(required - policy.keys())
     if missing:
         raise RuntimeError(f"missing policy keys: {missing}")

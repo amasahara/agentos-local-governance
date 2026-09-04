@@ -84,6 +84,8 @@ CORE_FILES = (
     ".agents/agentos/closed_loop_improvement_cli.py",
     ".agents/agentos/learning_effectiveness.py",
     ".agents/agentos/learning_effectiveness_cli.py",
+    ".agents/agentos/execution_provenance.py",
+    ".agents/agentos/execution_provenance_cli.py",
 )
 RELEASE_FILES = (
     ".agents/tests/test_release_line_endings_v0242.py",
@@ -207,6 +209,9 @@ RELEASE_FILES = (
     ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md",
     ".agents/tests/test_learning_effectiveness_drift_v0313.py",
     ".agents/docs/LEARNING_EFFECTIVENESS_DRIFT_V0313.md",
+    ".agents/config/policy/execution_identity.json",
+    ".agents/tests/test_execution_identity_model_provenance_v0320.py",
+    ".agents/docs/EXECUTION_IDENTITY_MODEL_PROVENANCE_V0320.md",
     ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
 )
 EXTENSION_FILES = (
@@ -758,6 +763,8 @@ def check_release_integrity(root: Path) -> dict[str, Any]:
                 required_policy_sections.add("context_authority_policy")
             if release_version >= (0, 31, 0):
                 required_policy_sections.add("governed_learning_policy")
+            if release_version >= (0, 32, 0):
+                required_policy_sections.add("execution_identity_policy")
             if release_version >= (0, 29, 4):
                 required_policy_sections.add("windows_restricted_execution_policy")
             if release_version >= (0, 29, 5):

@@ -92,20 +92,24 @@ State the problem and acceptance criteria, place changes by responsibility and l
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
 
 ## Current release
-**v0.31.2 — Closed-Loop Skill & Policy Improvement** · schema **64**
+**v0.31.3 — Learning Effectiveness & Drift** · schema **64**
 
-v0.31.2 closes the governed loop from human-approved active procedural memory to
-non-active skill candidates, then uses observational skill evaluations as
-evidence for policy-improvement proposals.
+v0.31.3 measures comparative/observational effectiveness from actual
+`knowledge_usage` and task outcomes, while distinguishing `current`,
+`review_required_architecture_change`, `stale`, and `scope_unresolved`.
 
-Skill candidates still require human `skill-graduate`. A policy patch must be
-supplied explicitly by the caller; AgentOS may create the draft and run the
-deterministic simulation but cannot automatically review, shadow, canary,
-activate policy, or mutate Architecture Authority.
+An Architecture Baseline change does not automatically stale memory or skills.
+Skill Contract v2 is compared through required Architecture sections; memory or
+finding evidence without section-level binding receives a review warning when
+applicability cannot be proven.
 
-Learning evidence remains `project_evidence`, with `authority_class=none` and
-`instruction_authority=false`. MCP remains at 132 tools with no learning mutation.
+There is no automatic deactivation/supersede, skill graduation, policy activation,
+or Architecture Authority mutation. Review reuses Human Decision and
+`decision-resolve` remains privileged control-plane authority.
 
-The release preserves v0.31.1 Governed Memory Promotion & Context Binding,
-v0.31.0 Governed Learning Signal Integration, v0.30.0 Context Authority &
-Untrusted Provenance, and **v0.29.5 — Native Physical Isolation Extensions**.
+Learning evidence remains `project_evidence`, `authority_class=none`, and
+`instruction_authority=false`; MCP remains at 132 tools.
+
+The release preserves v0.31.2 Closed-Loop Skill & Policy Improvement,
+v0.31.1 Governed Memory Promotion & Context Binding, and
+**v0.29.5 — Native Physical Isolation Extensions**.

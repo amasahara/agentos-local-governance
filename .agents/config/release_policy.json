@@ -128,16 +128,16 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md"
+      ".agents/docs/LEARNING_EFFECTIVENESS_DRIFT_V0313.md"
     ],
-    "current_release_name": "Closed-Loop Skill & Policy Improvement",
+    "current_release_name": "Learning Effectiveness & Drift",
     "current_schema": 64,
     "current_schema_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md"
+      ".agents/docs/LEARNING_EFFECTIVENESS_DRIFT_V0313.md"
     ],
     "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
     "current_version_files": [
@@ -145,7 +145,7 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md"
+      ".agents/docs/LEARNING_EFFECTIVENESS_DRIFT_V0313.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -157,7 +157,7 @@
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
       ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
-      ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md"
+      ".agents/docs/LEARNING_EFFECTIVENESS_DRIFT_V0313.md"
     ]
   },
   "governed_learning_policy": {
@@ -203,9 +203,32 @@
       "ordinary_governed_execution_may_continue_without_learning": true
     },
     "effectiveness": {
+      "actual_context_inclusion_required": true,
+      "architecture_match_required": true,
       "automatic_deactivation_allowed": false,
+      "automatic_review_request_creation": false,
+      "automatic_stale_status_mutation": false,
+      "automatic_supersede_allowed": false,
       "causal_effectiveness_claim_allowed": false,
-      "human_review_required_for_state_change": true
+      "comparative_effectiveness_enabled": true,
+      "drift_detection_enabled": true,
+      "explicit_review_request_required": true,
+      "human_review_required_for_state_change": true,
+      "mcp_mutation_allowed": false,
+      "minimum_control_tasks": 5,
+      "minimum_distinct_tasks": 5,
+      "minimum_effect_size": 0.1,
+      "minimum_treatment_tasks": 5,
+      "provider_model_matching_required": false,
+      "review_options": [
+        "retain",
+        "revise",
+        "supersede",
+        "deactivate"
+      ],
+      "significance_alpha": 0.05,
+      "small_sample_warning_below": 30,
+      "window_days": 90
     },
     "enabled": true,
     "mcp": {
@@ -575,7 +598,7 @@
       63,
       64
     ],
-    "schema_change": "no schema change; v0.31.2 reuses promoted_skills, skill_evaluation_runs, evolution_proposals, and learning_signal_links",
+    "schema_change": "no schema change; v0.31.3 computes comparative effectiveness and drift from existing schema-64 usage/outcome/architecture evidence",
     "schema_fingerprint_required": true,
     "schema_migration_markers_preserved": true,
     "source_database_write_authority_changed": false,
@@ -595,7 +618,7 @@
     "updater_scripts_used": false,
     "workflow_state_preserved": true
   },
-  "version": "0.31.2",
+  "version": "0.31.3",
   "web_control_plane_policy": {
     "architecture_approval_authority": false,
     "command_center_read_model_only": true,

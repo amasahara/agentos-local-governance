@@ -117,20 +117,23 @@ Trước khi gửi thay đổi:
 Các thay đổi governance phải giữ `AGENTS.md`, structured policy, runtime, tests, documentation, changelog và release identity nhất quán.
 
 ## Bản phát hành hiện hành
-**v0.31.2 — Closed-Loop Skill & Policy Improvement** · schema **64**
+**v0.31.3 — Learning Effectiveness & Drift** · schema **64**
 
-v0.31.2 nối vòng học có quản trị từ active procedural memory đã được con người
-duyệt sang non-active skill candidate, sau đó dùng observational skill evaluation
-làm evidence cho policy-improvement proposal.
+v0.31.3 đo comparative/observational effectiveness dựa trên `knowledge_usage`
+thực tế và task outcomes, đồng thời phân biệt `current`,
+`review_required_architecture_change`, `stale`, và `scope_unresolved`.
 
-Skill candidate vẫn phải qua human `skill-graduate`. Policy patch phải được
-caller cung cấp explicit; AgentOS chỉ có thể tạo draft và chạy deterministic
-simulation, không tự review, shadow, canary, activate policy hay thay đổi
-Architecture Authority.
+Baseline kiến trúc thay đổi không tự động làm memory/skill stale. Skill Contract
+v2 được so theo required Architecture sections; memory/finding thiếu section-level
+binding chỉ tạo review warning khi không thể chứng minh applicability.
+
+Không có auto-deactivate/supersede, auto skill graduation, policy activation hay
+Architecture Authority mutation. Review dùng Human Decision hiện có và
+`decision-resolve` vẫn thuộc privileged control plane.
 
 Learning evidence vẫn là `project_evidence`, `authority_class=none`,
-`instruction_authority=false`. MCP vẫn 132 tools và không có learning mutation.
+`instruction_authority=false`; MCP vẫn 132 tools.
 
-Release giữ nguyên v0.31.1 Governed Memory Promotion & Context Binding,
-v0.31.0 Governed Learning Signal Integration, v0.30.0 Context Authority &
-Untrusted Provenance và predecessor **v0.29.5 — Native Physical Isolation Extensions**.
+Release giữ nguyên v0.31.2 Closed-Loop Skill & Policy Improvement,
+v0.31.1 Governed Memory Promotion & Context Binding và predecessor
+**v0.29.5 — Native Physical Isolation Extensions**.

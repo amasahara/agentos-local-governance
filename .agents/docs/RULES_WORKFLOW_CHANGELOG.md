@@ -1,3 +1,12 @@
+## v0.31.3 — Learning Effectiveness & Drift
+
+- Schema remains 64; no migration 65.
+- Measures observational effectiveness from actual knowledge context inclusion.
+- Uses deterministic matched outcome cohorts with Wilson intervals and z-test reporting.
+- Distinguishes architecture review, stale evidence, and unresolved scope conservatively.
+- Reuses Human Decision for explicit review; no automatic knowledge deactivation/supersede.
+- MCP remains read-only at 132 tools; learning evidence gains no instruction authority.
+
 ## v0.31.2 — Closed-Loop Skill & Policy Improvement
 
 - Schema remains 64; no migration 65.

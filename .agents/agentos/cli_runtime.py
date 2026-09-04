@@ -48,6 +48,7 @@ FEATURE_CLI_MODULES = (
     "learning_cli",
     "memory_promotion_cli",
     "closed_loop_improvement_cli",
+    "learning_effectiveness_cli",
     "adaptive_budget_cli",
     "context_evaluation_cli",
     "consolidation_cockpit_cli",

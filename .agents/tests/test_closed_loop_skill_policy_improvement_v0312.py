@@ -338,9 +338,12 @@ def test_four_new_commands_are_agent_plane_only() -> None:
         added
         & set(cli_runtime.CONTROL_PLANE_COMMANDS)
     )
-    assert len(registry) == 360
-    assert len(agent) == 263
-    assert len(privileged) == 99
+    # Historical v0.31.2 surface floors. Successor releases may add commands,
+    # while this test still proves the v0.31.2 closed-loop commands remain
+    # agent-plane-only. The current release owns exact surface counts.
+    assert len(registry) >= 360
+    assert len(agent) >= 263
+    assert len(privileged) >= 99
 
 
 def test_existing_authority_surfaces_and_mcp_unchanged() -> None:

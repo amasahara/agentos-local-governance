@@ -82,6 +82,8 @@ CORE_FILES = (
     ".agents/agentos/memory_promotion_cli.py",
     ".agents/agentos/closed_loop_improvement.py",
     ".agents/agentos/closed_loop_improvement_cli.py",
+    ".agents/agentos/learning_effectiveness.py",
+    ".agents/agentos/learning_effectiveness_cli.py",
 )
 RELEASE_FILES = (
     ".agents/tests/test_release_line_endings_v0242.py",
@@ -203,6 +205,8 @@ RELEASE_FILES = (
     ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md",
     ".agents/tests/test_closed_loop_skill_policy_improvement_v0312.py",
     ".agents/docs/CLOSED_LOOP_SKILL_POLICY_IMPROVEMENT_V0312.md",
+    ".agents/tests/test_learning_effectiveness_drift_v0313.py",
+    ".agents/docs/LEARNING_EFFECTIVENESS_DRIFT_V0313.md",
     ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
 )
 EXTENSION_FILES = (

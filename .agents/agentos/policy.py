@@ -1105,6 +1105,43 @@ def _validate_governed_learning_policy_v0310(policy: dict[str, Any], version: tu
         raise RuntimeError("human review is required for learning-driven state change")
     if effectiveness.get("causal_effectiveness_claim_allowed") is not False:
         raise RuntimeError("causal effectiveness claims are forbidden in v0.31.0")
+    if version >= (0, 31, 3):
+        for key in (
+            "comparative_effectiveness_enabled",
+            "drift_detection_enabled",
+            "actual_context_inclusion_required",
+            "architecture_match_required",
+            "human_review_required_for_state_change",
+            "explicit_review_request_required",
+        ):
+            if effectiveness.get(key) is not True:
+                raise RuntimeError("learning effectiveness required invariant disabled:" + key)
+        for key in (
+            "automatic_review_request_creation",
+            "automatic_deactivation_allowed",
+            "automatic_supersede_allowed",
+            "automatic_stale_status_mutation",
+            "causal_effectiveness_claim_allowed",
+            "provider_model_matching_required",
+            "mcp_mutation_allowed",
+        ):
+            if effectiveness.get(key) is not False:
+                raise RuntimeError("learning effectiveness authority invariant violated:" + key)
+        for key in (
+            "minimum_treatment_tasks",
+            "minimum_control_tasks",
+            "minimum_distinct_tasks",
+            "window_days",
+            "small_sample_warning_below",
+        ):
+            if int(effectiveness.get(key, 0)) <= 0:
+                raise RuntimeError("learning effectiveness threshold invalid:" + key)
+        if not 0.0 < float(effectiveness.get("significance_alpha", 0.0)) < 1.0:
+            raise RuntimeError("learning effectiveness alpha invalid")
+        if not 0.0 < float(effectiveness.get("minimum_effect_size", 0.0)) <= 1.0:
+            raise RuntimeError("learning effectiveness effect size invalid")
+        if effectiveness.get("review_options") != ["retain", "revise", "supersede", "deactivate"]:
+            raise RuntimeError("learning effectiveness review options invalid")
     mcp = section.get("mcp") or {}
     if mcp.get("mutation_allowed") is not False or mcp.get("read_only") is not True:
         raise RuntimeError("governed learning MCP must remain read-only")

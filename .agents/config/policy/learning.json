@@ -42,9 +42,32 @@
       "ordinary_governed_execution_may_continue_without_learning": true
     },
     "effectiveness": {
+      "actual_context_inclusion_required": true,
+      "architecture_match_required": true,
       "automatic_deactivation_allowed": false,
+      "automatic_review_request_creation": false,
+      "automatic_stale_status_mutation": false,
+      "automatic_supersede_allowed": false,
       "causal_effectiveness_claim_allowed": false,
-      "human_review_required_for_state_change": true
+      "comparative_effectiveness_enabled": true,
+      "drift_detection_enabled": true,
+      "explicit_review_request_required": true,
+      "human_review_required_for_state_change": true,
+      "mcp_mutation_allowed": false,
+      "minimum_control_tasks": 5,
+      "minimum_distinct_tasks": 5,
+      "minimum_effect_size": 0.1,
+      "minimum_treatment_tasks": 5,
+      "provider_model_matching_required": false,
+      "review_options": [
+        "retain",
+        "revise",
+        "supersede",
+        "deactivate"
+      ],
+      "significance_alpha": 0.05,
+      "small_sample_warning_below": 30,
+      "window_days": 90
     },
     "enabled": true,
     "mcp": {

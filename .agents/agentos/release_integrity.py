@@ -78,6 +78,8 @@ CORE_FILES = (
     ".agents/agentos/learning_signals.py",
     ".agents/agentos/learning_cli.py",
     ".agents/agentos/mcp_v0310.py",
+    ".agents/agentos/memory_promotion.py",
+    ".agents/agentos/memory_promotion_cli.py",
 )
 RELEASE_FILES = (
     ".agents/tests/test_release_line_endings_v0242.py",
@@ -195,6 +197,8 @@ RELEASE_FILES = (
     ".agents/docs/CONTEXT_AUTHORITY_UNTRUSTED_PROVENANCE_V0300.md",
     ".agents/tests/test_governed_learning_signals_v0310.py",
     ".agents/docs/GOVERNED_LEARNING_SIGNAL_INTEGRATION_V0310.md",
+    ".agents/tests/test_governed_memory_promotion_v0311.py",
+    ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md",
     ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
 )
 EXTENSION_FILES = (

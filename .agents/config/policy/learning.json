@@ -31,13 +31,23 @@
       ]
     },
     "promotion": {
+      "active_status": "active",
+      "architecture_baseline_revalidation_required": true,
       "automatic_architecture_mutation": false,
+      "automatic_memory_activation": false,
       "automatic_memory_authority_promotion": false,
+      "automatic_memory_candidate_flagging": true,
       "automatic_policy_activation": false,
       "automatic_skill_graduation": false,
+      "candidate_memory_kind": "procedural",
+      "candidate_status": "candidate",
+      "distinct_completed_tasks_required": true,
+      "human_decision_required_for_memory_activation": true,
       "minimum_distinct_tasks": 2,
       "minimum_occurrences": 3,
       "promotion_cooldown_days": 7,
+      "rejected_status": "rejected",
+      "source_signal_revalidation_required": true,
       "window_days": 30
     },
     "retention": {

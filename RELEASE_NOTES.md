@@ -1,38 +1,87 @@
-# AgentOS Local Governance v0.31.0 — Governed Learning Signal Integration
+# AgentOS Local Governance v0.31.1 — Governed Memory Promotion & Context Binding
 
 Database schema: **64**
 
-v0.31.0 adds schema-64 `learning_signals`, `learning_signal_links`, and
-`knowledge_usage` as a thin linkage layer across existing verification, outcome,
-finding, memory/skill, and context systems.
+v0.31.1 turns repeated, verified project findings into reusable project-memory
+candidates through the existing `project_memory`, learning-link, Human Decision,
+and context retrieval paths.
 
-Raw learning signals are not injected into context. Existing skill/memory/finding
-remain project evidence with no instruction authority. MCP is read-only.
+No migration 65 and no parallel lesson or feedback subsystem are introduced.
 
-Learning observation is degraded-safe; existing governance/security/architecture/
-write/Context Authority boundaries remain fail-closed under their own contracts.
+## Governed promotion
 
-No automatic skill graduation, policy activation, Architecture mutation, or
-knowledge deactivation is introduced. Canonical signals are not automatically
-archived/deleted in this node.
+Default eligibility requires:
 
-Predecessors preserved:
+- at least 3 occurrences;
+- at least 2 distinct verified tasks;
+- evidence within a 30-day working window;
+- current source-hash revalidation;
+- active Architecture Authority baseline match;
+- 7-day promotion cooldown after rejected/stale candidates.
+
+Automatic behavior may flag/create only `project_memory(status='candidate')`.
+Existing retrieval selects active memory, so candidates are not injected into
+future context.
+
+Activation requires an explicit resolved Human Decision and the privileged
+`memory-promotion-finalize` command. Approval revalidates source hashes,
+distinct-task eligibility, occurrence threshold, candidate/link identity, and
+the active architecture baseline. Rejection produces `status='rejected'`.
+
+## Context Authority
+
+Activated promoted memory continues to use existing `knowledge_memory`
+provenance:
+
+```text
+trust_class           = project_evidence
+authority_class       = none
+instruction_authority = false
+```
+
+Human approval authorizes only the lifecycle state transition. It does not turn
+memory content into human-request or governance authority. Learning-derived
+evidence may change `provenance_manifest_hash` when included, but cannot by
+itself change `context_authority_hash`.
+
+## MCP and automation boundary
+
+v0.31.1 adds no MCP tool. The validated MCP surface remains 132 tools and the
+v0.31.0 learning MCP surface remains read-only.
+
+There is no automatic memory activation, skill graduation, policy activation, or
+Architecture Authority mutation.
+
+Candidate observation/flagging is degraded-safe. Activation remains fail-closed
+for missing human approval, stale evidence, eligibility regression, architecture
+drift, or candidate identity mismatch.
+
+## Predecessor contracts
+
+v0.31.1 preserves:
+- v0.31.0 — Governed Learning Signal Integration
 - v0.30.1 — Release & Schema Metadata Coherence
-- v0.30.0 — Context Authority & Untrusted Provenance. Its bounded non-claims remain explicit: this release does not claim prompt injection elimination, semantic correctness, model-manipulation prevention, or human-review replacement.
+- v0.30.0 — Context Authority & Untrusted Provenance
 - v0.29.5 — Native Physical Isolation Extensions
-
-Next node: v0.31.1 — Governed Memory Promotion & Context Binding.
-
-## Raw-signal context boundary
-
-Raw `learning_signals` are not registered as a Context Authority source kind and
-are never retrieved by `context_runtime`. Existing promoted `skill`, `memory`,
-and `finding` objects continue to use the existing project-evidence provenance
-path.
-
-The v0.29.5 predecessor chain remains explicit:
-
 - v0.29.4 Restricted Token
-- restricted_token_attested = true
-- low_integrity_attested = true
-- host_filesystem_isolation_attested = false
+
+### Preserved Windows predecessor attestation markers
+
+The bounded predecessor contracts remain unchanged:
+
+```text
+v0.29.4 Restricted Token
+restricted_token_attested = true
+v0.29.5 — Native Physical Isolation Extensions
+low_integrity_attested = true
+host_filesystem_isolation_attested = false
+```
+
+These markers are scoped release attestations and are not a claim of general
+host filesystem isolation.
+
+This release does not claim prompt injection elimination, semantic correctness,
+causal learning effectiveness, human-review replacement, or general host
+containment.
+
+Next node: **v0.31.2 — Closed-Loop Skill & Policy Improvement**.

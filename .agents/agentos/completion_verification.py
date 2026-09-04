@@ -475,6 +475,20 @@ def verify_completion(
         except Exception as exc:
             # Learning observation is degraded-safe; verification remains authoritative.
             learning_error=f"{type(exc).__name__}:{exc}"
+        try:
+            from .memory_promotion import flag_memory_promotion_candidates_for_task
+            memory_promotion = flag_memory_promotion_candidates_for_task(
+                root,
+                str(request["task_id"]),
+                raised_by_session=str(verifier_session_id),
+            )
+        except Exception as promotion_exc:
+            # Candidate flagging is degraded-safe; verification remains authoritative.
+            memory_promotion = {
+                "ok": False,
+                "degraded": True,
+                "error": f"{type(promotion_exc).__name__}:{promotion_exc}",
+            }
     return {
         **event_payload,
         "external_event_hash":external_hash or None,
@@ -484,6 +498,7 @@ def verify_completion(
             else None
         ),
         "learning_degraded":learning_error is not None,
+        "memory_promotion": memory_promotion if request_status=="verified" else None,
         "learning_error":learning_error,
     }
 

@@ -68,6 +68,53 @@ def remember(root: Path, kind: str, statement: str, source_path: str | None=None
     return {"memory_id":cur.lastrowid,"kind":kind,"status":"active","source_hash":source_hash}
 
 
+def remember_candidate(
+    root: Path,
+    kind: str,
+    statement: str,
+    *,
+    source_hash: str,
+    task_id: str,
+    last_confirmed_task_id: str,
+    confidence: float,
+    evidence_hash: str,
+    owner_scope: str = "project",
+    sensitivity: str = "normal",
+) -> dict[str, Any]:
+    """Store a non-active governed project-memory promotion candidate."""
+    if kind not in MEMORY_KINDS:
+        raise ValueError(f"invalid memory kind: {kind}")
+    if not 0 <= confidence <= 1:
+        raise ValueError("confidence must be between 0 and 1")
+    source_hash = str(source_hash or "").strip().lower()
+    evidence_hash = str(evidence_hash or "").strip().lower()
+    if len(source_hash) != 64 or len(evidence_hash) != 64:
+        raise ValueError("candidate source_hash and evidence_hash must be sha256")
+    if owner_scope != "project":
+        raise ValueError("learning promotion candidates must be project scoped")
+    with connect(root, immediate=True) as c:
+        cur = c.execute(
+            """INSERT INTO project_memory(
+                   kind,statement,source_path,source_hash,first_seen_task_id,
+                   last_confirmed_task_id,confidence,evidence_hash,status,
+                   owner_scope,sensitivity,consent_source,expires_at
+               ) VALUES(?,?,NULL,?,?,?,?,?,'candidate',?,?,NULL,NULL)""",
+            (
+                kind, statement, source_hash, str(task_id),
+                str(last_confirmed_task_id), float(confidence),
+                evidence_hash, owner_scope, sensitivity,
+            ),
+        )
+        memory_id = int(cur.lastrowid)
+    return {
+        "memory_id": memory_id,
+        "kind": kind,
+        "status": "candidate",
+        "source_hash": source_hash,
+        "evidence_hash": evidence_hash,
+    }
+
+
 def query_memory(root: Path, query: str, kind: str | None=None, limit: int=20, include_stale: bool=False, identity: str | None=None) -> list[dict[str, Any]]:
     """Query project memory and recurring findings."""
     clauses=["statement LIKE ?"]; params:[Any]=[f"%{query}%"]

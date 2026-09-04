@@ -1021,6 +1021,32 @@ def _validate_governed_learning_policy_v0310(policy: dict[str, Any], version: tu
     ):
         if promotion.get(key) is not False:
             raise RuntimeError("governed learning automatic authority mutation forbidden:" + key)
+
+    if version >= (0, 31, 1):
+        for key in (
+            "automatic_memory_candidate_flagging",
+            "distinct_completed_tasks_required",
+            "source_signal_revalidation_required",
+            "architecture_baseline_revalidation_required",
+            "human_decision_required_for_memory_activation",
+        ):
+            if promotion.get(key) is not True:
+                raise RuntimeError("governed memory promotion invariant disabled:" + key)
+        for key in (
+            "automatic_memory_activation",
+            "automatic_memory_authority_promotion",
+            "automatic_skill_graduation",
+            "automatic_policy_activation",
+            "automatic_architecture_mutation",
+        ):
+            if promotion.get(key) is not False:
+                raise RuntimeError("governed memory promotion authority mutation forbidden:" + key)
+        if promotion.get("candidate_status") != "candidate":
+            raise RuntimeError("governed memory candidate status is invalid")
+        if promotion.get("active_status") != "active":
+            raise RuntimeError("governed memory active status is invalid")
+        if promotion.get("rejected_status") != "rejected":
+            raise RuntimeError("governed memory rejected status is invalid")
     context = section.get("context") or {}
     if context.get("learning_signals_directly_injected") is not False:
         raise RuntimeError("raw learning signals must not be injected into context")

@@ -89,7 +89,10 @@ def test_cli_registry_adds_agent_plane_commands_only():
     assert not (expected & set(privileged))
     assert len(registry) >= 344
     assert len(agent) >= 248
-    assert len(privileged) == 98
+    # v0.29.0 invariant: the completion surface itself adds no privileged
+    # commands. Successor releases may add separately governed control-plane
+    # commands, which are pinned by their own release-node tests.
+    assert len(privileged) >= 98
 
 
 def test_cli_parser_registers_three_completion_commands():

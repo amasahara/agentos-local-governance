@@ -1,3 +1,11 @@
+## v0.31.1 — Governed Memory Promotion & Context Binding
+
+- Schema remains 64; no migration 65.
+- Reuses project_memory candidate state, learning links, and Human Decision.
+- Requires distinct verified tasks, source freshness, architecture match, and cooldown.
+- Candidate flagging may be automatic; activation is human-confirmed and privileged.
+- Promoted memory remains project evidence with no instruction authority.
+
 ## v0.31.0 — Governed Learning Signal Integration
 
 - Schema 63 → 64.

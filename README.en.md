@@ -90,28 +90,21 @@ Version history belongs in [CHANGELOG.md](CHANGELOG.md), Git history, tags, and 
 State the problem and acceptance criteria, place changes by responsibility and lifecycle, update relevant tests and documentation, run release validation and manifest verification, and do not commit runtime caches or reproducible test output.
 
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
+
 ## Current release
-**v0.31.0 — Governed Learning Signal Integration** · schema **64**
+**v0.31.1 — Governed Memory Promotion & Context Binding** · schema **64**
 
-Database schema: **64**
+v0.31.1 turns recurring findings verified across distinct tasks into
+`project_memory(status='candidate')` using the existing learning-link and memory
+subsystems. Candidates are not retrieved into context until an explicit Human
+Decision is confirmed and the control plane finalizes the lifecycle transition.
 
-v0.31.0 adds governed learning linkage through `learning_signals`,
-`learning_signal_links`, and `knowledge_usage`. Raw learning signals remain
-telemetry/linkage only: they are not registered as a Context Authority source
-kind and are never injected directly into context. `context_runtime` continues
-to retrieve only `skill`, `memory`, and `finding`.
+Promoted memory remains `project_evidence`, with `authority_class=none` and
+`instruction_authority=false`. There is no automatic memory activation, skill
+graduation, policy activation, Architecture Authority mutation, or learning MCP
+mutation.
 
-Learning-derived knowledge continues through the existing project-evidence
-provenance path and never gains instruction authority. This release does not
-auto-graduate skills, auto-activate policy, mutate Architecture Authority, or
-auto-deactivate knowledge.
-
-### Inherited predecessor contracts
-
-v0.31.0 preserves **v0.30.1 — Release & Schema Metadata Coherence** and
-**v0.30.0 — Context Authority & Untrusted Provenance**.
-
-It also preserves **v0.29.5 — Native Physical Isolation Extensions** and its
-bounded non-claims: Windows enforcement remains scoped to AgentOS-mediated
-process execution and does not imply general host isolation or same-user
-host-bypass resistance.
+v0.31.1 preserves v0.31.0 Governed Learning Signal Integration, v0.30.1 Release
+& Schema Metadata Coherence, v0.30.0 Context Authority & Untrusted Provenance,
+and the existing bounded Windows enforcement contracts.
+The release also explicitly preserves the predecessor contract **v0.29.5 — Native Physical Isolation Extensions** and its bounded Windows-isolation non-claims.

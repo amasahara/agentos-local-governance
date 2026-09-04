@@ -212,6 +212,55 @@ def _cross_task_eligible(c: Any, task_id: str, source_type: str) -> bool:
     return source_type == "completion_verification" or _verified_completion_exists(c, task_id)
 
 
+def revalidate_learning_signal(
+    root: Path,
+    signal_id: str,
+    *,
+    persist_eligibility: bool = False,
+) -> dict[str, Any]:
+    """Revalidate one source-bound signal without copying raw source content."""
+    with connect(root, immediate=bool(persist_eligibility)) as c:
+        row = c.execute(
+            "SELECT * FROM learning_signals WHERE signal_id=?",
+            (str(signal_id),),
+        ).fetchone()
+        if not row:
+            raise LearningSignalError("learning_signal_missing")
+        signal = dict(row)
+        current_hash = _source_current_hash(
+            c,
+            str(signal["task_id"]),
+            str(signal["source_type"]),
+            str(signal["source_id"]),
+        )
+        source_current = current_hash == str(signal["source_hash"])
+        eligible = _cross_task_eligible(
+            c,
+            str(signal["task_id"]),
+            str(signal["source_type"]),
+        )
+        if persist_eligibility and eligible and not int(signal["cross_task_eligible"]):
+            c.execute(
+                "UPDATE learning_signals SET cross_task_eligible=1 WHERE signal_id=?",
+                (str(signal_id),),
+            )
+    return {
+        "ok": True,
+        "signal_id": str(signal["signal_id"]),
+        "task_id": str(signal["task_id"]),
+        "source_type": str(signal["source_type"]),
+        "source_id": str(signal["source_id"]),
+        "source_hash": str(signal["source_hash"]),
+        "current_source_hash": current_hash,
+        "source_current": bool(source_current),
+        "cross_task_eligible": bool(eligible),
+        "architecture_baseline_hash": signal.get("architecture_baseline_hash"),
+        "context_authority_hash": signal.get("context_authority_hash"),
+        "provenance_manifest_hash": signal.get("provenance_manifest_hash"),
+        "instruction_authority": False,
+    }
+
+
 def create_learning_signal(root: Path, *, task_id: str, session_id: str | None,
                            signal_kind: str, source_type: str, source_id: str,
                            expected_source_hash: str | None = None) -> dict[str, Any]:

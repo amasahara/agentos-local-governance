@@ -128,16 +128,16 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/GOVERNED_LEARNING_SIGNAL_INTEGRATION_V0310.md"
+      ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md"
     ],
-    "current_release_name": "Governed Learning Signal Integration",
+    "current_release_name": "Governed Memory Promotion & Context Binding",
     "current_schema": 64,
     "current_schema_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/GOVERNED_LEARNING_SIGNAL_INTEGRATION_V0310.md"
+      ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md"
     ],
     "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
     "current_version_files": [
@@ -145,7 +145,7 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/GOVERNED_LEARNING_SIGNAL_INTEGRATION_V0310.md"
+      ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -157,7 +157,7 @@
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
       ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
-      ".agents/docs/GOVERNED_LEARNING_SIGNAL_INTEGRATION_V0310.md"
+      ".agents/docs/GOVERNED_MEMORY_PROMOTION_CONTEXT_BINDING_V0311.md"
     ]
   },
   "governed_learning_policy": {
@@ -192,13 +192,23 @@
       ]
     },
     "promotion": {
+      "active_status": "active",
+      "architecture_baseline_revalidation_required": true,
       "automatic_architecture_mutation": false,
+      "automatic_memory_activation": false,
       "automatic_memory_authority_promotion": false,
+      "automatic_memory_candidate_flagging": true,
       "automatic_policy_activation": false,
       "automatic_skill_graduation": false,
+      "candidate_memory_kind": "procedural",
+      "candidate_status": "candidate",
+      "distinct_completed_tasks_required": true,
+      "human_decision_required_for_memory_activation": true,
       "minimum_distinct_tasks": 2,
       "minimum_occurrences": 3,
       "promotion_cooldown_days": 7,
+      "rejected_status": "rejected",
+      "source_signal_revalidation_required": true,
       "window_days": 30
     },
     "retention": {
@@ -538,7 +548,7 @@
       63,
       64
     ],
-    "schema_change": "schema 64 governed learning linkage",
+    "schema_change": "no schema change; v0.31.1 reuses project_memory and learning_signal_links",
     "schema_fingerprint_required": true,
     "schema_migration_markers_preserved": true,
     "source_database_write_authority_changed": false,
@@ -558,7 +568,7 @@
     "updater_scripts_used": false,
     "workflow_state_preserved": true
   },
-  "version": "0.31.0",
+  "version": "0.31.1",
   "web_control_plane_policy": {
     "architecture_approval_authority": false,
     "command_center_read_model_only": true,

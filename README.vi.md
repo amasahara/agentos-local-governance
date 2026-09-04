@@ -102,27 +102,20 @@ Xem hướng dẫn theo hành trình:
 - `tools/`: công cụ build/validation của distribution, không cài vào application project.
 
 Lịch sử phiên bản thuộc [CHANGELOG.md](CHANGELOG.md), Git history, tags và relea
+
 ## Bản phát hành hiện hành
-**v0.31.0 — Governed Learning Signal Integration** · schema **64**
+**v0.31.1 — Governed Memory Promotion & Context Binding** · schema **64**
 
-Database schema: **64**
+v0.31.1 đưa recurring finding đã được xác minh qua nhiều task vào chính
+`project_memory` dưới dạng `status='candidate'`. Candidate không được retrieval
+vào context cho tới khi có Human Decision xác nhận và control-plane finalize.
 
-v0.31.0 bổ sung lớp liên kết learning có quản trị gồm `learning_signals`,
-`learning_signal_links` và `knowledge_usage`. Raw learning signal chỉ là
-telemetry/linkage: không được đăng ký thành Context Authority source kind và
-không được inject trực tiếp vào context. `context_runtime` tiếp tục chỉ retrieve
-`skill`, `memory` và `finding`.
+Promotion vẫn là `project_evidence`, `authority_class=none`,
+`instruction_authority=false`. Không có auto memory activation, auto skill
+graduation, auto policy activation, Architecture Authority mutation hay MCP
+learning mutation.
 
-Learning-derived knowledge vẫn đi qua provenance hiện hữu của project evidence,
-không có instruction authority. Release không tự graduate skill, không tự activate
-policy, không tự thay Architecture Authority và không tự deactivate knowledge.
-
-### Kế thừa các predecessor contract
-
-v0.31.0 giữ nguyên **v0.30.1 — Release & Schema Metadata Coherence** và
-**v0.30.0 — Context Authority & Untrusted Provenance**.
-
-v0.31.0 cũng giữ nguyên **v0.29.5 — Native Physical Isolation Extensions** cùng
-các non-claim giới hạn: các kiểm chứng Windows chỉ thuộc AgentOS-mediated process
-execution, không đồng nghĩa với general host isolation hoặc same-user host-bypass
-resistance.
+v0.31.1 giữ nguyên v0.31.0 Governed Learning Signal Integration, v0.30.1 Release
+& Schema Metadata Coherence, v0.30.0 Context Authority & Untrusted Provenance và
+các predecessor Windows enforcement contracts.
+Release cũng tiếp tục bảo tồn predecessor contract **v0.29.5 — Native Physical Isolation Extensions** và các non-claim Windows isolation đã được giới hạn từ các node trước.

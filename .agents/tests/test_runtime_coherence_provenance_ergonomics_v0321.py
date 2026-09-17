@@ -165,7 +165,7 @@ def test_v0321_base_governance_version_remains_historical_overlay_boundary() -> 
         (ROOT / ".agents/config/release_policy.json").read_text(encoding="utf-8")
     )
     assert base["version"] == "0.26.3"
-    assert release["version"] == "0.32.1"
+    assert release["version"] == (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     assert "windows_process_tree_containment_policy" not in base
     assert "windows_process_tree_containment_policy" in release
 

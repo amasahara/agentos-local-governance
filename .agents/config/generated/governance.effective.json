@@ -764,16 +764,16 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
+      ".agents/docs/PROJECT_ARTIFACT_PLACEMENT_PATH_SAFETY_V0322.md"
     ],
-    "current_release_name": "Runtime Coherence & Provenance Ergonomics",
+    "current_release_name": "Project Artifact Placement & Path Safety",
     "current_schema": 65,
     "current_schema_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
+      ".agents/docs/PROJECT_ARTIFACT_PLACEMENT_PATH_SAFETY_V0322.md"
     ],
     "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
     "current_version_files": [
@@ -781,7 +781,7 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
+      ".agents/docs/PROJECT_ARTIFACT_PLACEMENT_PATH_SAFETY_V0322.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -793,7 +793,7 @@
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
       ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
-      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
+      ".agents/docs/PROJECT_ARTIFACT_PLACEMENT_PATH_SAFETY_V0322.md"
     ]
   },
   "drift_policy": {
@@ -1649,7 +1649,7 @@
       ".agents/docs/EXISTING_PROJECT.md",
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
-      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
+      ".agents/docs/PROJECT_ARTIFACT_PLACEMENT_PATH_SAFETY_V0322.md"
     ],
     "current_docs_must_match_release": true,
     "identity_sources": [
@@ -1664,7 +1664,7 @@
       "governed_project"
     ],
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
-    "version": "0.32.1"
+    "version": "0.32.2"
   },
   "repository_policy": {
     "application_root_metadata_owned_by_agentos": false,
@@ -2064,7 +2064,7 @@
     "version": 1,
     "workflow_state_preserved": true
   },
-  "version": "0.32.1",
+  "version": "0.32.2",
   "windows_physical_isolation_policy": {
     "activation_complete": true,
     "activation_version": "0.29.5",

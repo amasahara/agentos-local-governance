@@ -117,12 +117,9 @@ Trước khi gửi thay đổi:
 Các thay đổi governance phải giữ `AGENTS.md`, structured policy, runtime, tests, documentation, changelog và release identity nhất quán.
 
 ## Bản phát hành hiện hành
-**v0.32.1 — Runtime Coherence & Provenance Ergonomics** · schema **65**
+**v0.32.2 — Project Artifact Placement & Path Safety** · schema **65**
 
-v0.32.1 giữ nguyên schema 65, harden `knowledge_usage` bằng SQLite savepoint,
-thêm `execution-provenance-list`, và expose hai MCP read-only
-`agentos.execution_provenance_get` / `agentos.execution_provenance_list` qua
-sanitized projection.
+v0.32.2 sửa cơ chế CREATE để giữ nguyên đường dẫn tương đối tường minh do dự án cung cấp, chỉ dùng `source_root` cho tên file đơn, chặn đường dẫn tuyệt đối, drive-qualified và parent-traversal trước kiểm tra quyền ghi, đồng thời giữ nguyên schema 65.
 
 Registration vẫn privileged-only; không MCP mutation, không instruction
 authority, không auto chọn provider/model và không claim remote cryptographic

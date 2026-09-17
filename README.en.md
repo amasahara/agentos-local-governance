@@ -92,12 +92,9 @@ State the problem and acceptance criteria, place changes by responsibility and l
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
 
 ## Current release
-**v0.32.1 — Runtime Coherence & Provenance Ergonomics** · schema **65**
+**v0.32.2 — Project Artifact Placement & Path Safety** · schema **65**
 
-v0.32.1 keeps schema 65, hardens `knowledge_usage` with a SQLite savepoint,
-adds `execution-provenance-list`, and exposes two read-only MCP tools
-`agentos.execution_provenance_get` / `agentos.execution_provenance_list`
-through a sanitized projection.
+v0.32.2 preserves explicit project-relative CREATE targets, uses `source_root` only for basename-only placement, rejects absolute, drive-qualified, and parent-traversal targets before write authorization, and keeps schema 65.
 
 Registration remains privileged-only; there is no MCP mutation, instruction
 authority, automatic provider/model selection, or remote cryptographic

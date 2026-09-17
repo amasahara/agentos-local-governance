@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from . import __version__
@@ -133,12 +133,25 @@ def check_write(root: Path, task_id: str, target: str) -> dict[str, Any]:
     return {"allowed": allowed, "reason": reason, "target": rel or target}
 
 
+def _placement_path_error(target: str) -> str | None:
+    """Reject unsafe create paths before resolution, on every host platform."""
+    portable = target.replace("\\", "/")
+    windows = PureWindowsPath(target)
+    if windows.drive or windows.root or Path(portable).is_absolute():
+        return "placement_requires_relative_path"
+    if ".." in portable.split("/"):
+        return "placement_path_traversal"
+    if not portable or portable in {".", "./"} or "\x00" in portable or ":" in portable:
+        return "invalid_placement_target"
+    return None
+
+
 def resolve_placement(root: Path, filename: str, intent: str, feature: str | None = None, layer: str | None = None, file_kind: str | None = None, temporary: bool = False, task_id: str | None = None) -> str:
     """Resolve a deterministic project-relative placement for a new file.
 
     Args:
         root: Project root.
-        filename: Requested file name.
+        filename: Explicit project-relative path or basename for default placement.
         intent: Intended responsibility.
         feature: Optional feature or bounded context.
         layer: Optional architecture layer.
@@ -149,7 +162,11 @@ def resolve_placement(root: Path, filename: str, intent: str, feature: str | Non
     Returns:
         Project-relative path.
     """
-    del root, intent
+    del intent
+    # Preserve explicit paths, including invalid requests, for the write gate.
+    # Placement is not authorization and must never sanitize an unsafe target.
+    if _placement_path_error(filename) or "/" in filename or "\\" in filename:
+        return filename
     if temporary:
         if not task_id:
             raise RuntimeError("task_id is required for temporary placement")
@@ -159,7 +176,7 @@ def resolve_placement(root: Path, filename: str, intent: str, feature: str | Non
         return f"tests/{feature + '/' if feature else ''}{filename}"
     if file_kind == "script":
         return f"scripts/{filename}"
-    parts = ["src"]
+    parts = [str(load_policy(root).get("source_root", "src"))]
     if feature:
         parts.append(feature)
     if layer:
@@ -213,14 +230,21 @@ def prepare_change(root: Path, task_id: str, operation: str, target: str, intent
     if operation not in {"create", "modify"}:
         raise RuntimeError("operation must be create or modify")
     symbols = symbols or []
-    effective_target = resolve_placement(root, Path(target).name, intent, feature, layer, file_kind, temporary, task_id) if operation == "create" else target
+    effective_target = resolve_placement(root, target, intent, feature, layer, file_kind, temporary, task_id) if operation == "create" else target
     similar = []
     for symbol in symbols:
         similar.extend(index_query(root, symbol, limit=5))
     seen = set()
     similar = [m for m in similar if not ((m["path"], m["qualname"]) in seen or seen.add((m["path"], m["qualname"]))) ]
     duplicates = [d for d in duplicate_report(root) if any(s["path"] == effective_target for s in d["symbols"])]
-    write = check_write(root, task_id, effective_target)
+    placement_error = _placement_path_error(effective_target) if operation == "create" else None
+    if placement_error:
+        with connect(root) as c:
+            c.execute("INSERT INTO write_audit(task_id,target,allowed,reason) VALUES(?,?,0,?)", (task_id, effective_target, placement_error))
+        write = {"allowed": False, "reason": placement_error, "target": effective_target}
+    else:
+        checked_target = effective_target.replace("\\", "/") if operation == "create" else effective_target
+        write = check_write(root, task_id, checked_target)
     blockers = [] if write["allowed"] else [write["reason"]]
     return {
         "task_id": task_id,

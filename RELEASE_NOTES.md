@@ -1,3 +1,40 @@
+# AgentOS Local Governance v0.32.2 — Project Artifact Placement & Path Safety
+
+Database schema: **65**
+
+v0.32.2 is a bounded patch release for explicit project-relative
+CREATE placement and path-safety regression coverage.
+
+## Changes
+
+- Preserve explicit project-relative CREATE targets instead of reducing
+  them to their basename.
+- Preserve configured `source_root` placement for basename-only CREATE
+  targets.
+- Reject absolute paths, drive-qualified paths, and parent traversal
+  before normal write authorization.
+- Preserve approved-scope and existing write-authorization semantics.
+- Add regression coverage for project-owned artifacts outside `src/`.
+- Add regression coverage for the hospital Baseline review-artifact path.
+
+## Compatibility
+
+VERSION = 0.32.2
+schema = 65
+previous release = 0.32.1
+
+No database migration is introduced.
+
+## Authority and security
+
+Explicit placement is not write authorization.
+
+This release does not widen approved scope, create a new internal-write
+capability, alter Human approval authority, or weaken sandbox, credential,
+context-authority, or project-preservation boundaries.
+
+---
+
 # AgentOS Local Governance v0.32.1 — Runtime Coherence & Provenance Ergonomics
 
 Database schema: **65**

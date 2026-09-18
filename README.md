@@ -117,17 +117,19 @@ Trước khi gửi thay đổi:
 Các thay đổi governance phải giữ `AGENTS.md`, structured policy, runtime, tests, documentation, changelog và release identity nhất quán.
 
 ## Bản phát hành hiện hành
-**v0.32.1 — Runtime Coherence & Provenance Ergonomics** · schema **65**
 
-v0.32.1 giữ nguyên schema 65, harden `knowledge_usage` bằng SQLite savepoint,
-thêm `execution-provenance-list`, và expose hai MCP read-only
-`agentos.execution_provenance_get` / `agentos.execution_provenance_list` qua
-sanitized projection.
+**v0.32.4 — Windows Trusted Gateway IPC & Capability Completion Stabilization** · schema **65**
 
-Registration vẫn privileged-only; không MCP mutation, không instruction
-authority, không auto chọn provider/model và không claim remote cryptographic
-attestation.
+v0.32.4 là bản vá tích lũy có phạm vi giới hạn trên nền v0.32.2: giữ
+nguyên phần bootstrap capability-session và ổn định completion-subject của
+v0.32.3, đồng thời bổ sung IPC gateway tin cậy trên Windows bằng AF_PIPE với
+DACL bảo vệ auth-key theo từng project. Hành vi AF_UNIX trên POSIX được giữ
+nguyên.
 
-Surface dự kiến: CLI 368 · agent 270 · privileged 100 · MCP 134.
+Gateway không mở TCP listener, không thêm raw process-creation primitive,
+không mở rộng quyền filesystem/process/network và không thay thế thẩm quyền
+phê duyệt của Human.
+
+Surface hiện tại: CLI 371 · agent 270 · privileged 103.
 
 Release giữ nguyên các predecessor contracts, bao gồm **v0.29.5 — Native Physical Isolation Extensions**; các bounded attestation/non-claims của các release trước không bị mở rộng.

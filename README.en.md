@@ -92,17 +92,18 @@ State the problem and acceptance criteria, place changes by responsibility and l
 Governance changes must keep `AGENTS.md`, structured policy, runtime enforcement, tests, documentation, changelog, and release identity coherent.
 
 ## Current release
-**v0.32.1 — Runtime Coherence & Provenance Ergonomics** · schema **65**
 
-v0.32.1 keeps schema 65, hardens `knowledge_usage` with a SQLite savepoint,
-adds `execution-provenance-list`, and exposes two read-only MCP tools
-`agentos.execution_provenance_get` / `agentos.execution_provenance_list`
-through a sanitized projection.
+**v0.32.4 — Windows Trusted Gateway IPC & Capability Completion Stabilization** · schema **65**
 
-Registration remains privileged-only; there is no MCP mutation, instruction
-authority, automatic provider/model selection, or remote cryptographic
-attestation claim.
+v0.32.4 is a cumulative bounded patch over v0.32.2. It preserves the
+v0.32.3 capability-session bootstrap and completion-subject stabilization,
+and adds trusted Windows gateway IPC using AF_PIPE with a protected
+per-project auth-key DACL. POSIX AF_UNIX behavior is preserved.
 
-Expected surface: CLI 368 · agent 270 · privileged 100 · MCP 134.
+The gateway adds no TCP listener, introduces no new raw process-creation
+primitive, does not widen filesystem/process/network authority, and does not
+replace Human approval.
+
+Current surface: CLI 371 · agent 270 · privileged 103.
 
 This release preserves predecessor contracts, including **v0.29.5 — Native Physical Isolation Extensions**; bounded predecessor attestations and non-claims are not broadened.

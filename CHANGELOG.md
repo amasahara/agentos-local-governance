@@ -1,3 +1,13 @@
+## v0.32.2 — Project Artifact Placement & Path Safety
+
+- Correct explicit project-relative CREATE placement.
+- Preserve `source_root` fallback for basename-only targets.
+- Reject absolute, drive-qualified, and parent-traversal CREATE targets before normal write authorization.
+- Preserve approved-scope and existing write-authority semantics.
+- Add regression coverage for project-owned targets outside `src/`.
+- Add regression coverage for the hospital Baseline review-artifact destination.
+- Keep database schema at 65; no migration 66.
+
 ## v0.32.1 — Runtime Coherence & Provenance Ergonomics
 
 - Keep schema 65; no migration 66.

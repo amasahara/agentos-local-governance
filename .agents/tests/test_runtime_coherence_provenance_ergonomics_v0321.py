@@ -101,9 +101,9 @@ def test_cli_list_is_agent_plane_and_registration_stays_privileged() -> None:
     assert "execution-provenance-list" not in privileged
     assert "execution-provenance-register" in privileged
     assert "execution-provenance-register" not in agent
-    assert len(registry) == 368
+    assert len(registry) == 371
     assert len(agent) == 270
-    assert len(privileged) == 100
+    assert len(privileged) == 103
 
 
 def test_learning_usage_savepoint_policy_and_source() -> None:
@@ -165,7 +165,7 @@ def test_v0321_base_governance_version_remains_historical_overlay_boundary() -> 
         (ROOT / ".agents/config/release_policy.json").read_text(encoding="utf-8")
     )
     assert base["version"] == "0.26.3"
-    assert release["version"] == "0.32.1"
+    assert release["version"] == (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     assert "windows_process_tree_containment_policy" not in base
     assert "windows_process_tree_containment_policy" in release
 

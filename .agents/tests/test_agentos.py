@@ -486,7 +486,9 @@ def test_security_schema_tables(tmp_path: Path) -> None:
 def test_capability_session_replay_and_revoke(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root = project(tmp_path); ready(root)
     monkeypatch.setenv("AGENTOS_AUDIT_HOME", str(tmp_path / "audit-home"))
+    from agentos.concurrency import claim_task
     from agentos.security import authenticate_request, issue_session_token, revoke_session
+    claim_task(root, "T1", "S1")
     issued = issue_session_token(root, "T1", "S1", ["filesystem.read"], 300)
     auth = authenticate_request(root, issued["session_token"], "T1", "filesystem.read", {"path": "src/a.py"}, "R1", 1)
     assert auth["session_id"] == "S1"
@@ -684,10 +686,13 @@ def test_controlled_evolution_requires_evaluation_and_staged_activation(tmp_path
 def test_multi_agent_requires_capability_role_and_fresh_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root=project(tmp_path); monkeypatch.setenv("AGENTOS_AUDIT_HOME",str(tmp_path/"audit")); ready(root)
     from agentos.collaboration import assign_role, collaboration_readiness, send_message
+    from agentos.concurrency import claim_task, handoff_task
     from agentos.context_runtime import build_context_pack
     from agentos.security import issue_session_token
     assert collaboration_readiness(root,"T1")["ok"] is False
+    claim_task(root,"T1","EXEC")
     issue_session_token(root,"T1","EXEC")
+    handoff_task(root,"T1","EXEC","REVIEW","test collaboration ownership handoff")
     issue_session_token(root,"T1","REVIEW")
     assign_role(root,"T1","EXEC","executor","operator")
     assign_role(root,"T1","REVIEW","reviewer","operator")
@@ -822,3 +827,87 @@ def test_v0192_v0195_capabilities(tmp_path):
     from agentos.storage import backup_create, backup_verify
     b=backup_create(root,".agents/runtime/test-backup.zip")
     assert backup_verify(root,b["path"])["ok"]
+
+
+# v0.32.2: explicit project artifact placement and containment regressions.
+@pytest.mark.parametrize("target,scope,expected,allowed", [
+    ("ho_so_du_an/a.md", ["ho_so_du_an/a.md"], "ho_so_du_an/a.md", True),
+    ("src/a.py", ["src/a.py"], "src/a.py", True),
+    ("other/a.md", ["ho_so_du_an/a.md"], "other/a.md", False),
+    ("../escape.txt", ["src"], "../escape.txt", False),
+    ("ho_so_du_an/../a.md", ["src", "a.md"], "ho_so_du_an/../a.md", False),
+    (".agents/agentos/core.py", ["ho_so_du_an"], ".agents/agentos/core.py", False),
+    ("ho_so_du_an/cho_duyet/a.md", ["ho_so_du_an/cho_duyet/"], "ho_so_du_an/cho_duyet/a.md", True),
+    ("a.py", ["src/a.py"], "src/a.py", True),
+    ("./a.md", ["a.md"], "./a.md", True),
+    (r"ho_so_du_an\a.md", ["ho_so_du_an/a.md"], r"ho_so_du_an\a.md", True),
+    ("C:/outside/a.py", ["src"], "C:/outside/a.py", False),
+    (r"C:\outside\a.py", ["src"], r"C:\outside\a.py", False),
+])
+def test_v0322_create_target_contract(tmp_path, target, scope, expected, allowed):
+    """Check supplied paths and scope in isolated fixtures; never write a target."""
+    root = project(tmp_path)
+    start_task(root, "placement", "Test project artifact placement")
+    approve_task(root, "placement", scope)
+    result = prepare_change(root, "placement", "create", target, "Create artifact")
+    assert result["effective_target"] == expected
+    assert result["write"]["allowed"] is allowed
+    assert result["ready"] is allowed
+
+
+def test_v0322_absolute_outside_create_is_denied(tmp_path):
+    """Keep an absolute request visible and deny it without basename fallback."""
+    root = project(tmp_path)
+    start_task(root, "placement", "Test absolute placement")
+    approve_task(root, "placement", ["src"])
+    target = str(tmp_path / "outside.py")
+    result = prepare_change(root, "placement", "create", target, "Create artifact")
+    assert result["effective_target"] == target
+    assert not result["ready"]
+
+
+def test_v0322_source_root_default_and_explicit_precedence(tmp_path):
+    """Honor the existing safe source_root setting only for basename placement."""
+    from agentos.core import resolve_placement
+    root = project(tmp_path)
+    (root / ".agents/config/governance.local.json").write_text(
+        json.dumps({"source_root": "application"}), encoding="utf-8")
+    assert resolve_placement(root, "a.py", "source") == "application/a.py"
+    assert resolve_placement(root, "docs/a.md", "documentation") == "docs/a.md"
+    assert resolve_placement(root, "a.py", "source", feature="orders", layer="domain") == "application/orders/domain/a.py"
+    assert resolve_placement(root, "a.py", "test", file_kind="test") == "tests/a.py"
+    assert resolve_placement(root, "a.py", "script", file_kind="script") == "scripts/a.py"
+
+
+def test_v0322_placement_does_not_grant_internal_write_authority(tmp_path):
+    """An internal-looking target still requires the project's approved scope."""
+    root = project(tmp_path)
+    start_task(root, "placement", "Test internal-looking target")
+    approve_task(root, "placement", ["ho_so_du_an/a.md"])
+    for target in [".agents/state/agentos.db", ".agents/runtime/arbitrary.md"]:
+        result = prepare_change(root, "placement", "create", target, "system_internal_write")
+        assert result["effective_target"] == target
+        assert not result["ready"]
+
+
+def test_v0322_exact_baseline_artifact_path(tmp_path):
+    """Verify the exact Human-approved artifact path in an isolated test project.
+
+    Args:
+        tmp_path: Pytest-managed temporary directory inside the maintenance repo.
+    Returns:
+        None; assertion failures identify placement or scope regressions.
+    Side Effects:
+        Creates only isolated fixture and governance state; no hospital access.
+    """
+    root = project(tmp_path)
+    target = "ho_so_du_an/cho_duyet/baseline_5_0_1/tiep_nhan/tiep_nhan_baseline.md"
+    start_task(root, "exact_placement", "Create the approved baseline artifact")
+    approve_task(root, "exact_placement", [target])
+    result = prepare_change(root, "exact_placement", "create", target, "Create review artifact")
+    assert result["requested_target"] == target
+    assert result["effective_target"] == target
+    assert result["placement"]["resolved_path"] == target
+    assert result["write"] == {"allowed": True, "reason": "approved_scope", "target": target}
+    assert result["ready"] is True
+    assert not (root / target).exists()

@@ -128,16 +128,16 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
+      ".agents/docs/WINDOWS_TRUSTED_GATEWAY_IPC_V0324.md"
     ],
-    "current_release_name": "Runtime Coherence & Provenance Ergonomics",
+    "current_release_name": "Windows Trusted Gateway IPC & Capability Completion Stabilization",
     "current_schema": 65,
     "current_schema_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
+      ".agents/docs/WINDOWS_TRUSTED_GATEWAY_IPC_V0324.md"
     ],
     "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
     "current_version_files": [
@@ -145,7 +145,7 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
+      ".agents/docs/WINDOWS_TRUSTED_GATEWAY_IPC_V0324.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -157,7 +157,7 @@
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
       ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
-      ".agents/docs/RUNTIME_COHERENCE_PROVENANCE_ERGONOMICS_V0321.md"
+      ".agents/docs/WINDOWS_TRUSTED_GATEWAY_IPC_V0324.md"
     ]
   },
   "execution_identity_policy": {
@@ -673,7 +673,7 @@
     "updater_scripts_used": false,
     "workflow_state_preserved": true
   },
-  "version": "0.32.1",
+  "version": "0.32.4",
   "web_control_plane_policy": {
     "architecture_approval_authority": false,
     "command_center_read_model_only": true,

@@ -38,6 +38,7 @@ from .drift import ack_baseline, drift_check, drift_diff
 from .indexing import duplicate_report, index_build, index_query, index_status
 from .incremental_index_benchmark import DEFAULT_BENCHMARK_FILE, check_incremental_index_benchmark, run_incremental_index_benchmark
 from .policy import approve_local_override, local_override_status, load_policy
+from .security import issue_session_token, revoke_session, session_status
 from .proxy import proxy_execute, proxy_submit_job
 from .external_audit import rotate_signing_key, verify_external_log
 from .tooling import complete_tool, egress_report, guard_tool
@@ -90,6 +91,9 @@ def parser() -> argparse.ArgumentParser:
     a=s.add_parser("release-resource"); _task_arg(a); a.add_argument("--lease-id",required=True,type=int)
     a=s.add_parser("list-resources"); _task_arg(a); a.add_argument("--all",action="store_true")
     a=s.add_parser("claim-task"); _task_arg(a)
+    a=s.add_parser("session-issue"); _task_arg(a); a.add_argument("--ttl",type=int,default=900)
+    a=s.add_parser("session-revoke"); _task_arg(a); a.add_argument("--token-id",required=True); a.add_argument("--revoked-by",required=True); a.add_argument("--reason",required=True)
+    a=s.add_parser("session-status"); _task_arg(a); a.add_argument("--target-session")
     a=s.add_parser("handoff-task"); _task_arg(a); a.add_argument("--to-session",required=True); a.add_argument("--note",required=True)
     a=s.add_parser("mark-step"); _task_arg(a); a.add_argument("--step",required=True); a.add_argument("--status",required=True,choices=["done","skipped"]); a.add_argument("--note",required=True)
     a=s.add_parser("workflow-status"); _task_arg(a)
@@ -313,7 +317,7 @@ def main(argv: list[str] | None = None) -> int:
     args=parser().parse_args(argv); root=Path(args.root).resolve(); session=normalize_session_id(args.session_id)
     try:
         tid=getattr(args,"task_id",None)
-        task_commands={"run-tests","role-assign","collaboration-readiness","message-send","message-list","job-submit","tools-discover","plan-submit","plan-show","precommit-check","context-build","context-status","context-explain","context-compare","memory-record","finding-record","approve-task","acquire-resource","heartbeat-resource","release-resource","list-resources","claim-task","handoff-task","mark-step","workflow-status","index-build","guard-tool","prepare-change","record-claim","list-claims","egress-report","cache-store","cache-lookup","report","proxy-execute","mcp-serve"}
+        task_commands={"run-tests","role-assign","collaboration-readiness","message-send","message-list","job-submit","tools-discover","plan-submit","plan-show","precommit-check","context-build","context-status","context-explain","context-compare","memory-record","finding-record","approve-task","acquire-resource","heartbeat-resource","release-resource","list-resources","claim-task","session-issue","session-revoke","session-status","handoff-task","mark-step","workflow-status","index-build","guard-tool","prepare-change","record-claim","list-claims","egress-report","cache-store","cache-lookup","report","proxy-execute","mcp-serve"}
         if args.cmd in task_commands:
             tid=resolve_task_id(root,tid,session)
         if args.cmd=="start-task":
@@ -327,6 +331,9 @@ def main(argv: list[str] | None = None) -> int:
         elif args.cmd=="release-resource": result=proxy_execute(root,tid,session,"agentos.release_resource",{"lease_id":args.lease_id})
         elif args.cmd=="list-resources": result=proxy_execute(root,tid,session,"agentos.list_resources",{"active_only":not args.all,"task_only":True})
         elif args.cmd=="claim-task": result=proxy_execute(root,tid,session,"agentos.claim_task",{})
+        elif args.cmd=="session-issue": result=issue_session_token(root,tid,session,None,args.ttl)
+        elif args.cmd=="session-revoke": result=revoke_session(root,args.token_id,args.revoked_by,args.reason)
+        elif args.cmd=="session-status": result=session_status(root,tid,args.target_session or session)
         elif args.cmd=="handoff-task": result=proxy_execute(root,tid,session,"agentos.handoff_task",{"to_session":args.to_session,"note":args.note})
         elif args.cmd=="mark-step": result=mark_step(root,tid,args.step,args.status,args.note)
         elif args.cmd=="workflow-status": result=workflow_status(root,tid)

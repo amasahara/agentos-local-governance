@@ -101,9 +101,9 @@ def test_cli_list_is_agent_plane_and_registration_stays_privileged() -> None:
     assert "execution-provenance-list" not in privileged
     assert "execution-provenance-register" in privileged
     assert "execution-provenance-register" not in agent
-    assert len(registry) == 368
+    assert len(registry) == 371
     assert len(agent) == 270
-    assert len(privileged) == 100
+    assert len(privileged) == 103
 
 
 def test_learning_usage_savepoint_policy_and_source() -> None:

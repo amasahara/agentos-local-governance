@@ -1,4 +1,17 @@
 {
+  "capability_session_bootstrap_policy": {
+    "agent_plane_issue_allowed": false,
+    "approved_task_required": true,
+    "capabilities_derived_from_approved_scope": true,
+    "control_plane_required": true,
+    "database_schema": 65,
+    "enabled": true,
+    "owner_session_required": true,
+    "requested_capabilities_must_be_subset": true,
+    "schema_migration_required": false,
+    "session_token_persisted_raw": false,
+    "version": 1
+  },
   "completion_verification_policy": {
     "database_schema": 62,
     "enabled": true,
@@ -87,16 +100,16 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/PROJECT_ARTIFACT_PLACEMENT_PATH_SAFETY_V0322.md"
+      ".agents/docs/WINDOWS_TRUSTED_GATEWAY_IPC_V0324.md"
     ],
-    "current_release_name": "Project Artifact Placement & Path Safety",
+    "current_release_name": "Windows Trusted Gateway IPC & Capability Completion Stabilization",
     "current_schema": 65,
     "current_schema_files": [
       "README.md",
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/PROJECT_ARTIFACT_PLACEMENT_PATH_SAFETY_V0322.md"
+      ".agents/docs/WINDOWS_TRUSTED_GATEWAY_IPC_V0324.md"
     ],
     "current_upgrade_guide": ".agents/docs/QUICKSTART.md",
     "current_version_files": [
@@ -104,7 +117,7 @@
       "README.vi.md",
       "README.en.md",
       "RELEASE_NOTES.md",
-      ".agents/docs/PROJECT_ARTIFACT_PLACEMENT_PATH_SAFETY_V0322.md"
+      ".agents/docs/WINDOWS_TRUSTED_GATEWAY_IPC_V0324.md"
     ],
     "local_link_check_files": [
       "README.md",
@@ -116,7 +129,7 @@
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
       ".agents/docs/RELEASE_SCHEMA_METADATA_COHERENCE_V0301.md",
-      ".agents/docs/PROJECT_ARTIFACT_PLACEMENT_PATH_SAFETY_V0322.md"
+      ".agents/docs/WINDOWS_TRUSTED_GATEWAY_IPC_V0324.md"
     ]
   },
   "privileged_control_plane_policy": {
@@ -165,7 +178,7 @@
       ".agents/docs/EXISTING_PROJECT.md",
       ".agents/docs/WINDOWS.md",
       ".agents/docs/REFERENCE.md",
-      ".agents/docs/PROJECT_ARTIFACT_PLACEMENT_PATH_SAFETY_V0322.md"
+      ".agents/docs/WINDOWS_TRUSTED_GATEWAY_IPC_V0324.md"
     ],
     "current_docs_must_match_release": true,
     "identity_sources": [
@@ -180,7 +193,7 @@
       "governed_project"
     ],
     "schema_authority": ".agents/agentos/schema_version.py:CURRENT_SCHEMA_VERSION",
-    "version": "0.32.2"
+    "version": "0.32.4"
   },
   "sandbox_workspace_runtime_profile_policy": {
     "async_credential_boundary_attested": true,

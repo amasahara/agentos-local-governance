@@ -1,3 +1,39 @@
+# AgentOS Local Governance v0.32.4 — Windows Trusted Gateway IPC & Capability Completion Stabilization
+
+Database schema: **65**
+
+v0.32.4 is a cumulative bounded patch over formal release v0.32.2.
+It incorporates the operational v0.32.3 capability-session/completion
+stabilization and the Windows trusted gateway IPC fix.
+
+## Changes
+
+- Preserve v0.32.3 capability-session bootstrap on the privileged control plane.
+- Preserve stable workflow completion subjects independent of task ownership/liveness state.
+- Use project-scoped Windows Named Pipes (AF_PIPE) for the trusted gateway.
+- Preserve POSIX AF_UNIX gateway behavior.
+- Protect the Windows gateway auth-key file with a protected DACL granting full access only to the current execution identity, SYSTEM, and Administrators.
+- Keep the gateway free of TCP listeners.
+- Remove direct subprocess/process-creation primitives from gateway ACL setup; use direct Win32 security APIs instead.
+- Add focused Windows IPC, ACL, cleanup, and attestation regression coverage.
+
+## Compatibility
+
+VERSION = 0.32.4
+schema = 65
+previous formal release = 0.32.2
+operational predecessor = 0.32.3
+
+No database migration is introduced.
+
+## Authority and security
+
+This release does not widen approved scope, create filesystem/process/network authority, add MCP mutation authority, replace Human approval, weaken context authority, or claim general host containment.
+
+Windows gateway transport is local-only AF_PIPE. No TCP listener is added.
+
+---
+
 # AgentOS Local Governance v0.32.2 — Project Artifact Placement & Path Safety
 
 Database schema: **65**

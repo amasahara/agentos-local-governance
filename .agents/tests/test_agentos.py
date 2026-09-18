@@ -486,7 +486,9 @@ def test_security_schema_tables(tmp_path: Path) -> None:
 def test_capability_session_replay_and_revoke(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root = project(tmp_path); ready(root)
     monkeypatch.setenv("AGENTOS_AUDIT_HOME", str(tmp_path / "audit-home"))
+    from agentos.concurrency import claim_task
     from agentos.security import authenticate_request, issue_session_token, revoke_session
+    claim_task(root, "T1", "S1")
     issued = issue_session_token(root, "T1", "S1", ["filesystem.read"], 300)
     auth = authenticate_request(root, issued["session_token"], "T1", "filesystem.read", {"path": "src/a.py"}, "R1", 1)
     assert auth["session_id"] == "S1"
@@ -684,10 +686,13 @@ def test_controlled_evolution_requires_evaluation_and_staged_activation(tmp_path
 def test_multi_agent_requires_capability_role_and_fresh_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root=project(tmp_path); monkeypatch.setenv("AGENTOS_AUDIT_HOME",str(tmp_path/"audit")); ready(root)
     from agentos.collaboration import assign_role, collaboration_readiness, send_message
+    from agentos.concurrency import claim_task, handoff_task
     from agentos.context_runtime import build_context_pack
     from agentos.security import issue_session_token
     assert collaboration_readiness(root,"T1")["ok"] is False
+    claim_task(root,"T1","EXEC")
     issue_session_token(root,"T1","EXEC")
+    handoff_task(root,"T1","EXEC","REVIEW","test collaboration ownership handoff")
     issue_session_token(root,"T1","REVIEW")
     assign_role(root,"T1","EXEC","executor","operator")
     assign_role(root,"T1","REVIEW","reviewer","operator")

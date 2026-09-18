@@ -27,14 +27,97 @@ def default_capabilities(scope:list[str]|None=None)->list[str]:
     return caps
 
 def issue_session_token(root:Path,task_id:str,session_id:str,capabilities:list[str]|None=None,ttl_seconds:int=900)->dict[str,Any]:
-    token=secrets.token_urlsafe(32); token_id=secrets.token_hex(12); expires=_now()+timedelta(seconds=max(60,ttl_seconds))
-    with connect(root) as c:
-        task=c.execute('SELECT approved_scope FROM tasks WHERE id=?',(task_id,)).fetchone()
-        if not task: raise RuntimeError('task not found')
-        caps=capabilities or default_capabilities(json.loads(task['approved_scope']))
-        c.execute('INSERT INTO session_tokens(token_hash,token_id,session_id,task_id,capability_set_json,expires_at) VALUES(?,?,?,?,?,?)',(_hash(token),token_id,session_id,task_id,json.dumps(caps),_iso(expires)))
-    event=append_signed_event(root,'security.session_issued',{'token_id':token_id,'task_id':task_id,'session_id':session_id,'capabilities':caps,'expires_at':_iso(expires)},task_id,session_id)
+    # Chi cap capability session cho task da duyet va session dang so huu task.
+    if not str(task_id).strip() or not str(session_id).strip():
+        raise PermissionError('task_and_session_required')
+    ttl=max(60,min(int(ttl_seconds),3600))
+    token=secrets.token_urlsafe(32); token_id=secrets.token_hex(12); expires=_now()+timedelta(seconds=ttl)
+    with connect(root,immediate=True) as c:
+        task=c.execute(
+            'SELECT approved,approved_scope,owner_session_id,task_state FROM tasks WHERE id=?',
+            (task_id,),
+        ).fetchone()
+        if not task:
+            raise RuntimeError('task not found')
+        if not bool(task['approved']):
+            raise PermissionError('approved_task_required')
+        if str(task['owner_session_id'] or '') != str(session_id):
+            raise PermissionError('task_owner_session_required')
+        if str(task['task_state'] or '') != 'active':
+            raise PermissionError('active_task_required')
+        try:
+            scope=json.loads(task['approved_scope'] or '[]')
+        except json.JSONDecodeError as exc:
+            raise RuntimeError('approved_scope_invalid_json') from exc
+        if not isinstance(scope,list) or not all(isinstance(x,str) and x.strip() for x in scope):
+            raise RuntimeError('approved_scope_invalid')
+        allowed=default_capabilities(scope)
+        if capabilities is None:
+            caps=list(allowed)
+        else:
+            if not isinstance(capabilities,list) or not all(isinstance(x,str) and x.strip() for x in capabilities):
+                raise PermissionError('invalid_capability_request')
+            requested=list(dict.fromkeys(capabilities))
+            allowed_set=set(allowed)
+            if any(cap not in allowed_set for cap in requested):
+                raise PermissionError('capability_exceeds_approved_scope')
+            caps=requested
+        c.execute(
+            'INSERT INTO session_tokens(token_hash,token_id,session_id,task_id,capability_set_json,expires_at) VALUES(?,?,?,?,?,?)',
+            (_hash(token),token_id,session_id,task_id,json.dumps(caps),_iso(expires)),
+        )
+    event=append_signed_event(
+        root,
+        'security.session_issued',
+        {'token_id':token_id,'task_id':task_id,'session_id':session_id,'capabilities':caps,'expires_at':_iso(expires)},
+        task_id,
+        session_id,
+    )
     return {'session_token':token,'token_id':token_id,'session_id':session_id,'task_id':task_id,'capabilities':caps,'expires_at':_iso(expires),'external_event_hash':event['event_hash']}
+
+
+def session_status(root:Path,task_id:str,session_id:str)->dict[str,Any]:
+    # Tra metadata capability session, khong tra token/hash bi mat.
+    with connect(root) as c:
+        task=c.execute(
+            'SELECT approved,owner_session_id,task_state FROM tasks WHERE id=?',
+            (task_id,),
+        ).fetchone()
+        if not task:
+            raise RuntimeError('task not found')
+        rows=c.execute(
+            'SELECT token_id,session_id,task_id,capability_set_json,issued_at,expires_at,revoked_at,last_sequence '
+            'FROM session_tokens WHERE task_id=? AND session_id=? ORDER BY issued_at DESC',
+            (task_id,session_id),
+        ).fetchall()
+    now=_now()
+    items=[]
+    active_count=0
+    for row in rows:
+        expires=datetime.fromisoformat(str(row['expires_at']))
+        active=(row['revoked_at'] is None and expires > now)
+        if active:
+            active_count+=1
+        items.append({
+            'token_id':row['token_id'],
+            'session_id':row['session_id'],
+            'task_id':row['task_id'],
+            'capabilities':json.loads(row['capability_set_json'] or '[]'),
+            'issued_at':row['issued_at'],
+            'expires_at':row['expires_at'],
+            'revoked_at':row['revoked_at'],
+            'last_sequence':int(row['last_sequence']),
+            'active':active,
+        })
+    return {
+        'task_id':task_id,
+        'session_id':session_id,
+        'task_approved':bool(task['approved']),
+        'owner_session_id':task['owner_session_id'],
+        'task_state':task['task_state'],
+        'active_session_count':active_count,
+        'sessions':items,
+    }
 
 def _capability_allowed(granted:list[str],required:str,args:dict[str,Any])->bool:
     if required.startswith('coordination.') and 'coordination.*' in granted: return True

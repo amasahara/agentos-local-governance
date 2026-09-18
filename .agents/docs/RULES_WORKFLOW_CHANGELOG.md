@@ -1,3 +1,12 @@
+## v0.32.4 — Windows Trusted Gateway IPC & Capability Completion Stabilization
+
+- Carry forward the v0.32.3 capability-session bootstrap and stable completion-subject semantics.
+- Replace Windows AF_UNIX gateway dependency with project-scoped AF_PIPE.
+- Protect gateway auth-key material with a protected Windows DACL.
+- Preserve POSIX AF_UNIX and keep the gateway free of TCP listeners.
+- Keep enforcement attestation clean: no new direct process-creation primitive.
+- Database schema remains 65.
+
 ## v0.32.2 — Project Artifact Placement & Path Safety
 
 - Preserve explicit project-relative CREATE targets.

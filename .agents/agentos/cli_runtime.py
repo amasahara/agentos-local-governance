@@ -82,6 +82,9 @@ SPECIAL_COMMANDS = {
 }
 
 PRIVILEGED_COMMANDS = {
+    "session-issue",
+    "session-revoke",
+    "session-status",
     'multi-agent-supervisor-create', 'multi-agent-supervisor-worker-add', 'multi-agent-supervisor-dependency-add', 'multi-agent-supervisor-activate', 'multi-agent-supervisor-pause', 'multi-agent-supervisor-cancel', 'multi-agent-worker-start', 'multi-agent-worker-update',
     'multi-agent-workspace-provision', 'multi-agent-workspace-collect', 'multi-agent-workspace-seal', 'multi-agent-workspace-release', 'multi-agent-integration-proposal-create', 'multi-agent-integration-proposal-review', 'multi-agent-integration-proposal-approve', 'multi-agent-integration-proposal-reject', 'multi-agent-integration-apply',
     "db-connection-register", "db-source-verify-readonly", "db-consolidation-create", "db-consolidation-add-source",

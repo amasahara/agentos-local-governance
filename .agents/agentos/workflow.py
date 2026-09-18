@@ -311,7 +311,7 @@ def workflow_completion_subject(
     connector = connect_read_only if read_only else connect
     with connector(root) as c:
         task = c.execute(
-            "SELECT id,request,approved,approved_scope,owner_session_id,task_state FROM tasks WHERE id=?",
+            "SELECT id,request,approved,approved_scope FROM tasks WHERE id=?",
             (task_id,),
         ).fetchone()
         if not task:
